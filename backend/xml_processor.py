@@ -53,8 +53,26 @@ class MSProjectXMLProcessor:
             summary_elem = task_elem.find('msproj:Summary', self.NS)
             start_elem = task_elem.find('msproj:Start', self.NS)
             finish_elem = task_elem.find('msproj:Finish', self.NS)
+
+            # Read PhysicalPercentComplete (preferred for construction projects)
+            # Fall back to PercentComplete if PhysicalPercentComplete doesn't exist
+            physical_percent_elem = task_elem.find('msproj:PhysicalPercentComplete', self.NS)
             percent_complete_elem = task_elem.find('msproj:PercentComplete', self.NS)
-            
+            percent_complete = 0
+            if physical_percent_elem is not None:
+                percent_complete = int(physical_percent_elem.text)
+            elif percent_complete_elem is not None:
+                percent_complete = int(percent_complete_elem.text)
+
+            # Preserve CreateDate from original XML
+            create_date_elem = task_elem.find('msproj:CreateDate', self.NS)
+            create_date = create_date_elem.text if create_date_elem is not None else None
+
+            # Read Actual dates for in-progress tasks
+            actual_start_elem = task_elem.find('msproj:ActualStart', self.NS)
+            actual_finish_elem = task_elem.find('msproj:ActualFinish', self.NS)
+            actual_duration_elem = task_elem.find('msproj:ActualDuration', self.NS)
+
             # Extract custom field value
             value = ""
             ext_attr = task_elem.find('msproj:ExtendedAttribute', self.NS)
@@ -62,7 +80,7 @@ class MSProjectXMLProcessor:
                 value_elem = ext_attr.find('msproj:Value', self.NS)
                 if value_elem is not None:
                     value = value_elem.text or ""
-            
+
             # Extract predecessors
             predecessors = []
             for pred_link in task_elem.findall('msproj:PredecessorLink', self.NS):
@@ -70,7 +88,7 @@ class MSProjectXMLProcessor:
                 pred_type_elem = pred_link.find('msproj:Type', self.NS)
                 pred_lag_elem = pred_link.find('msproj:LinkLag', self.NS)
                 pred_lag_format_elem = pred_link.find('msproj:LagFormat', self.NS)
-                
+
                 if pred_uid_elem is not None:
                     # Find the outline number for this UID
                     pred_outline = self._find_outline_by_uid(pred_uid_elem.text)
@@ -81,7 +99,7 @@ class MSProjectXMLProcessor:
                             "lag": int(pred_lag_elem.text) if pred_lag_elem is not None else 0,
                             "lag_format": int(pred_lag_format_elem.text) if pred_lag_format_elem is not None else 7
                         })
-            
+
             return {
                 "id": id_elem.text if id_elem is not None else "",
                 "uid": uid_elem.text if uid_elem is not None else "",
@@ -91,7 +109,11 @@ class MSProjectXMLProcessor:
                 "duration": duration_elem.text if duration_elem is not None else "PT8H0M0S",
                 "milestone": milestone_elem.text == "1" if milestone_elem is not None else False,
                 "summary": summary_elem.text == "1" if summary_elem is not None else False,
-                "percent_complete": int(percent_complete_elem.text) if percent_complete_elem is not None else 0,
+                "percent_complete": percent_complete,
+                "create_date": create_date,
+                "actual_start": actual_start_elem.text if actual_start_elem is not None else None,
+                "actual_finish": actual_finish_elem.text if actual_finish_elem is not None else None,
+                "actual_duration": actual_duration_elem.text if actual_duration_elem is not None else None,
                 "value": value,
                 "predecessors": predecessors,
                 "start_date": start_elem.text if start_elem is not None else None,
@@ -273,7 +295,14 @@ class MSProjectXMLProcessor:
         ET.SubElement(task_elem, 'Name').text = task_data["name"]
         ET.SubElement(task_elem, 'Type').text = '1'
         ET.SubElement(task_elem, 'IsNull').text = '0'
-        ET.SubElement(task_elem, 'CreateDate').text = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+
+        # Preserve original CreateDate if it exists, otherwise use current time for new tasks
+        create_date = task_data.get("create_date")
+        if create_date:
+            ET.SubElement(task_elem, 'CreateDate').text = create_date
+        else:
+            ET.SubElement(task_elem, 'CreateDate').text = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+
         ET.SubElement(task_elem, 'OutlineNumber').text = task_data["outline_number"]
         ET.SubElement(task_elem, 'OutlineLevel').text = str(task_data["outline_level"])
         ET.SubElement(task_elem, 'Priority').text = '500'
@@ -291,13 +320,26 @@ class MSProjectXMLProcessor:
         ET.SubElement(task_elem, 'Milestone').text = '1' if task_data.get("milestone", False) else '0'
         ET.SubElement(task_elem, 'Summary').text = '1' if is_summary else '0'
 
-        # Percent Complete
+        # MS Project Compliance: Use ONLY PhysicalPercentComplete for construction projects
+        # Do NOT write PercentComplete to avoid conflicts with MS Project
         percent_complete = task_data.get("percent_complete", 0)
-        ET.SubElement(task_elem, 'PercentComplete').text = str(percent_complete)
+        ET.SubElement(task_elem, 'PhysicalPercentComplete').text = str(percent_complete)
 
         ET.SubElement(task_elem, 'EffortDriven').text = '0'
         ET.SubElement(task_elem, 'CalendarUID').text = '1'
-        ET.SubElement(task_elem, 'PhysicalPercentComplete').text = str(percent_complete)
+
+        # Preserve Actual dates if they exist (for in-progress tasks)
+        actual_start = task_data.get("actual_start")
+        if actual_start:
+            ET.SubElement(task_elem, 'ActualStart').text = actual_start
+
+        actual_finish = task_data.get("actual_finish")
+        if actual_finish:
+            ET.SubElement(task_elem, 'ActualFinish').text = actual_finish
+
+        actual_duration = task_data.get("actual_duration")
+        if actual_duration:
+            ET.SubElement(task_elem, 'ActualDuration').text = actual_duration
 
         # Extended attribute (custom field)
         if task_data.get("value"):

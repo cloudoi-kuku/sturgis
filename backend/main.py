@@ -188,11 +188,13 @@ async def export_project():
     try:
         xml_content = xml_processor.generate_xml(current_project)
 
+        # Use .mspdi extension for MS Project compatibility
+        # This allows Windows to automatically associate the file with MS Project
         return Response(
             content=xml_content,
             media_type="application/xml",
             headers={
-                "Content-Disposition": f"attachment; filename={current_project['name']}.xml"
+                "Content-Disposition": f"attachment; filename={current_project['name']}.mspdi"
             }
         )
     except Exception as e:
