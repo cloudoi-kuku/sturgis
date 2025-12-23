@@ -509,10 +509,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         <div className="gantt-task-list">
           <div className="gantt-header">
             <div className="gantt-header-cell">#</div>
+            <div className="gantt-header-cell">WBS Code</div>
             <div className="gantt-header-cell">Task Name</div>
             <div className="gantt-header-cell">Start Date</div>
             <div className="gantt-header-cell">Duration</div>
-            <div className="gantt-header-cell">Outline</div>
           </div>
           <div className="gantt-tasks" ref={taskListRef} onScroll={handleTaskListScroll}>
             {visibleTasks.map((task, index) => {
@@ -528,6 +528,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   <div className="gantt-task-number">
                     {index + 1}
                   </div>
+                  <div className="gantt-task-wbs">{task.outline_number}</div>
                   <div className="gantt-task-name" style={{ paddingLeft: getTaskIndent(task.outline_level) }}>
                     {task.summary ? (
                       <button
@@ -556,7 +557,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   <div className="gantt-task-duration">
                     {task.summary ? '(auto)' : formatDuration(task.duration)}
                   </div>
-                  <div className="gantt-task-outline">{task.outline_number}</div>
                 </div>
               );
             })}

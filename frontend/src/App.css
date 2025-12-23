@@ -293,8 +293,8 @@ body {
 }
 
 .gantt-task-list {
-  min-width: 600px;
-  max-width: 600px;
+  min-width: 650px;
+  max-width: 650px;
   border-right: 2px solid #e1e8ed;
   flex-shrink: 0;
   overflow: hidden;
@@ -302,7 +302,7 @@ body {
 
 .gantt-header {
   display: grid;
-  grid-template-columns: 50px 300px 150px 100px 80px;
+  grid-template-columns: 50px 100px 250px 150px 100px;
   background: #34495e;
   color: white;
   font-weight: 600;
@@ -329,7 +329,7 @@ body {
 
 .gantt-task-row {
   display: grid;
-  grid-template-columns: 50px 300px 150px 100px 80px;
+  grid-template-columns: 50px 100px 250px 150px 100px;
   border-bottom: 1px solid #e1e8ed;
   cursor: pointer;
   transition: background 0.2s;
@@ -354,7 +354,7 @@ body {
 .gantt-task-name,
 .gantt-task-start,
 .gantt-task-duration,
-.gantt-task-outline,
+.gantt-task-wbs,
 .gantt-task-number {
   padding: 0 1rem;
   font-size: 0.9rem;
@@ -373,6 +373,15 @@ body {
   color: #7f8c8d;
   font-weight: 600;
   font-size: 0.85rem;
+}
+
+.gantt-task-wbs {
+  justify-content: center;
+  color: #2c3e50;
+  font-weight: 700;
+  font-size: 0.9rem;
+  font-family: 'Courier New', monospace;
+  background: #f8f9fa;
 }
 
 .task-name-text {
