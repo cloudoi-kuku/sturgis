@@ -281,31 +281,52 @@ class MSProjectXMLProcessor:
                 task_elem = self._create_task_element(task_data, project_data["tasks"])
                 tasks_elem.append(task_elem)
 
-        # Convert to string
-        xml_string = ET.tostring(root, encoding='unicode', xml_declaration=True)
+        # Convert to string with proper XML declaration
+        # Register the namespace to ensure proper xmlns attribute
+        ET.register_namespace('', 'http://schemas.microsoft.com/project')
+
+        xml_bytes = ET.tostring(root, encoding='utf-8', xml_declaration=True)
+        xml_string = xml_bytes.decode('utf-8')
+
         return xml_string
 
     def _create_task_element(self, task_data: Dict[str, Any], all_tasks: List[Dict[str, Any]]) -> ET.Element:
         """Create an XML element for a task"""
+        # Helper function to create namespaced elements
+        def create_elem(parent, tag, text=None):
+            elem = ET.SubElement(parent, f'{{http://schemas.microsoft.com/project}}{tag}')
+            if text is not None:
+                elem.text = str(text)
+            return elem
+
         task_elem = ET.Element('{http://schemas.microsoft.com/project}Task')
 
         # Add basic fields
-        ET.SubElement(task_elem, 'UID').text = task_data["uid"]
-        ET.SubElement(task_elem, 'ID').text = task_data["id"]
-        ET.SubElement(task_elem, 'Name').text = task_data["name"]
-        ET.SubElement(task_elem, 'Type').text = '1'
-        ET.SubElement(task_elem, 'IsNull').text = '0'
+        create_elem(task_elem, 'UID', task_data["uid"])
+        create_elem(task_elem, 'ID', task_data["id"])
+        create_elem(task_elem, 'Name', task_data["name"])
+        create_elem(task_elem, 'Type', '1')
+        create_elem(task_elem, 'IsNull', '0')
 
         # Preserve original CreateDate if it exists, otherwise use current time for new tasks
         create_date = task_data.get("create_date")
         if create_date:
-            ET.SubElement(task_elem, 'CreateDate').text = create_date
+            create_elem(task_elem, 'CreateDate', create_date)
         else:
-            ET.SubElement(task_elem, 'CreateDate').text = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+            create_elem(task_elem, 'CreateDate', datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
 
-        ET.SubElement(task_elem, 'OutlineNumber').text = task_data["outline_number"]
-        ET.SubElement(task_elem, 'OutlineLevel').text = str(task_data["outline_level"])
-        ET.SubElement(task_elem, 'Priority').text = '500'
+        create_elem(task_elem, 'OutlineNumber', task_data["outline_number"])
+        create_elem(task_elem, 'OutlineLevel', task_data["outline_level"])
+        create_elem(task_elem, 'Priority', '500')
+
+        # Start and Finish dates (CRITICAL for MS Project)
+        start_date = task_data.get("start_date")
+        if start_date:
+            create_elem(task_elem, 'Start', start_date)
+
+        finish_date = task_data.get("finish_date")
+        if finish_date:
+            create_elem(task_elem, 'Finish', finish_date)
 
         # Duration - only for non-summary tasks (MS Project calculates summary task durations)
         is_summary = task_data.get("summary", False)
@@ -313,52 +334,52 @@ class MSProjectXMLProcessor:
             duration = task_data.get("duration", "PT8H0M0S")
             if task_data.get("milestone", False) and duration == "PT8H0M0S":
                 duration = "PT0H0M0S"
-            ET.SubElement(task_elem, 'Duration').text = duration
-            ET.SubElement(task_elem, 'DurationFormat').text = '7'
+            create_elem(task_elem, 'Duration', duration)
+            create_elem(task_elem, 'DurationFormat', '7')
 
         # Milestone
-        ET.SubElement(task_elem, 'Milestone').text = '1' if task_data.get("milestone", False) else '0'
-        ET.SubElement(task_elem, 'Summary').text = '1' if is_summary else '0'
+        create_elem(task_elem, 'Milestone', '1' if task_data.get("milestone", False) else '0')
+        create_elem(task_elem, 'Summary', '1' if is_summary else '0')
 
         # MS Project Compliance: Use ONLY PhysicalPercentComplete for construction projects
         # Do NOT write PercentComplete to avoid conflicts with MS Project
         percent_complete = task_data.get("percent_complete", 0)
-        ET.SubElement(task_elem, 'PhysicalPercentComplete').text = str(percent_complete)
+        create_elem(task_elem, 'PhysicalPercentComplete', percent_complete)
 
-        ET.SubElement(task_elem, 'EffortDriven').text = '0'
-        ET.SubElement(task_elem, 'CalendarUID').text = '1'
+        create_elem(task_elem, 'EffortDriven', '0')
+        create_elem(task_elem, 'CalendarUID', '1')
 
         # Preserve Actual dates if they exist (for in-progress tasks)
         actual_start = task_data.get("actual_start")
         if actual_start:
-            ET.SubElement(task_elem, 'ActualStart').text = actual_start
+            create_elem(task_elem, 'ActualStart', actual_start)
 
         actual_finish = task_data.get("actual_finish")
         if actual_finish:
-            ET.SubElement(task_elem, 'ActualFinish').text = actual_finish
+            create_elem(task_elem, 'ActualFinish', actual_finish)
 
         actual_duration = task_data.get("actual_duration")
         if actual_duration:
-            ET.SubElement(task_elem, 'ActualDuration').text = actual_duration
+            create_elem(task_elem, 'ActualDuration', actual_duration)
 
         # Extended attribute (custom field)
         if task_data.get("value"):
-            ext_attr = ET.SubElement(task_elem, 'ExtendedAttribute')
-            ET.SubElement(ext_attr, 'UID').text = '1'
-            ET.SubElement(ext_attr, 'FieldID').text = '188743731'
-            ET.SubElement(ext_attr, 'Value').text = task_data["value"]
+            ext_attr = create_elem(task_elem, 'ExtendedAttribute')
+            create_elem(ext_attr, 'UID', '1')
+            create_elem(ext_attr, 'FieldID', '188743731')
+            create_elem(ext_attr, 'Value', task_data["value"])
 
         # Predecessors
         outline_to_uid = {t["outline_number"]: t["uid"] for t in all_tasks}
         for pred in task_data.get("predecessors", []):
             pred_outline = pred["outline_number"]
             if pred_outline in outline_to_uid:
-                link = ET.SubElement(task_elem, 'PredecessorLink')
-                ET.SubElement(link, 'PredecessorUID').text = outline_to_uid[pred_outline]
-                ET.SubElement(link, 'Type').text = str(pred.get("type", 1))
-                ET.SubElement(link, 'CrossProject').text = '0'
-                ET.SubElement(link, 'LinkLag').text = str(pred.get("lag", 0))
-                ET.SubElement(link, 'LagFormat').text = str(pred.get("lag_format", 7))
+                link = create_elem(task_elem, 'PredecessorLink')
+                create_elem(link, 'PredecessorUID', outline_to_uid[pred_outline])
+                create_elem(link, 'Type', pred.get("type", 1))
+                create_elem(link, 'CrossProject', '0')
+                create_elem(link, 'LinkLag', pred.get("lag", 0))
+                create_elem(link, 'LagFormat', pred.get("lag_format", 7))
 
         return task_elem
 

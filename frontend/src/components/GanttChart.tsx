@@ -626,14 +626,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               <defs>
                 <marker
                   id="arrowhead"
-                  markerWidth="10"
+                  markerWidth="12"
                   markerHeight="10"
-                  refX="9"
-                  refY="3"
+                  refX="11"
+                  refY="5"
                   orient="auto"
                   markerUnits="strokeWidth"
                 >
-                  <polygon points="0 0, 10 3, 0 6" fill="#3498db" />
+                  <polygon 
+                    points="0,0 12,5 0,10" 
+                    className="dependency-arrow"
+                    fill="#2c3e50" 
+                  />
                 </marker>
               </defs>
 
@@ -650,56 +654,90 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   const predTaskIndex = taskPositions.findIndex(p => p.task.outline_number === pred.outline_number);
                   if (predTaskIndex === -1) return null;
 
-                  // Connection points (MS Project style: right edge of predecessor, left edge of successor)
-                  // Task bars are 28px tall, centered in 48px rows at vertical center (row * 48 + 24)
-
-                  // Predecessor: right edge, vertical center
+                  // Enhanced MS Project style dependency routing
                   const predEndX = ((predTaskPos.startDay + predTaskPos.duration) / maxDay) * timelineConfig.width;
-                  const predY = (predTaskIndex * 48) + 24;
+                  const predY = (predTaskIndex * 48) + 24; // Center of predecessor row
 
-                  // Successor: left edge, vertical center
                   const taskStartX = (startDay / maxDay) * timelineConfig.width;
-                  const taskY = (taskIndex * 48) + 24;
+                  const taskY = (taskIndex * 48) + 24; // Center of successor row
 
-                  // MS Project style: orthogonal routing (only horizontal and vertical lines)
-                  const horizontalGap = 12; // Gap from task bar edge for routing
-                  const arrowOffset = 4; // Space for arrow
+                  // Enhanced routing parameters
+                  const minHorizontalGap = 16;
+                  const verticalPadding = 16;
+                  const arrowSize = 6;
 
-                  // Dependency type labels
-                  const depTypeLabel = pred.type === 1 ? 'FS' : pred.type === 2 ? 'SS' : pred.type === 3 ? 'FF' : 'SF';
-                  const tooltipText = `${predTaskPos.task.outline_number} ${predTaskPos.task.name} → ${task.outline_number} ${task.name} (${depTypeLabel})`;
-
-                  // Build path based on relative positions
-                  let pathD = '';
-
-                  if (taskStartX > predEndX + 20) {
-                    // Case 1: Successor is to the right - simple 3-segment line
-                    const midX = predEndX + (taskStartX - predEndX) / 2;
-                    pathD = `M ${predEndX} ${predY} L ${midX} ${predY} L ${midX} ${taskY} L ${taskStartX - arrowOffset} ${taskY}`;
+                  // Dependency type and styling
+                  const isFinishToStart = pred.type === 1; // Most common type
+                  const lagDays = pred.lag || 0;
+                  
+                  // Calculate connection points based on dependency type
+                  let startX = predEndX;
+                  let endX = taskStartX - arrowSize;
+                  
+                  // Enhanced routing algorithm
+                  let pathSegments: string[] = [];
+                  
+                  if (endX > startX + minHorizontalGap * 2) {
+                    // Simple case: successor is well to the right
+                    const midX = startX + (endX - startX) * 0.3; // Closer to predecessor for better visual
+                    pathSegments = [
+                      `M ${startX} ${predY}`,
+                      `H ${midX}`, // Horizontal to intermediate point
+                      `V ${taskY}`, // Vertical to successor level
+                      `H ${endX}`   // Horizontal to successor
+                    ];
                   } else {
-                    // Case 2: Successor is to the left or overlapping - route around
-                    // Go right from predecessor, then up/down, then left to successor
-                    const routeX1 = predEndX + horizontalGap;
-                    const routeX2 = taskStartX - horizontalGap;
-
-                    // Determine if we should route above or below the tasks
-                    const routeAbove = taskY < predY;
-                    const verticalOffset = 24; // Half row height
-                    const routeY = routeAbove ? Math.min(predY, taskY) - verticalOffset : Math.max(predY, taskY) + verticalOffset;
-
-                    pathD = `M ${predEndX} ${predY} L ${routeX1} ${predY} L ${routeX1} ${routeY} L ${routeX2} ${routeY} L ${routeX2} ${taskY} L ${taskStartX - arrowOffset} ${taskY}`;
+                    // Complex case: route around tasks
+                    const routeX1 = startX + minHorizontalGap;
+                    const routeX2 = endX - minHorizontalGap;
+                    
+                    // Determine routing direction (above or below)
+                    const routeAbove = predY > taskY;
+                    const clearanceY = routeAbove 
+                      ? Math.min(predY, taskY) - verticalPadding
+                      : Math.max(predY, taskY) + verticalPadding;
+                    
+                    pathSegments = [
+                      `M ${startX} ${predY}`,
+                      `H ${routeX1}`,           // Go right from predecessor
+                      `V ${clearanceY}`,        // Go to clearance level
+                      `H ${routeX2}`,           // Go horizontally to above successor
+                      `V ${taskY}`,             // Go down to successor level
+                      `H ${endX}`               // Go to successor start
+                    ];
                   }
+                  
+                  const pathD = pathSegments.join(' ');
+                  
+                  // Enhanced tooltip with more details
+                  const depTypeLabel = pred.type === 1 ? 'FS' : pred.type === 2 ? 'SS' : pred.type === 3 ? 'FF' : 'SF';
+                  const lagText = lagDays !== 0 ? ` ${lagDays > 0 ? '+' : ''}${lagDays}d` : '';
+                  const tooltipText = `${predTaskPos.task.name} → ${task.name}\\n${depTypeLabel}${lagText}`;
 
                   return (
-                    <g key={`${task.id}-${pred.outline_number}-${predIndex}`} style={{ pointerEvents: 'auto' }}>
-                      <title>{tooltipText}</title>
+                    <g key={`${task.id}-${pred.outline_number}-${predIndex}`}>
+                      {/* Enhanced path with better styling */}
                       <path
                         d={pathD}
-                        fill="none"
-                        stroke="#3498db"
-                        strokeWidth="2"
                         markerEnd="url(#arrowhead)"
-                      />
+                        className="dependency-line"
+                      >
+                        <title>{tooltipText}</title>
+                      </path>
+                      
+                      {/* Lag indicator if present */}
+                      {lagDays !== 0 && (
+                        <text
+                          x={(startX + endX) / 2}
+                          y={predY < taskY ? (predY + taskY) / 2 - 8 : (predY + taskY) / 2 + 16}
+                          fontSize="10"
+                          fill="#7f8c8d"
+                          textAnchor="middle"
+                          className="lag-label"
+                        >
+                          {lagDays > 0 ? `+${lagDays}d` : `${lagDays}d`}
+                        </text>
+                      )}
                     </g>
                   );
                 });
