@@ -6,6 +6,8 @@ from typing import List, Optional, Dict, Any
 import xml.etree.ElementTree as ET
 from datetime import datetime
 import os
+import json
+from pathlib import Path
 
 from models import (
     ProjectConfig,
@@ -30,10 +32,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Storage configuration
+STORAGE_DIR = Path("project_data")
+STORAGE_DIR.mkdir(exist_ok=True)
+CURRENT_PROJECT_FILE = STORAGE_DIR / "current_project.json"
+
 # In-memory storage for the current project state
 current_project: Optional[Dict[str, Any]] = None
 xml_processor = MSProjectXMLProcessor()
 validator = ProjectValidator()
+
+
+def save_project_to_disk():
+    """Save current project to disk"""
+    if current_project:
+        try:
+            with open(CURRENT_PROJECT_FILE, 'w', encoding='utf-8') as f:
+                json.dump(current_project, f, indent=2, ensure_ascii=False)
+            print(f"Saved project to disk: {current_project.get('name', 'Unknown')}")
+        except Exception as e:
+            print(f"Error saving project to disk: {e}")
+
+
+def load_project_from_disk():
+    """Load project from disk on startup"""
+    global current_project
+    if CURRENT_PROJECT_FILE.exists():
+        try:
+            with open(CURRENT_PROJECT_FILE, 'r', encoding='utf-8') as f:
+                current_project = json.load(f)
+            print(f"Loaded project from disk: {current_project.get('name', 'Unknown')}")
+        except Exception as e:
+            print(f"Error loading project from disk: {e}")
+
+
+# Load project on startup
+@app.on_event("startup")
+async def startup_event():
+    """Load saved project on server startup"""
+    load_project_from_disk()
 
 
 @app.get("/")
@@ -57,7 +94,10 @@ async def upload_project(file: UploadFile = File(...)):
         # Parse the XML and extract project data
         project_data = xml_processor.parse_xml(xml_content)
         current_project = project_data
-        
+
+        # Save to disk
+        save_project_to_disk()
+
         return {
             "success": True,
             "message": "Project uploaded successfully",
@@ -92,7 +132,10 @@ async def update_project_metadata(metadata: ProjectMetadata):
     current_project["name"] = metadata.name
     current_project["start_date"] = metadata.start_date
     current_project["status_date"] = metadata.status_date
-    
+
+    # Save to disk
+    save_project_to_disk()
+
     return {"success": True, "metadata": metadata}
 
 
@@ -120,7 +163,10 @@ async def create_task(task: TaskCreate):
     
     # Add the task
     new_task = xml_processor.add_task(current_project, task.dict())
-    
+
+    # Save to disk
+    save_project_to_disk()
+
     return {"success": True, "task": new_task}
 
 
@@ -140,6 +186,9 @@ async def update_task(task_id: str, task: TaskUpdate):
     if not updated_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    # Save to disk
+    save_project_to_disk()
+
     print(f"DEBUG: Updated task result: {updated_task}")
     return {"success": True, "task": updated_task}
 
@@ -156,6 +205,9 @@ async def delete_task(task_id: str):
 
     if not success:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    # Save to disk
+    save_project_to_disk()
 
     return {"success": True, "message": "Task deleted successfully"}
 
