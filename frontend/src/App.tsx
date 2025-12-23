@@ -180,7 +180,10 @@ function AppContent() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>MS Project Configuration Tool</h1>
+        <div className="header-left">
+          <img src="/sturgis-logo.png" alt="Sturgis Logo" className="app-logo" />
+          <h1>MS Project Configuration Tool</h1>
+        </div>
         <div className="header-actions">
           <label className="upload-button">
             <Upload size={18} />
