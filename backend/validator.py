@@ -132,11 +132,13 @@ class ProjectValidator:
                 })
             
             # Validate dependency type
+            # Per MS Project XML Schema (mspdi_pj12.xsd):
+            # 0=FF (Finish-to-Finish), 1=FS (Finish-to-Start), 2=SF (Start-to-Finish), 3=SS (Start-to-Start)
             dep_type = pred.get("type", 1)
-            if dep_type not in [1, 2, 3, 4]:
+            if dep_type not in [0, 1, 2, 3]:
                 errors.append({
                     "field": "predecessors",
-                    "message": f"Invalid dependency type: {dep_type}. Must be 1 (FS), 2 (SS), 3 (FF), or 4 (SF)"
+                    "message": f"Invalid dependency type: {dep_type}. Must be 0 (FF), 1 (FS), 2 (SF), or 3 (SS)"
                 })
         
         return errors
