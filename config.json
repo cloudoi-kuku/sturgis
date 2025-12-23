@@ -1,0 +1,148 @@
+{
+  "project_name": "Multi Family Template",
+  "start_date": "2026-01-01T08:00:00",
+  "status_date": "2026-01-01T08:00:00",
+  "new_tasks": [
+    {
+      "name": "Sturgis Submit Change Request",
+      "outline_number": "1.1.1.1",
+      "duration": "PT24H0M0S",
+      "value": "12",
+      "predecessors": []
+    },
+    {
+      "name": "Owner Approve Change Request",
+      "outline_number": "1.1.1.2",
+      "duration": "PT8H0M0S",
+      "value": "15",
+      "predecessors": [
+        {
+          "outline_number": "1.1.1.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ]
+    },
+    {
+      "name": "Pre-Construction Meeting",
+      "outline_number": "1.1.1.4",
+      "duration": "PT8H0M0S",
+      "value": "35",
+      "predecessors": [
+        {
+          "outline_number": "1.1.1.3",
+          "type": 1,
+          "lag": 0
+        }
+      ]
+    },
+    {
+      "name": "Additional Sewer Inspection",
+      "outline_number": "1.2.1.5",
+      "duration": "PT16H0M0S",
+      "value": "40",
+      "predecessors": [
+        {
+          "outline_number": "1.2.1.4",
+          "type": 1,
+          "lag": 5,
+          "lag_format": 7
+        }
+      ]
+    },
+    {
+      "name": "Utility Coordination Meeting",
+      "outline_number": "1.3.5",
+      "duration": "PT8H0M0S",
+      "value": "50",
+      "milestone": true,
+      "predecessors": [
+        {
+          "outline_number": "1.3.4.1",
+          "type": 1,
+          "lag": 0
+        }
+      ]
+    },
+    {
+      "name": "Sitework Planning Review",
+      "outline_number": "1.4.1.2",
+      "duration": "PT40H0M0S",
+      "value": "60",
+      "predecessors": [
+        {
+          "outline_number": "1.4.1.1",
+          "type": 2,
+          "lag": 0
+        }
+      ]
+    },
+    {
+      "name": "Landscaping Design Approval",
+      "outline_number": "1.4.2.3",
+      "duration": "PT24H0M0S",
+      "value": "70",
+      "predecessors": []
+    },
+    {
+      "name": "Masonry Quality Check",
+      "outline_number": "1.4.8.2",
+      "duration": "PT8H0M0S",
+      "value": "80",
+      "predecessors": [
+        {
+          "outline_number": "1.4.8.1",
+          "type": 1,
+          "lag": 10
+        }
+      ]
+    },
+    {
+      "name": "Site Preparation Milestone",
+      "outline_number": "1.5.1.2",
+      "milestone": true,
+      "value": "90",
+      "predecessors": [
+        {
+          "outline_number": "1.5.1.1",
+          "type": 1
+        }
+      ]
+    },
+    {
+      "name": "Hardscape Material Procurement",
+      "outline_number": "1.5.7.1",
+      "duration": "PT32H0M0S",
+      "value": "100",
+      "predecessors": [
+        {
+          "outline_number": "1.4.3.1",
+          "type": 1,
+          "lag": 0
+        }
+      ]
+    }
+  ],
+  "modify_tasks": [
+    {
+      "outline_number": "1.4.1.1",
+      "name": "Updated Sitework Subcontract",
+      "duration": "PT16H0M0S",
+      "predecessors": [
+        {
+          "outline_number": "1.1.1.4",
+          "type": 1,
+          "lag": 0
+        }
+      ]
+    },
+    {
+      "outline_number": "1.2.1.1",
+      "duration": "PT40H0M0S"
+    }
+  ],
+  "remove_tasks": [
+    "1.4.23"
+  ]
+}
