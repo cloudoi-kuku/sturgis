@@ -97,10 +97,12 @@ The app will be available at `http://localhost:5173`
 
 ## Dependency Types
 
-1. **Finish-to-Start (FS)**: Task B starts when Task A finishes
-2. **Start-to-Start (SS)**: Task B starts when Task A starts
-3. **Finish-to-Finish (FF)**: Task B finishes when Task A finishes
-4. **Start-to-Finish (SF)**: Task B finishes when Task A starts
+Per MS Project XML Schema (mspdi_pj12.xsd):
+
+0. **Finish-to-Finish (FF)**: Task B finishes when Task A finishes
+1. **Finish-to-Start (FS)**: Task B starts when Task A finishes (DEFAULT)
+2. **Start-to-Finish (SF)**: Task B finishes when Task A starts
+3. **Start-to-Start (SS)**: Task B starts when Task A starts
 
 ## Validation
 

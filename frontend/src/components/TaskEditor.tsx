@@ -265,10 +265,10 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     value={pred.type}
                     onChange={(e) => updatePredecessor(index, 'type', parseInt(e.target.value))}
                   >
-                    <option value={1}>Finish-to-Start (FS)</option>
-                    <option value={2}>Start-to-Start (SS)</option>
-                    <option value={3}>Finish-to-Finish (FF)</option>
-                    <option value={4}>Start-to-Finish (SF)</option>
+                    <option value={1}>Finish-to-Start (FS) - Default</option>
+                    <option value={0}>Finish-to-Finish (FF)</option>
+                    <option value={2}>Start-to-Finish (SF)</option>
+                    <option value={3}>Start-to-Start (SS)</option>
                   </select>
 
                   <input

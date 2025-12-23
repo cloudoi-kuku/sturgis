@@ -6,7 +6,7 @@ from datetime import datetime
 class Predecessor(BaseModel):
     """Task predecessor/dependency model"""
     outline_number: str = Field(..., description="Outline number of the predecessor task")
-    type: int = Field(default=1, description="Dependency type: 1=FS, 2=SS, 3=FF, 4=SF")
+    type: int = Field(default=1, description="Dependency type: 0=FF, 1=FS, 2=SF, 3=SS (per MS Project XML schema)")
     lag: int = Field(default=0, description="Lag time in the specified format")
     lag_format: int = Field(default=7, description="Lag format: 7=days, 8=hours")
 
