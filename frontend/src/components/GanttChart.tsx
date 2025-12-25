@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import type { Task } from '../api/client';
-import { format, parseISO, addDays, differenceInDays, startOfWeek, addWeeks, isSameDay, addMonths, startOfMonth, endOfMonth, startOfDay, eachDayOfInterval, getDay } from 'date-fns';
+import { format, parseISO, addDays, differenceInDays, startOfWeek, addWeeks, addMonths, startOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward } from 'lucide-react';
 
 interface GanttChartProps {
@@ -40,12 +40,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [showWeekends, setShowWeekends] = useState<boolean>(true);
-  const [currentViewDate, setCurrentViewDate] = useState<Date>(() => {
-    return projectStartDate ? parseISO(projectStartDate) : new Date();
-  });
-  const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
-  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Refs for synchronized scrolling
   const taskListRef = useRef<HTMLDivElement>(null);
@@ -206,8 +200,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const timelineConfig = useMemo(() => {
     if (!projectStartDate) return { width: 1200, days: 30 };
 
-    const startDate = parseISO(projectStartDate);
-    const endDate = addDays(startDate, maxDay);
     const config = ZOOM_CONFIG[zoomLevel];
     
     let timelineWidth: number;
@@ -341,76 +333,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     const scrollPosition = (dayOffset * config.width) / (zoomLevel === 'day' ? 1 : zoomLevel === 'week' ? 7 : 30);
     timelineBodyRef.current.scrollLeft = Math.max(0, scrollPosition - 200);
   }, [projectStartDate, zoomLevel]);
-
-  // Drag and drop handlers
-  const handleTaskMouseDown = useCallback((e: React.MouseEvent, task: Task) => {
-    if (task.summary) return; // Don't allow dragging summary tasks
-    
-    e.preventDefault();
-    setIsDragging(true);
-    setDraggedTask(task);
-    
-    const rect = e.currentTarget.getBoundingClientRect();
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
-  }, []);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !draggedTask || !timelineBodyRef.current) return;
-    
-    const timelineRect = timelineBodyRef.current.getBoundingClientRect();
-    const relativeX = e.clientX - timelineRect.left - dragOffset.x;
-    const dayPosition = Math.round((relativeX / timelineConfig.width) * maxDay);
-    
-    // Update cursor style
-    document.body.style.cursor = 'grabbing';
-    
-    // You could add visual feedback here (like a ghost task bar)
-  }, [isDragging, draggedTask, dragOffset, timelineConfig.width, maxDay]);
-
-  const handleMouseUp = useCallback((e: MouseEvent) => {
-    if (!isDragging || !draggedTask || !timelineBodyRef.current) return;
-    
-    const timelineRect = timelineBodyRef.current.getBoundingClientRect();
-    const relativeX = e.clientX - timelineRect.left - dragOffset.x;
-    const dayPosition = Math.max(0, Math.round((relativeX / timelineConfig.width) * maxDay));
-    
-    if (dayPosition !== taskPositions.find(p => p.task.id === draggedTask.id)?.startDay) {
-      // Calculate new start date
-      const newStartDate = addDays(parseISO(projectStartDate), dayPosition);
-      
-      // Here you would call your task update function
-      console.log('Task rescheduled:', {
-        taskId: draggedTask.id,
-        newStartDate: newStartDate.toISOString(),
-        daysMoved: dayPosition - (taskPositions.find(p => p.task.id === draggedTask.id)?.startDay || 0)
-      });
-      
-      // onTaskEdit({
-      //   ...draggedTask,
-      //   start_date: newStartDate.toISOString()
-      // });
-    }
-    
-    setIsDragging(false);
-    setDraggedTask(null);
-    document.body.style.cursor = 'default';
-  }, [isDragging, draggedTask, dragOffset, timelineConfig.width, maxDay, projectStartDate, taskPositions]);
-
-  // Set up global mouse events for drag and drop
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   // Synchronized scrolling between task list and timeline
   const handleTaskListScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -641,7 +563,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 </marker>
               </defs>
 
-              {taskPositions.map(({ task, startDay, duration }, taskIndex) => {
+              {taskPositions.map(({ task, startDay }, taskIndex) => {
                 if (!task.predecessors || task.predecessors.length === 0) return null;
 
                 return task.predecessors.map((pred, predIndex) => {
@@ -667,7 +589,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   const arrowSize = 6;
 
                   // Dependency type and styling
-                  const isFinishToStart = pred.type === 1; // Most common type
                   const lagDays = pred.lag || 0;
                   
                   // Calculate connection points based on dependency type
