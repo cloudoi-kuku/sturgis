@@ -20,7 +20,10 @@ from models import (
     DurationEstimateRequest,
     DependencyDetectionRequest,
     TaskCategorizationRequest,
-    ChatRequest
+    ChatRequest,
+    OptimizeDurationRequest,
+    OptimizationResult,
+    ApplyOptimizationRequest
 )
 from xml_processor import MSProjectXMLProcessor
 from validator import ProjectValidator
@@ -380,6 +383,95 @@ async def clear_chat_history():
     """Clear chat conversation history"""
     ai_service.clear_chat_history()
     return {"success": True, "message": "Chat history cleared"}
+
+
+# ============================================================================
+# PROJECT DURATION OPTIMIZATION ENDPOINTS (MS Project Compliant)
+# ============================================================================
+
+@app.post("/api/ai/optimize-duration", response_model=OptimizationResult)
+async def optimize_project_duration(request: OptimizeDurationRequest):
+    """
+    Optimize project to meet target duration.
+    Returns multiple strategies with cost/risk analysis.
+
+    MS Project Compliant:
+    - Respects critical path calculation
+    - Modifies LinkLag (lag times) per MS Project schema
+    - Modifies Duration in ISO 8601 format
+    - Preserves dependency types (FF, FS, SF, SS)
+    """
+    global current_project
+
+    if not current_project:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    try:
+        result = ai_service.optimize_project_duration(
+            target_days=request.target_days,
+            project_context=current_project
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+
+
+@app.post("/api/ai/apply-optimization")
+async def apply_optimization_strategy(request: ApplyOptimizationRequest):
+    """
+    Apply an optimization strategy to the project.
+    Updates tasks and saves changes to disk.
+
+    MS Project Compliant:
+    - Updates LinkLag values in minutes (480 min = 1 day)
+    - Updates Duration in ISO 8601 format (PT{hours}H0M0S)
+    - Preserves all MS Project XML schema requirements
+    """
+    global current_project
+
+    if not current_project:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    try:
+        tasks = current_project.get("tasks", [])
+        changes_applied = 0
+
+        # Apply each change based on type
+        for change in request.changes:
+            # Find the task
+            task = next((t for t in tasks if t["id"] == change["task_id"]), None)
+            if not task:
+                continue
+
+            if change["change_type"] == "lag_reduction":
+                # Update lag in predecessor relationship
+                for pred in task.get("predecessors", []):
+                    if pred["outline_number"] == change.get("predecessor_outline"):
+                        # Update lag in MS Project format (minutes)
+                        new_lag_minutes = int(change["suggested_value"] * 480)
+                        pred["lag"] = new_lag_minutes
+                        changes_applied += 1
+                        print(f"Updated lag for task {task['name']}: {change['current_value']:.1f}d → {change['suggested_value']:.1f}d")
+
+            elif change["change_type"] == "duration_compression":
+                # Update task duration in MS Project ISO 8601 format
+                new_duration_hours = int(change["suggested_value"] * 8)
+                task["duration"] = f"PT{new_duration_hours}H0M0S"
+                changes_applied += 1
+                print(f"Compressed task {task['name']}: {change['current_value']:.1f}d → {change['suggested_value']:.1f}d")
+
+        # Save updated project to disk
+        save_project_to_disk()
+
+        return {
+            "success": True,
+            "message": f"Applied {changes_applied} changes successfully",
+            "changes_applied": changes_applied,
+            "strategy_id": request.strategy_id
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to apply optimization: {str(e)}")
 
 
 if __name__ == "__main__":

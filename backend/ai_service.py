@@ -143,6 +143,425 @@ Provide your estimate:"""
         # Fallback
         return {"days": 1, "confidence": 50, "reasoning": "Default estimate"}
 
+    # ============================================================================
+    # MS PROJECT CRITICAL PATH CALCULATION (CPM Algorithm)
+    # ============================================================================
+
+    def _calculate_critical_path(self, tasks: list) -> dict:
+        """
+        Calculate critical path using CPM (Critical Path Method).
+        Implements forward pass and backward pass per MS Project standards.
+
+        Returns:
+            dict with:
+                - critical_tasks: list of tasks on critical path
+                - project_duration: total project duration in days
+                - task_floats: dict of task_id -> total_float
+        """
+        if not tasks:
+            return {
+                "critical_tasks": [],
+                "project_duration": 0,
+                "task_floats": {}
+            }
+
+        # Build task lookup map
+        task_map = {t["id"]: t for t in tasks}
+        outline_to_id = {t["outline_number"]: t["id"] for t in tasks}
+
+        # Initialize all tasks
+        for task in tasks:
+            task["early_start"] = 0.0
+            task["early_finish"] = 0.0
+            task["late_start"] = 0.0
+            task["late_finish"] = 0.0
+            task["total_float"] = 0.0
+            task["is_critical"] = False
+
+        # FORWARD PASS: Calculate Early Start and Early Finish
+        # Process tasks in topological order (respecting dependencies)
+        processed = set()
+
+        def can_process(task):
+            """Check if all predecessors have been processed"""
+            if not task.get("predecessors"):
+                return True
+            for pred in task["predecessors"]:
+                pred_id = outline_to_id.get(pred["outline_number"])
+                if pred_id and pred_id not in processed:
+                    return False
+            return True
+
+        while len(processed) < len(tasks):
+            made_progress = False
+            for task in tasks:
+                if task["id"] in processed:
+                    continue
+
+                if can_process(task):
+                    # Calculate early start
+                    if not task.get("predecessors"):
+                        task["early_start"] = 0.0
+                    else:
+                        max_finish = 0.0
+                        for pred in task["predecessors"]:
+                            pred_id = outline_to_id.get(pred["outline_number"])
+                            if pred_id and pred_id in task_map:
+                                pred_task = task_map[pred_id]
+
+                                # Get lag in days (MS Project stores in minutes, format 7=days)
+                                lag_minutes = pred.get("lag", 0)
+                                lag_days = lag_minutes / 480.0  # 480 minutes = 1 day (8 hours)
+
+                                # Dependency type (MS Project standard):
+                                # 0 = FF (Finish-to-Finish)
+                                # 1 = FS (Finish-to-Start) - DEFAULT
+                                # 2 = SF (Start-to-Finish)
+                                # 3 = SS (Start-to-Start)
+                                dep_type = pred.get("type", 1)
+
+                                if dep_type == 1:  # FS (Finish-to-Start)
+                                    finish_time = pred_task["early_finish"] + lag_days
+                                elif dep_type == 3:  # SS (Start-to-Start)
+                                    finish_time = pred_task["early_start"] + lag_days
+                                elif dep_type == 0:  # FF (Finish-to-Finish)
+                                    finish_time = pred_task["early_finish"] + lag_days - self._parse_duration_to_days(task.get("duration", ""))
+                                elif dep_type == 2:  # SF (Start-to-Finish)
+                                    finish_time = pred_task["early_start"] + lag_days - self._parse_duration_to_days(task.get("duration", ""))
+                                else:
+                                    finish_time = pred_task["early_finish"] + lag_days
+
+                                max_finish = max(max_finish, finish_time)
+
+                        task["early_start"] = max_finish
+
+                    # Calculate early finish
+                    duration_days = self._parse_duration_to_days(task.get("duration", ""))
+                    task["early_finish"] = task["early_start"] + duration_days
+
+                    processed.add(task["id"])
+                    made_progress = True
+
+            if not made_progress:
+                # Circular dependency detected - break the loop
+                break
+
+        # Find project end date (maximum early finish)
+        project_end = max((t["early_finish"] for t in tasks), default=0.0)
+
+        # BACKWARD PASS: Calculate Late Start and Late Finish
+        # Process tasks in reverse topological order
+        processed = set()
+
+        # Build successor map
+        successor_map = {task["id"]: [] for task in tasks}
+        for task in tasks:
+            for pred in task.get("predecessors", []):
+                pred_id = outline_to_id.get(pred["outline_number"])
+                if pred_id:
+                    successor_map[pred_id].append({
+                        "task": task,
+                        "type": pred.get("type", 1),
+                        "lag": pred.get("lag", 0)
+                    })
+
+        def can_process_backward(task):
+            """Check if all successors have been processed"""
+            successors = successor_map.get(task["id"], [])
+            if not successors:
+                return True
+            for succ_info in successors:
+                if succ_info["task"]["id"] not in processed:
+                    return False
+            return True
+
+        while len(processed) < len(tasks):
+            made_progress = False
+            for task in reversed(tasks):
+                if task["id"] in processed:
+                    continue
+
+                if can_process_backward(task):
+                    successors = successor_map.get(task["id"], [])
+
+                    if not successors:
+                        # No successors - use project end date
+                        task["late_finish"] = project_end
+                    else:
+                        min_start = project_end
+                        for succ_info in successors:
+                            succ_task = succ_info["task"]
+                            dep_type = succ_info["type"]
+                            lag_days = succ_info["lag"] / 480.0
+
+                            if dep_type == 1:  # FS (Finish-to-Start)
+                                start_time = succ_task["late_start"] - lag_days
+                            elif dep_type == 3:  # SS (Start-to-Start)
+                                start_time = succ_task["late_start"] - lag_days + self._parse_duration_to_days(task.get("duration", ""))
+                            elif dep_type == 0:  # FF (Finish-to-Finish)
+                                start_time = succ_task["late_finish"] - lag_days
+                            elif dep_type == 2:  # SF (Start-to-Finish)
+                                start_time = succ_task["late_finish"] - lag_days + self._parse_duration_to_days(task.get("duration", ""))
+                            else:
+                                start_time = succ_task["late_start"] - lag_days
+
+                            min_start = min(min_start, start_time)
+
+                        task["late_finish"] = min_start
+
+                    # Calculate late start
+                    duration_days = self._parse_duration_to_days(task.get("duration", ""))
+                    task["late_start"] = task["late_finish"] - duration_days
+
+                    processed.add(task["id"])
+                    made_progress = True
+
+            if not made_progress:
+                break
+
+        # Calculate Total Float and identify Critical Path
+        critical_tasks = []
+        task_floats = {}
+
+        for task in tasks:
+            # Total Float = Late Start - Early Start (or Late Finish - Early Finish)
+            total_float = task["late_start"] - task["early_start"]
+            task["total_float"] = total_float
+            task_floats[task["id"]] = total_float
+
+            # Critical if float is approximately zero (within 0.01 days tolerance)
+            if abs(total_float) < 0.01:
+                task["is_critical"] = True
+                critical_tasks.append(task)
+
+        return {
+            "critical_tasks": critical_tasks,
+            "project_duration": project_end,
+            "task_floats": task_floats
+        }
+
+    # ============================================================================
+    # PROJECT DURATION OPTIMIZATION STRATEGIES
+    # ============================================================================
+
+    def optimize_project_duration(self, target_days: int, project_context: dict) -> dict:
+        """
+        Optimize project to meet target duration.
+        Returns multiple strategies with cost/risk analysis.
+        MS Project compliant.
+        """
+        tasks = project_context.get("tasks", [])
+
+        if not tasks:
+            return {
+                "success": False,
+                "message": "No tasks in project",
+                "current_duration_days": 0,
+                "target_duration_days": target_days,
+                "reduction_needed_days": 0,
+                "achievable": False,
+                "strategies": [],
+                "critical_path_tasks": []
+            }
+
+        # Calculate critical path
+        cp_result = self._calculate_critical_path(tasks)
+        current_duration = cp_result["project_duration"]
+        critical_tasks = cp_result["critical_tasks"]
+        reduction_needed = current_duration - target_days
+
+        if reduction_needed <= 0:
+            return {
+                "success": True,
+                "message": f"Project already meets target ({current_duration:.1f} ≤ {target_days} days)",
+                "current_duration_days": current_duration,
+                "target_duration_days": target_days,
+                "reduction_needed_days": 0,
+                "achievable": True,
+                "strategies": [],
+                "critical_path_tasks": [t["name"] for t in critical_tasks]
+            }
+
+        # Generate optimization strategies
+        strategies = []
+
+        # Strategy 1: Reduce Lags (Lowest Risk)
+        lag_strategy = self._optimize_lags(tasks, critical_tasks, reduction_needed)
+        if lag_strategy:
+            strategies.append(lag_strategy)
+
+        # Strategy 2: Compress Tasks (Medium Risk)
+        compression_strategy = self._compress_tasks(tasks, critical_tasks, reduction_needed)
+        if compression_strategy:
+            strategies.append(compression_strategy)
+
+        # Determine if target is achievable
+        max_savings = sum(s["total_savings_days"] for s in strategies)
+        achievable = max_savings >= reduction_needed
+
+        # Rank strategies
+        strategies = self._rank_strategies(strategies, reduction_needed)
+
+        return {
+            "success": True,
+            "message": f"Found {len(strategies)} optimization strategies",
+            "current_duration_days": current_duration,
+            "target_duration_days": target_days,
+            "reduction_needed_days": reduction_needed,
+            "achievable": achievable,
+            "strategies": strategies,
+            "critical_path_tasks": [t["name"] for t in critical_tasks]
+        }
+
+    def _optimize_lags(self, tasks: list, critical_tasks: list, reduction_needed: float) -> Optional[dict]:
+        """
+        Strategy 1: Reduce lags between dependent tasks.
+        MS Project compliant - modifies LinkLag values.
+        """
+        changes = []
+        total_savings = 0.0
+
+        # Only look at critical path tasks
+        for task in critical_tasks:
+            for pred in task.get("predecessors", []):
+                lag_minutes = pred.get("lag", 0)
+
+                if lag_minutes > 0:
+                    lag_days = lag_minutes / 480.0  # MS Project: 480 min = 1 day
+
+                    # Suggest reducing lag by 40% (conservative approach)
+                    reduction_percent = 0.4
+                    suggested_reduction = lag_days * reduction_percent
+                    new_lag_days = lag_days - suggested_reduction
+                    new_lag_minutes = int(new_lag_days * 480)
+
+                    changes.append({
+                        "task_id": task["id"],
+                        "task_name": task["name"],
+                        "task_outline": task["outline_number"],
+                        "change_type": "lag_reduction",
+                        "current_value": lag_days,
+                        "suggested_value": new_lag_days,
+                        "savings_days": suggested_reduction,
+                        "cost_usd": 0,
+                        "risk_level": "Low",
+                        "description": f"Reduce lag from {lag_days:.1f} to {new_lag_days:.1f} days",
+                        "predecessor_outline": pred["outline_number"],
+                        "lag_format": pred.get("lag_format", 7),
+                        "new_lag_minutes": new_lag_minutes
+                    })
+
+                    total_savings += suggested_reduction
+
+        if not changes:
+            return None
+
+        return {
+            "strategy_id": "lag_reduction",
+            "name": "Reduce Lags",
+            "type": "lag_reduction",
+            "total_savings_days": total_savings,
+            "total_cost_usd": 0,
+            "risk_level": "Low",
+            "recommended": True,
+            "description": f"Reduce buffer time between {len(changes)} dependent tasks on critical path",
+            "changes": changes,
+            "tasks_affected": len(set(c["task_id"] for c in changes)),
+            "critical_path_impact": True
+        }
+
+    def _compress_tasks(self, tasks: list, critical_tasks: list, reduction_needed: float) -> Optional[dict]:
+        """
+        Strategy 2: Compress task durations by adding resources.
+        MS Project compliant - modifies Duration field.
+        """
+        changes = []
+        total_savings = 0.0
+        total_cost = 0.0
+
+        for task in critical_tasks:
+            # Skip summary tasks and milestones
+            if task.get("summary") or task.get("milestone"):
+                continue
+
+            duration_days = self._parse_duration_to_days(task.get("duration", ""))
+
+            # Only compress tasks longer than 2 days
+            if duration_days > 2:
+                # Suggest 20% compression (realistic with added resources)
+                compression_percent = 0.2
+                compression_days = duration_days * compression_percent
+                new_duration_days = duration_days - compression_days
+
+                # Convert back to MS Project format
+                new_duration_hours = int(new_duration_days * 8)
+                new_duration_format = f"PT{new_duration_hours}H0M0S"
+
+                # Estimate cost: $500/day for overtime or extra crew
+                cost = compression_days * 500
+
+                changes.append({
+                    "task_id": task["id"],
+                    "task_name": task["name"],
+                    "task_outline": task["outline_number"],
+                    "change_type": "duration_compression",
+                    "current_value": duration_days,
+                    "suggested_value": new_duration_days,
+                    "savings_days": compression_days,
+                    "cost_usd": cost,
+                    "risk_level": "Medium",
+                    "description": f"Compress from {duration_days:.1f} to {new_duration_days:.1f} days (add crew/overtime)",
+                    "duration_format": new_duration_format
+                })
+
+                total_savings += compression_days
+                total_cost += cost
+
+                # Stop if we've achieved enough savings
+                if total_savings >= reduction_needed:
+                    break
+
+        if not changes:
+            return None
+
+        return {
+            "strategy_id": "task_compression",
+            "name": "Compress Tasks",
+            "type": "task_compression",
+            "total_savings_days": total_savings,
+            "total_cost_usd": total_cost,
+            "risk_level": "Medium",
+            "recommended": False,
+            "description": f"Reduce duration of {len(changes)} critical tasks by adding resources",
+            "changes": changes,
+            "tasks_affected": len(changes),
+            "critical_path_impact": True
+        }
+
+    def _rank_strategies(self, strategies: list, reduction_needed: float) -> list:
+        """Rank strategies by effectiveness, cost, and risk"""
+        def strategy_score(s):
+            # Prefer strategies that meet the need
+            meets_need = 1.0 if s["total_savings_days"] >= reduction_needed else 0.5
+
+            # Prefer lower cost
+            cost_factor = 1.0 / (1.0 + s["total_cost_usd"] / 10000.0)
+
+            # Prefer lower risk
+            risk_scores = {"Low": 1.0, "Medium": 0.7, "High": 0.4}
+            risk_factor = risk_scores.get(s["risk_level"], 0.5)
+
+            return meets_need * cost_factor * risk_factor
+
+        # Sort by score (highest first)
+        sorted_strategies = sorted(strategies, key=strategy_score, reverse=True)
+
+        # Mark top strategy as recommended
+        if sorted_strategies:
+            sorted_strategies[0]["recommended"] = True
+
+        return sorted_strategies
+
     def _parse_duration_to_days(self, duration_str: str) -> float:
         """
         Parse ISO 8601 duration format (PT8H0M0S) to days
