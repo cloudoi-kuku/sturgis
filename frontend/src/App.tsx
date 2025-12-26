@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { GanttChart } from './components/GanttChart';
 import { TaskEditor } from './components/TaskEditor';
@@ -22,6 +22,7 @@ import type {
   ProjectMetadata,
 } from './api/client';
 import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle } from 'lucide-react';
+import { parseISO, addDays, differenceInDays } from 'date-fns';
 import './App.css';
 
 const queryClient = new QueryClient();
@@ -201,6 +202,77 @@ function AppContent() {
 
   const tasks = tasksData?.tasks || [];
 
+  // Calculate project duration
+  const projectDuration = useMemo(() => {
+    if (!tasks || tasks.length === 0 || !metadata) return null;
+
+    // Parse duration from ISO 8601 format (PT8H0M0S) to days
+    const parseDuration = (duration: string): number => {
+      const match = duration.match(/PT(\d+)H/);
+      if (match) {
+        const hours = parseInt(match[1]);
+        return hours / 8; // Convert hours to days (8-hour workday)
+      }
+      return 1;
+    };
+
+    // Build task map for quick lookup
+    const taskMap = new Map(tasks.map(t => [t.outline_number, t]));
+    const taskDates = new Map<string, Date>();
+    const startDate = parseISO(metadata.start_date);
+
+    // Calculate start dates for all tasks (considering predecessors)
+    const calculateStartDate = (task: Task): Date => {
+      if (taskDates.has(task.id)) {
+        return taskDates.get(task.id)!;
+      }
+
+      if (!task.predecessors || task.predecessors.length === 0) {
+        taskDates.set(task.id, startDate);
+        return startDate;
+      }
+
+      let latestEnd = startDate;
+      for (const pred of task.predecessors) {
+        const predTask = taskMap.get(pred.outline_number);
+        if (predTask) {
+          const predStart = calculateStartDate(predTask);
+          const predDuration = parseDuration(predTask.duration);
+          const predEnd = addDays(predStart, predDuration);
+          const lagDays = (pred.lag || 0) / 480; // Convert minutes to days
+          const adjustedEnd = addDays(predEnd, lagDays);
+          if (adjustedEnd > latestEnd) {
+            latestEnd = adjustedEnd;
+          }
+        }
+      }
+
+      taskDates.set(task.id, latestEnd);
+      return latestEnd;
+    };
+
+    // Calculate all task dates
+    tasks.forEach(task => calculateStartDate(task));
+
+    // Find the latest end date
+    let projectEnd = startDate;
+    tasks.forEach(task => {
+      const taskStart = taskDates.get(task.id) || startDate;
+      const taskDuration = parseDuration(task.duration);
+      const taskEnd = addDays(taskStart, taskDuration);
+      if (taskEnd > projectEnd) {
+        projectEnd = taskEnd;
+      }
+    });
+
+    const totalDays = differenceInDays(projectEnd, startDate);
+    return {
+      days: totalDays,
+      startDate: metadata.start_date,
+      endDate: projectEnd.toISOString().split('T')[0]
+    };
+  }, [tasks, metadata]);
+
   return (
     <div className="app">
       <header className="app-header">
@@ -245,7 +317,12 @@ function AppContent() {
         <div className="project-info">
           <div className="project-metadata">
             <h2>{metadata.name}</h2>
-            <p>Start: {metadata.start_date} | Status: {metadata.status_date}</p>
+            <p>
+              Start: {metadata.start_date} | Status: {metadata.status_date}
+              {projectDuration && (
+                <> | Duration: <strong>{projectDuration.days} days</strong> (End: {projectDuration.endDate})</>
+              )}
+            </p>
           </div>
           <button className="settings-button" onClick={() => setIsMetadataOpen(true)}>
             <Settings size={18} />

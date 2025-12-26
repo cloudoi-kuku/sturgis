@@ -304,7 +304,7 @@ body {
 
 .gantt-header {
   display: grid;
-  grid-template-columns: 50px 100px 250px 150px 100px;
+  grid-template-columns: 50px 100px 250px 150px 100px 150px;
   background: #34495e;
   color: white;
   font-weight: 600;
@@ -331,7 +331,7 @@ body {
 
 .gantt-task-row {
   display: grid;
-  grid-template-columns: 50px 100px 250px 150px 100px;
+  grid-template-columns: 50px 100px 250px 150px 100px 150px;
   border-bottom: 1px solid #e1e8ed;
   cursor: pointer;
   transition: background 0.2s;
@@ -356,6 +356,7 @@ body {
 .gantt-task-name,
 .gantt-task-start,
 .gantt-task-duration,
+.gantt-task-predecessors,
 .gantt-task-wbs,
 .gantt-task-number {
   padding: 0 1rem;
@@ -395,6 +396,19 @@ body {
 .gantt-task-start {
   color: #7f8c8d;
   font-size: 0.85rem;
+}
+
+.gantt-task-predecessors {
+  color: #3498db;
+  font-size: 0.85rem;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
+.gantt-task-predecessors:empty::after {
+  content: '-';
+  color: #bdc3c7;
+  font-weight: 400;
 }
 
 .expand-button {

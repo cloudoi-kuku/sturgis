@@ -68,6 +68,44 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     return `${days} days`;
   };
 
+  // Format predecessors for display (MS Project style)
+  const formatPredecessors = (predecessors: Task['predecessors']): string => {
+    if (!predecessors || predecessors.length === 0) return '';
+
+    return predecessors.map(pred => {
+      // Dependency type mapping
+      const typeMap: { [key: number]: string } = {
+        0: 'FF', // Finish-to-Finish
+        1: 'FS', // Finish-to-Start (default)
+        2: 'SF', // Start-to-Finish
+        3: 'SS', // Start-to-Start
+      };
+
+      const type = typeMap[pred.type] || 'FS';
+
+      // Convert lag from minutes to days (480 min = 1 day)
+      const lagDays = (pred.lag || 0) / 480;
+
+      // Format: "1.2FS" or "1.2FS+5d" or "1.2FS-3d"
+      let result = pred.outline_number;
+
+      // Only show type if not default FS
+      if (pred.type !== 1) {
+        result += type;
+      } else {
+        result += type; // Always show type for clarity
+      }
+
+      // Add lag if non-zero
+      if (lagDays !== 0) {
+        const sign = lagDays > 0 ? '+' : '';
+        result += `${sign}${lagDays}d`;
+      }
+
+      return result;
+    }).join(', ');
+  };
+
   // Sort tasks by outline number to maintain hierarchy
   const sortedTasks = useMemo(() => {
     return [...tasks].sort((a, b) => {
@@ -279,6 +317,34 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     return headers;
   }, [projectStartDate, maxDay, zoomLevel, showWeekends]);
 
+  // Calculate summary task durations based on their children
+  const calculateSummaryDuration = useCallback((summaryTask: Task): number => {
+    // Find all child tasks (tasks that start with this summary's outline number)
+    const childTasks = tasks.filter(t =>
+      t.outline_number.startsWith(summaryTask.outline_number + '.') &&
+      t.outline_number !== summaryTask.outline_number
+    );
+
+    if (childTasks.length === 0) return 0;
+
+    // Calculate start and end dates for all children
+    const childDates = childTasks.map(child => {
+      const startDate = calculateTaskDates.get(child.id) || parseISO(projectStartDate);
+      const duration = parseDuration(child.duration);
+      const endDate = addDays(startDate, duration);
+      return { startDate, endDate };
+    });
+
+    // Find earliest start and latest end
+    const earliestStart = childDates.reduce((min, curr) =>
+      curr.startDate < min ? curr.startDate : min, childDates[0].startDate);
+    const latestEnd = childDates.reduce((max, curr) =>
+      curr.endDate > max ? curr.endDate : max, childDates[0].endDate);
+
+    // Calculate duration in days
+    return differenceInDays(latestEnd, earliestStart);
+  }, [tasks, calculateTaskDates, projectStartDate]);
+
   // Calculate project statistics
   const projectStats = useMemo(() => {
     const regularTasks = tasks.filter(t => !t.summary && !t.milestone);
@@ -435,6 +501,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             <div className="gantt-header-cell">Task Name</div>
             <div className="gantt-header-cell">Start Date</div>
             <div className="gantt-header-cell">Duration</div>
+            <div className="gantt-header-cell">Predecessors</div>
           </div>
           <div className="gantt-tasks" ref={taskListRef} onScroll={handleTaskListScroll}>
             {visibleTasks.map((task, index) => {
@@ -477,7 +544,16 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     {calculatedStartDate ? formatDate(calculatedStartDate.toISOString()) : '-'}
                   </div>
                   <div className="gantt-task-duration">
-                    {task.summary ? '(auto)' : formatDuration(task.duration)}
+                    {task.summary ? (() => {
+                      const summaryDuration = calculateSummaryDuration(task);
+                      return summaryDuration === 0 ? '0 days' :
+                             summaryDuration === 1 ? '1 day' :
+                             summaryDuration % 1 === 0 ? `${summaryDuration} days` :
+                             `${summaryDuration.toFixed(1)} days`;
+                    })() : formatDuration(task.duration)}
+                  </div>
+                  <div className="gantt-task-predecessors" title={formatPredecessors(task.predecessors)}>
+                    {formatPredecessors(task.predecessors)}
                   </div>
                 </div>
               );

@@ -6,6 +6,8 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  commandExecuted?: boolean;
+  changes?: any[];
 }
 
 interface AIChatProps {
@@ -17,7 +19,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "Hi! I'm your construction project AI assistant. I can help you with task duration estimates, sequencing, dependencies, and answer questions about your project. What would you like to know?",
+      content: "Hi! I'm your construction project AI assistant. I can help you with task duration estimates, sequencing, dependencies, and answer questions about your project.\n\n✨ I can also modify your project! Try commands like:\n• 'Change task 1.2 duration to 10 days'\n• 'Set lag for task 2.3 to 5 days'\n• 'Set project start date to 2024-01-15'\n• 'Add 10% buffer to all tasks'\n\nWhat would you like to do?",
       timestamp: new Date()
     }
   ]);
@@ -56,14 +58,22 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose }) => {
       if (!response.ok) throw new Error('Chat request failed');
 
       const data = await response.json();
-      
+
       const assistantMessage: Message = {
         role: 'assistant',
         content: data.response,
-        timestamp: new Date()
+        timestamp: new Date(),
+        commandExecuted: data.command_executed,
+        changes: data.changes
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // If a command was executed, trigger a page refresh to show updated data
+      if (data.command_executed && data.changes && data.changes.length > 0) {
+        // Dispatch custom event to notify parent component
+        window.dispatchEvent(new CustomEvent('projectUpdated'));
+      }
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage: Message = {
@@ -123,12 +133,17 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose }) => {
 
         <div className="ai-chat-messages">
           {messages.map((msg, idx) => (
-            <div key={idx} className={`ai-chat-message ${msg.role}`}>
+            <div key={idx} className={`ai-chat-message ${msg.role} ${msg.commandExecuted ? 'command-executed' : ''}`}>
               <div className="ai-chat-message-avatar">
-                {msg.role === 'user' ? '👤' : '🤖'}
+                {msg.role === 'user' ? '👤' : msg.commandExecuted ? '⚡' : '🤖'}
               </div>
               <div className="ai-chat-message-content">
                 <div className="ai-chat-message-text">{msg.content}</div>
+                {msg.commandExecuted && msg.changes && msg.changes.length > 0 && (
+                  <div className="ai-chat-command-badge">
+                    ✨ Modified {msg.changes.length} item{msg.changes.length > 1 ? 's' : ''}
+                  </div>
+                )}
                 <div className="ai-chat-message-time">
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>

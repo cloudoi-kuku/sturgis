@@ -28,6 +28,7 @@ from models import (
 from xml_processor import MSProjectXMLProcessor
 from validator import ProjectValidator
 from ai_service import ai_service
+from ai_command_handler import ai_command_handler
 
 app = FastAPI(title="MS Project Configuration API", version="1.0.0")
 
@@ -365,15 +366,67 @@ async def categorize_task(request: TaskCategorizationRequest):
 @app.post("/api/ai/chat")
 async def chat_with_ai(request: ChatRequest):
     """
-    Conversational AI chat for construction project assistance
-    Returns AI response as text
+    Conversational AI chat for construction project assistance with command execution
+    Can answer questions AND modify tasks/project based on natural language commands
+    Returns AI response as text, plus any modifications made
     """
+    global current_project
+
     try:
+        # First, check if the message contains a command
+        command = ai_command_handler.parse_command(request.message)
+
+        if command and current_project:
+            # Execute the command
+            result = ai_command_handler.execute_command(command, current_project)
+
+            if result["success"]:
+                # Save changes to disk
+                save_project_to_disk()
+
+                # Generate AI response confirming the change
+                response = f"✅ {result['message']}\n\n"
+
+                # Add details about changes
+                if result["changes"]:
+                    response += "Changes made:\n"
+                    for change in result["changes"][:5]:  # Show first 5 changes
+                        if change["type"] == "duration":
+                            response += f"• Task {change['task']} '{change['task_name']}': {change['old_days']:.1f} → {change['new_days']} days\n"
+                        elif change["type"] == "lag":
+                            response += f"• Task {change['task']} lag: {change['old_days']:.1f} → {change['new_days']} days\n"
+                        elif change["type"] == "project_start_date":
+                            response += f"• Project start date: {change['old_value']} → {change['new_value']}\n"
+
+                    if len(result["changes"]) > 5:
+                        response += f"• ... and {len(result['changes']) - 5} more changes\n"
+
+                return {
+                    "response": response.strip(),
+                    "command_executed": True,
+                    "changes": result["changes"]
+                }
+            else:
+                # Command failed, let AI explain why
+                response = await ai_service.chat(
+                    user_message=f"I tried to execute: '{request.message}' but got error: {result['message']}. Please explain this to the user.",
+                    project_context=current_project
+                )
+                return {
+                    "response": response,
+                    "command_executed": False,
+                    "error": result["message"]
+                }
+
+        # No command detected, use normal AI chat
         response = await ai_service.chat(
             user_message=request.message,
-            project_context=current_project  # ← Context-aware chat!
+            project_context=current_project
         )
-        return {"response": response}
+        return {
+            "response": response,
+            "command_executed": False
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 

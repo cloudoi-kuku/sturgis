@@ -220,6 +220,29 @@
   padding: 0 4px;
 }
 
+.ai-chat-command-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  margin-top: 8px;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.ai-chat-message.command-executed .ai-chat-message-bubble {
+  border-left: 3px solid #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .ai-chat-message.command-executed .ai-chat-message-bubble {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  }
+}
+
 .ai-chat-typing {
   display: flex;
   align-items: center;
