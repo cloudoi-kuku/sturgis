@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Task, TaskCreate, TaskUpdate, Predecessor } from '../api/client';
 import { X, Plus, Trash2 } from 'lucide-react';
+import { AITaskHelper } from './AITaskHelper';
 
 interface TaskEditorProps {
   task?: Task;
@@ -149,6 +150,17 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
               required
             />
           </div>
+
+          {/* AI Task Helper - Smart Duration & Category Suggestions */}
+          {!isCurrentTaskSummary && !formData.milestone && (
+            <AITaskHelper
+              taskName={formData.name}
+              onDurationSuggest={(days) => {
+                setDurationDays(days);
+                setFormData({ ...formData, duration: daysToDuration(days) });
+              }}
+            />
+          )}
 
           <div className="form-row">
             <div className="form-group">

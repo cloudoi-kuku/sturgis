@@ -74,3 +74,17 @@ class ValidationResult(BaseModel):
     errors: List[ValidationError] = Field(default_factory=list)
     warnings: List[ValidationError] = Field(default_factory=list)
 
+# AI Models
+class DurationEstimateRequest(BaseModel):
+    task_name: str
+    task_type: str = ""
+
+class DependencyDetectionRequest(BaseModel):
+    tasks: List[Dict]
+
+class TaskCategorizationRequest(BaseModel):
+    task_name: str
+
+class ChatRequest(BaseModel):
+    message: str
+

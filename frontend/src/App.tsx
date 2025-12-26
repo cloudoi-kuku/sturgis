@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient
 import { GanttChart } from './components/GanttChart';
 import { TaskEditor } from './components/TaskEditor';
 import { ProjectMetadataEditor } from './components/ProjectMetadataEditor';
+import { AIChat } from './components/AIChat';
 import {
   uploadProject,
   getTasks,
@@ -20,7 +21,7 @@ import type {
   TaskUpdate,
   ProjectMetadata,
 } from './api/client';
-import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings } from 'lucide-react';
+import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle } from 'lucide-react';
 import './App.css';
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ function AppContent() {
   const [selectedTask, setSelectedTask] = useState<Task | undefined>();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isMetadataOpen, setIsMetadataOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const queryClientInstance = useQueryClient();
 
@@ -169,9 +171,31 @@ function AppContent() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Export error:', error);
-      alert('Error exporting project.');
+
+      // Extract error message from response
+      let errorMessage = 'Error exporting project.';
+      if (error.response?.data) {
+        // If the error response is a Blob (from blob responseType), convert it to text
+        if (error.response.data instanceof Blob) {
+          try {
+            const text = await error.response.data.text();
+            const errorData = JSON.parse(text);
+            errorMessage = errorData.detail || errorMessage;
+          } catch (e) {
+            // If parsing fails, use default message
+          }
+        } else if (typeof error.response.data === 'object') {
+          errorMessage = error.response.data.detail || errorMessage;
+        } else if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      alert(errorMessage);
     }
   };
 
@@ -204,6 +228,15 @@ function AppContent() {
           <button className="action-button primary" onClick={handleExport} disabled={!metadata}>
             <Download size={18} />
             Export XML
+          </button>
+
+          <button
+            className="action-button ai-chat-button"
+            onClick={() => setIsChatOpen(true)}
+            title="AI Assistant"
+          >
+            <MessageCircle size={18} />
+            AI Chat
           </button>
         </div>
       </header>
@@ -289,6 +322,11 @@ function AppContent() {
         onSave={async (updatedMetadata) => {
           await updateMetadataMutation.mutateAsync(updatedMetadata);
         }}
+      />
+
+      <AIChat
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
       />
     </div>
   );
