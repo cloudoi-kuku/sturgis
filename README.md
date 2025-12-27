@@ -8,8 +8,10 @@ A modern web-based tool for configuring and managing Microsoft Project XML files
 - ✅ **Real-time Validation** - Catch configuration errors before export
 - 🔄 **Task Management** - Create, edit, and delete tasks with ease
 - 📊 **Dependency Visualization** - See task relationships at a glance
-- 🚀 **Modern Architecture** - React frontend + Python FastAPI backend
+- 🤖 **AI-Powered Features** - Local AI for task estimation, categorization, and optimization
+- 🚀 **Modern Architecture** - React frontend + Python FastAPI backend + Ollama AI
 - 💾 **XML Import/Export** - Seamless MS Project integration
+- 🐳 **Fully Dockerized** - No external dependencies, runs anywhere
 
 ## Architecture
 
@@ -24,13 +26,49 @@ A modern web-based tool for configuring and managing Microsoft Project XML files
 - Comprehensive validation engine
 - Task dependency management
 - MS Project XML parsing and generation
+- AI integration for intelligent features
+
+### AI Service (Ollama + Llama 3.2)
+- Local AI model (no cloud dependencies)
+- Task duration estimation
+- Automatic task categorization
+- Dependency detection
+- Project optimization suggestions
+- Natural language chat interface
 
 ## Quick Start
 
-### Prerequisites
+### 🐳 Docker (Recommended - Works on All OS)
+
+The easiest way to run the application with **full AI capabilities** on any operating system:
+
+```bash
+# Linux/Mac
+./start.sh
+
+# Windows
+start.bat
+
+# Or manually with Docker Compose
+docker-compose up -d
+```
+
+Then open http://localhost in your browser.
+
+**📖 Documentation:**
+- **Docker Setup**: [DOCKER-README.md](DOCKER-README.md)
+- **AI Features**: [AI-SERVICE-README.md](AI-SERVICE-README.md)
+- **Ollama Integration**: [OLLAMA-INTEGRATION-SUMMARY.md](OLLAMA-INTEGRATION-SUMMARY.md)
+
+---
+
+### 💻 Manual Setup (Development)
+
+#### Prerequisites
 - Python 3.8+
 - Node.js 16+
 - npm or yarn
+- Ollama (for AI features)
 
 ### Backend Setup
 

@@ -1,0 +1,94 @@
+services:
+  # Ollama AI Service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: msproject-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      # Persist Ollama models
+      - ollama-data:/root/.ollama
+    networks:
+      - msproject-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Pull and run the model on startup
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Start Ollama in the background
+        /bin/ollama serve &
+        # Wait for Ollama to be ready
+        sleep 5
+        # Pull the model if not already present
+        ollama pull llama3.2:3b
+        # Keep the container running
+        wait
+
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: msproject-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount project data directory for persistence
+      - ./backend/project_data:/app/project_data
+      # Mount source code for development (hot reload)
+      - ./backend:/app
+      # Exclude venv from mount
+      - /app/venv
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=development
+      - OLLAMA_BASE_URL=http://ollama:11434
+    networks:
+      - msproject-network
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: msproject-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - msproject-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  msproject-network:
+    driver: bridge
+
+volumes:
+  project-data:
+    driver: local
+  ollama-data:
+    driver: local
+

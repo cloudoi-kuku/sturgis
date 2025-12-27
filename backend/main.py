@@ -21,6 +21,7 @@ from models import (
     DependencyDetectionRequest,
     TaskCategorizationRequest,
     ChatRequest,
+    GenerateProjectRequest,
     OptimizeDurationRequest,
     OptimizationResult,
     ApplyOptimizationRequest
@@ -29,13 +30,20 @@ from xml_processor import MSProjectXMLProcessor
 from validator import ProjectValidator
 from ai_service import ai_service
 from ai_command_handler import ai_command_handler
+from database import DatabaseService
 
 app = FastAPI(title="MS Project Configuration API", version="1.0.0")
 
 # CORS middleware for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:3000",  # Alternative dev port
+        "http://localhost",       # Docker frontend
+        "http://localhost:80",    # Docker frontend with port
+        "http://frontend",        # Docker service name
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,60 +52,104 @@ app.add_middleware(
 # Storage configuration
 STORAGE_DIR = Path("project_data")
 STORAGE_DIR.mkdir(exist_ok=True)
-CURRENT_PROJECT_FILE = STORAGE_DIR / "current_project.json"
-XML_TEMPLATE_FILE = STORAGE_DIR / "xml_template.xml"
 
-# In-memory storage for the current project state
+# Initialize database service
+db = DatabaseService()
+
+# In-memory cache for the current project state (for backward compatibility)
 current_project: Optional[Dict[str, Any]] = None
+current_project_id: Optional[str] = None
 xml_processor = MSProjectXMLProcessor()
 validator = ProjectValidator()
 
 
-def save_project_to_disk():
-    """Save current project and XML template to disk"""
-    if current_project:
+def save_project_to_db():
+    """Save current project state to database"""
+    global current_project_id
+    if current_project and current_project_id:
         try:
-            # Save project data
-            with open(CURRENT_PROJECT_FILE, 'w', encoding='utf-8') as f:
-                json.dump(current_project, f, indent=2, ensure_ascii=False)
+            # Update project metadata
+            db.update_project_metadata(
+                current_project_id,
+                current_project.get('name', 'Unnamed Project'),
+                current_project.get('start_date', '2024-01-01'),
+                current_project.get('status_date', '2024-01-01')
+            )
 
             # Save XML template if available
             if xml_processor.xml_root is not None:
                 xml_str = ET.tostring(xml_processor.xml_root, encoding='unicode')
-                with open(XML_TEMPLATE_FILE, 'w', encoding='utf-8') as f:
-                    f.write(xml_str)
+                db.save_xml_template(current_project_id, xml_str)
 
-            print(f"Saved project to disk: {current_project.get('name', 'Unknown')}")
+            print(f"Saved project to database: {current_project.get('name', 'Unknown')} (ID: {current_project_id})")
         except Exception as e:
-            print(f"Error saving project to disk: {e}")
+            print(f"Error saving project to database: {e}")
 
 
-def load_project_from_disk():
-    """Load project and XML template from disk on startup"""
-    global current_project
-    if CURRENT_PROJECT_FILE.exists():
+def load_project_from_db(project_id: Optional[str] = None):
+    """Load project from database"""
+    global current_project, current_project_id
+
+    # If no project_id specified, load the active project
+    if project_id is None:
+        project_data = db.get_active_project()
+        if project_data:
+            project_id = project_data['id']
+
+    if project_id:
         try:
-            # Load project data
-            with open(CURRENT_PROJECT_FILE, 'r', encoding='utf-8') as f:
-                current_project = json.load(f)
+            # Load project metadata
+            project_data = db.get_project(project_id)
+            if not project_data:
+                return False
+
+            # Load tasks
+            tasks = db.get_tasks(project_id)
+
+            # Build current_project dict
+            current_project = {
+                "name": project_data['name'],
+                "start_date": project_data['start_date'],
+                "status_date": project_data['status_date'],
+                "tasks": tasks
+            }
+            current_project_id = project_id
 
             # Load XML template if available
-            if XML_TEMPLATE_FILE.exists():
-                with open(XML_TEMPLATE_FILE, 'r', encoding='utf-8') as f:
-                    xml_content = f.read()
-                    xml_processor.xml_root = ET.fromstring(xml_content)
-                    print(f"Loaded XML template from disk")
+            xml_content = db.get_xml_template(project_id)
+            if xml_content:
+                xml_processor.xml_root = ET.fromstring(xml_content)
+            else:
+                xml_processor.xml_root = None
 
-            print(f"Loaded project from disk: {current_project.get('name', 'Unknown')}")
+            # Switch to this project
+            db.switch_project(project_id)
+
+            print(f"Loaded project from database: {current_project.get('name', 'Unknown')} (ID: {project_id})")
+            return True
         except Exception as e:
-            print(f"Error loading project from disk: {e}")
+            print(f"Error loading project from database: {e}")
+
+    return False
 
 
 # Load project on startup
 @app.on_event("startup")
 async def startup_event():
     """Load saved project on server startup"""
-    load_project_from_disk()
+    load_project_from_db()
+
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Docker and monitoring"""
+    return {
+        "status": "healthy",
+        "service": "MS Project Configuration API",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @app.get("/")
@@ -106,28 +158,125 @@ async def root():
     return {"status": "ok", "message": "MS Project Configuration API"}
 
 
+@app.get("/api/projects")
+async def get_all_projects():
+    """Get list of all saved projects"""
+    projects = db.list_projects()
+    # Format for frontend compatibility
+    formatted_projects = []
+    for p in projects:
+        formatted_projects.append({
+            "id": p['id'],
+            "name": p['name'],
+            "task_count": p['task_count'],
+            "start_date": p['start_date'],
+            "is_active": bool(p['is_active'])
+        })
+    return {"projects": formatted_projects}
+
+
+@app.post("/api/projects/new")
+async def create_new_project(name: str = "New Project"):
+    """Create a new empty project"""
+    global current_project, current_project_id
+
+    # Create project in database
+    project_id = db.create_project(
+        name=name,
+        start_date=datetime.now().strftime("%Y-%m-%d"),
+        status_date=datetime.now().strftime("%Y-%m-%d")
+    )
+
+    # Create minimal project structure in memory
+    current_project = {
+        "name": name,
+        "start_date": datetime.now().strftime("%Y-%m-%d"),
+        "status_date": datetime.now().strftime("%Y-%m-%d"),
+        "tasks": []
+    }
+    current_project_id = project_id
+
+    # Clear XML template for new project
+    xml_processor.xml_root = None
+
+    return {
+        "success": True,
+        "message": "New project created",
+        "project_id": project_id,
+        "project": current_project
+    }
+
+
+@app.post("/api/projects/{project_id}/switch")
+async def switch_project(project_id: str):
+    """Switch to a different project"""
+    global current_project, current_project_id
+
+    if load_project_from_db(project_id):
+        return {
+            "success": True,
+            "message": "Switched to project",
+            "project_id": project_id,
+            "project": current_project
+        }
+    else:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+
+@app.delete("/api/projects/{project_id}")
+async def delete_project(project_id: str):
+    """Delete a project"""
+    global current_project, current_project_id
+
+    # Don't allow deleting the currently active project
+    if project_id == current_project_id:
+        raise HTTPException(status_code=400, detail="Cannot delete the currently active project. Switch to another project first.")
+
+    if db.delete_project(project_id):
+        return {
+            "success": True,
+            "message": "Project deleted successfully"
+        }
+    else:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+
 @app.post("/api/project/upload")
 async def upload_project(file: UploadFile = File(...)):
-    """Upload and parse an MS Project XML file"""
-    global current_project
-    
+    """Upload and parse an MS Project XML file - creates a new project"""
+    global current_project, current_project_id
+
     if not file.filename.endswith('.xml'):
         raise HTTPException(status_code=400, detail="File must be an XML file")
-    
+
     try:
         content = await file.read()
         xml_content = content.decode('utf-8')
-        
+
         # Parse the XML and extract project data
         project_data = xml_processor.parse_xml(xml_content)
-        current_project = project_data
 
-        # Save to disk
-        save_project_to_disk()
+        # Create project in database
+        project_id = db.create_project(
+            name=project_data.get('name', 'Imported Project'),
+            start_date=project_data.get('start_date', datetime.now().strftime("%Y-%m-%d")),
+            status_date=project_data.get('status_date', datetime.now().strftime("%Y-%m-%d")),
+            xml_template=xml_content
+        )
+
+        # Bulk insert tasks
+        tasks = project_data.get('tasks', [])
+        if tasks:
+            db.bulk_create_tasks(project_id, tasks)
+
+        # Update in-memory state
+        current_project = project_data
+        current_project_id = project_id
 
         return {
             "success": True,
             "message": "Project uploaded successfully",
+            "project_id": project_id,
             "project": project_data
         }
     except Exception as e:
@@ -152,16 +301,22 @@ async def get_project_metadata():
 async def update_project_metadata(metadata: ProjectMetadata):
     """Update project metadata"""
     global current_project
-    
-    if not current_project:
+
+    if not current_project or not current_project_id:
         raise HTTPException(status_code=404, detail="No project loaded")
-    
+
+    # Update in database
+    db.update_project_metadata(
+        current_project_id,
+        metadata.name,
+        metadata.start_date,
+        metadata.status_date
+    )
+
+    # Update in-memory state
     current_project["name"] = metadata.name
     current_project["start_date"] = metadata.start_date
     current_project["status_date"] = metadata.status_date
-
-    # Save to disk
-    save_project_to_disk()
 
     return {"success": True, "metadata": metadata}
 
@@ -179,20 +334,24 @@ async def get_tasks():
 async def create_task(task: TaskCreate):
     """Create a new task"""
     global current_project
-    
-    if not current_project:
+
+    if not current_project or not current_project_id:
         raise HTTPException(status_code=404, detail="No project loaded")
-    
+
     # Validate the task
-    validation = validator.validate_task(task.dict(), current_project.get("tasks", []))
+    task_dict = task.model_dump()
+    validation = validator.validate_task(task_dict, current_project.get("tasks", []))
     if not validation["valid"]:
         raise HTTPException(status_code=400, detail=validation["errors"])
-    
-    # Add the task
-    new_task = xml_processor.add_task(current_project, task.dict())
 
-    # Save to disk
-    save_project_to_disk()
+    # Add the task to in-memory project
+    new_task = xml_processor.add_task(current_project, task_dict)
+
+    # Save to database
+    db.create_task(current_project_id, new_task)
+
+    # Save XML template
+    save_project_to_db()
 
     return {"success": True, "task": new_task}
 
@@ -202,19 +361,22 @@ async def update_task(task_id: str, task: TaskUpdate):
     """Update an existing task"""
     global current_project
 
-    if not current_project:
+    if not current_project or not current_project_id:
         raise HTTPException(status_code=404, detail="No project loaded")
 
-    # Update the task
-    updates = task.dict(exclude_unset=True)
+    # Update the task in memory
+    updates = task.model_dump(exclude_unset=True)
     print(f"DEBUG: Updating task {task_id} with updates: {updates}")
     updated_task = xml_processor.update_task(current_project, task_id, updates)
 
     if not updated_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Save to disk
-    save_project_to_disk()
+    # Update in database
+    db.update_task(task_id, updated_task)
+
+    # Save XML template
+    save_project_to_db()
 
     print(f"DEBUG: Updated task result: {updated_task}")
     return {"success": True, "task": updated_task}
@@ -225,7 +387,7 @@ async def delete_task(task_id: str):
     """Delete a task"""
     global current_project
 
-    if not current_project:
+    if not current_project or not current_project_id:
         raise HTTPException(status_code=404, detail="No project loaded")
 
     success = xml_processor.delete_task(current_project, task_id)
@@ -233,8 +395,11 @@ async def delete_task(task_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Save to disk
-    save_project_to_disk()
+    # Delete from database
+    db.delete_task(task_id)
+
+    # Save XML template
+    save_project_to_db()
 
     return {"success": True, "message": "Task deleted successfully"}
 
@@ -381,8 +546,8 @@ async def chat_with_ai(request: ChatRequest):
             result = ai_command_handler.execute_command(command, current_project)
 
             if result["success"]:
-                # Save changes to disk
-                save_project_to_disk()
+                # Save changes to database
+                save_project_to_db()
 
                 # Generate AI response confirming the change
                 response = f"✅ {result['message']}\n\n"
@@ -438,6 +603,84 @@ async def clear_chat_history():
     return {"success": True, "message": "Chat history cleared"}
 
 
+@app.post("/api/ai/generate-project")
+async def generate_project_from_description(request: GenerateProjectRequest):
+    """
+    Generate a complete construction project from a natural language description.
+    Creates a new project with tasks, durations, dependencies, and dates.
+
+    Returns: {
+        "success": bool,
+        "project_id": str,
+        "project_name": str,
+        "task_count": int,
+        "message": str
+    }
+    """
+    global current_project, current_project_id
+
+    try:
+        # Generate project using AI
+        result = await ai_service.generate_project(
+            description=request.description,
+            project_type=request.project_type
+        )
+
+        if not result.get("success", False):
+            raise HTTPException(
+                status_code=500,
+                detail=f"AI project generation failed: {result.get('error', 'Unknown error')}"
+            )
+
+        # Create project in database
+        project_name = result.get("project_name", "AI Generated Project")
+        start_date = result.get("start_date", datetime.now().strftime("%Y-%m-%d"))
+
+        project_id = db.create_project(
+            name=project_name,
+            start_date=start_date,
+            status_date=start_date
+        )
+
+        # Bulk insert generated tasks
+        tasks = result.get("tasks", [])
+        if tasks:
+            # Add project_id and generate UIDs for each task
+            import uuid
+            for task in tasks:
+                task["id"] = str(uuid.uuid4())
+                task["uid"] = task["id"]
+                task["project_id"] = project_id
+
+            db.bulk_create_tasks(project_id, tasks)
+
+        # Update in-memory state to the new project
+        current_project = {
+            "name": project_name,
+            "start_date": start_date,
+            "status_date": start_date,
+            "tasks": tasks
+        }
+        current_project_id = project_id
+
+        # Clear XML template for AI-generated project
+        xml_processor.xml_root = None
+
+        return {
+            "success": True,
+            "project_id": project_id,
+            "project_name": project_name,
+            "task_count": len(tasks),
+            "message": f"Successfully generated project '{project_name}' with {len(tasks)} tasks"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Project generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate project: {str(e)}")
+
+
 # ============================================================================
 # PROJECT DURATION OPTIMIZATION ENDPOINTS (MS Project Compliant)
 # ============================================================================
@@ -467,6 +710,48 @@ async def optimize_project_duration(request: OptimizeDurationRequest):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+
+
+@app.get("/api/critical-path")
+async def get_critical_path():
+    """
+    Calculate and return the critical path for the current project.
+
+    Returns:
+        - critical_tasks: List of tasks on the critical path
+        - project_duration: Total project duration in days
+        - task_floats: Dictionary of task_id -> total_float (slack time)
+    """
+    global current_project
+
+    if not current_project:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    tasks = current_project.get("tasks", [])
+
+    if not tasks:
+        return {
+            "critical_tasks": [],
+            "project_duration": 0,
+            "task_floats": {},
+            "critical_task_ids": []
+        }
+
+    try:
+        # Use the AI service's critical path calculation
+        result = ai_service._calculate_critical_path(tasks)
+
+        # Extract just the IDs for easier frontend use
+        critical_task_ids = [task["id"] for task in result["critical_tasks"]]
+
+        return {
+            "critical_tasks": result["critical_tasks"],
+            "project_duration": result["project_duration"],
+            "task_floats": result["task_floats"],
+            "critical_task_ids": critical_task_ids
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Critical path calculation failed: {str(e)}")
 
 
 @app.post("/api/ai/apply-optimization")
@@ -513,8 +798,12 @@ async def apply_optimization_strategy(request: ApplyOptimizationRequest):
                 changes_applied += 1
                 print(f"Compressed task {task['name']}: {change['current_value']:.1f}d → {change['suggested_value']:.1f}d")
 
-        # Save updated project to disk
-        save_project_to_disk()
+        # Save updated project to database
+        # Need to update all modified tasks in the database
+        for task in current_project.get("tasks", []):
+            db.update_task(task['id'], task)
+
+        save_project_to_db()
 
         return {
             "success": True,

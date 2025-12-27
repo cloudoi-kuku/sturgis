@@ -1,5 +1,5 @@
 // Simple test file to verify exports
-import { Task, TaskCreate, TaskUpdate, ProjectMetadata } from './api/client';
+import type { Task, TaskCreate, TaskUpdate, ProjectMetadata } from './api/client';
 
 console.log('✅ All imports successful!');
 console.log('Task type:', typeof ({} as Task));

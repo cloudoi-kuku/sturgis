@@ -5,6 +5,7 @@ Provides task duration estimation, dependency detection, and categorization
 
 import httpx
 import json
+import os
 from typing import List, Dict, Optional
 from models import Task
 
@@ -12,8 +13,9 @@ from models import Task
 class LocalAIService:
     """Local LLM service using Ollama"""
 
-    def __init__(self, base_url: str = "http://localhost:11434"):
-        self.base_url = base_url
+    def __init__(self, base_url: str = None):
+        # Use environment variable if available, otherwise default to localhost
+        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.model = "llama3.2:3b"  # Fast, lightweight model
         self.chat_history: List[Dict[str, str]] = []  # Store conversation history
     
@@ -730,8 +732,51 @@ Respond ONLY with JSON: {"category": "<type>", "confidence": <0-100>}"""
     async def chat(self, user_message: str, project_context: Optional[Dict] = None) -> str:
         """
         Conversational AI chat for construction project assistance
-        Returns: AI response as string
+        Can also detect and handle project generation requests
+        Returns: AI response as string OR special JSON for project generation
         """
+        # Check if this is a project generation request
+        generation_keywords = [
+            "generate", "create", "build", "make", "new project",
+            "residential", "commercial", "industrial", "warehouse",
+            "office building", "home", "house", "renovation"
+        ]
+
+        message_lower = user_message.lower()
+        is_generation_request = any(keyword in message_lower for keyword in generation_keywords)
+
+        # Additional heuristics: if message is long and descriptive, likely a generation request
+        if len(user_message.split()) > 10 and any(word in message_lower for word in ["sq ft", "square", "bedroom", "story", "floor"]):
+            is_generation_request = True
+
+        # If it's a generation request, handle it specially
+        if is_generation_request and not project_context:
+            # Detect project type
+            project_type = "commercial"  # default
+            if any(word in message_lower for word in ["residential", "home", "house", "bedroom", "family"]):
+                project_type = "residential"
+            elif any(word in message_lower for word in ["warehouse", "distribution", "storage", "industrial"]):
+                project_type = "industrial"
+            elif any(word in message_lower for word in ["renovation", "remodel", "retrofit", "upgrade"]):
+                project_type = "renovation"
+
+            # Generate the project
+            try:
+                result = await self.generate_project(user_message, project_type)
+                if result.get("success"):
+                    # Return special JSON response that frontend can detect
+                    return json.dumps({
+                        "type": "project_generation",
+                        "project_name": result.get("project_name"),
+                        "task_count": len(result.get("tasks", [])),
+                        "message": f"I've generated a complete {project_type} project based on your description! The project '{result['project_name']}' has {len(result.get('tasks', []))} tasks organized into phases. Would you like me to explain the structure or make any adjustments?"
+                    })
+                else:
+                    return "I tried to generate a project but encountered an issue. Could you provide more details about what you'd like to build?"
+            except Exception as e:
+                print(f"Project generation error in chat: {e}")
+                return "I had trouble generating the project. Please make sure your description includes key details like project type, size, and main features."
+
         # Build project context summary
         context_summary = ""
         if project_context:
@@ -814,6 +859,201 @@ Conversation history is maintained, so you can reference previous messages.
     def clear_chat_history(self):
         """Clear conversation history"""
         self.chat_history = []
+
+    async def generate_project(self, description: str, project_type: str = "commercial") -> Dict:
+        """
+        Generate a complete construction project from a description
+        Returns: {"tasks": [...], "metadata": {...}, "success": bool}
+        """
+        system_prompt = """You are an expert construction project manager. Generate a complete, realistic construction project schedule.
+
+CRITICAL INSTRUCTIONS:
+1. Return ONLY valid JSON - no markdown, no explanations, no extra text
+2. Use this EXACT structure:
+{
+  "project_name": "string",
+  "start_date": "YYYY-MM-DD",
+  "tasks": [
+    {
+      "name": "Task name",
+      "outline_number": "1.1",
+      "outline_level": 1,
+      "duration_days": 10,
+      "milestone": false,
+      "summary": false,
+      "predecessors": ["1.0"]
+    }
+  ]
+}
+
+3. Create a hierarchical task structure:
+   - Level 0: Project root (outline "0", summary=true)
+   - Level 1: Major phases (outline "1", "2", "3", summary=true)
+   - Level 2: Sub-phases (outline "1.1", "1.2", summary=true)
+   - Level 3: Actual tasks (outline "1.1.1", "1.1.2", summary=false)
+
+4. Include realistic construction phases:
+   - Pre-Construction (permits, site prep)
+   - Foundation & Sitework
+   - Structure/Framing
+   - MEP (Mechanical, Electrical, Plumbing)
+   - Interior Finishes
+   - Exterior Finishes
+   - Final Inspections & Closeout
+
+5. Set realistic durations (in days):
+   - Small tasks: 1-5 days
+   - Medium tasks: 5-15 days
+   - Large tasks: 15-30 days
+   - Phases: sum of subtasks
+
+6. Add logical dependencies using outline numbers:
+   - Foundation before framing
+   - Rough-in before finishes
+   - Inspections after work completion
+
+7. Mark milestones (milestone=true, duration_days=0):
+   - Permit approval
+   - Foundation complete
+   - Building dried-in
+   - Certificate of Occupancy
+
+8. Summary tasks (summary=true) should have duration_days = 0 (calculated from children)
+
+RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT"""
+
+        prompt = f"""Generate a construction project schedule for:
+
+Project Type: {project_type}
+Description: {description}
+
+Create a complete project with:
+- 30-50 tasks organized in a hierarchy
+- Realistic durations based on construction industry standards
+- Logical dependencies between tasks
+- Key milestones
+- Proper outline numbering (0, 1, 1.1, 1.1.1, etc.)
+
+Remember: Return ONLY the JSON object, nothing else."""
+
+        try:
+            response = await self._generate(prompt, system_prompt)
+
+            # Extract JSON from response
+            json_start = response.find('{')
+            json_end = response.rfind('}') + 1
+
+            if json_start >= 0 and json_end > json_start:
+                json_str = response[json_start:json_end]
+                result = json.loads(json_str)
+
+                # Validate and transform the result
+                tasks = result.get("tasks", [])
+                if not tasks:
+                    raise ValueError("No tasks generated")
+
+                # Transform tasks to MS Project format
+                formatted_tasks = []
+                for task in tasks:
+                    # Convert predecessors from outline numbers to proper format
+                    predecessors = []
+                    for pred_outline in task.get("predecessors", []):
+                        if pred_outline and pred_outline != "0":
+                            predecessors.append({
+                                "outline_number": pred_outline,
+                                "type": 1,  # Finish-to-Start
+                                "lag": 0,
+                                "lag_format": 7  # Days
+                            })
+
+                    # Convert duration to ISO 8601 format
+                    duration_days = task.get("duration_days", 1)
+                    duration_hours = int(duration_days * 8)  # 8-hour workday
+                    duration_iso = f"PT{duration_hours}H0M0S"
+
+                    formatted_task = {
+                        "name": task.get("name", "Unnamed Task"),
+                        "outline_number": task.get("outline_number", "1"),
+                        "outline_level": task.get("outline_level", 1),
+                        "duration": duration_iso,
+                        "milestone": task.get("milestone", False),
+                        "summary": task.get("summary", False),
+                        "percent_complete": 0,
+                        "value": "",
+                        "predecessors": predecessors
+                    }
+                    formatted_tasks.append(formatted_task)
+
+                return {
+                    "success": True,
+                    "project_name": result.get("project_name", "Generated Project"),
+                    "start_date": result.get("start_date", "2024-01-01"),
+                    "tasks": formatted_tasks
+                }
+            else:
+                raise ValueError("No valid JSON found in response")
+
+        except Exception as e:
+            print(f"Project generation error: {e}")
+            print(f"Response: {response[:500] if 'response' in locals() else 'No response'}")
+
+            # Return a minimal fallback project
+            return {
+                "success": False,
+                "error": str(e),
+                "project_name": "Fallback Project",
+                "start_date": "2024-01-01",
+                "tasks": self._get_fallback_project_tasks()
+            }
+
+    def _get_fallback_project_tasks(self) -> List[Dict]:
+        """Return a minimal fallback project structure"""
+        return [
+            {
+                "name": "Construction Project",
+                "outline_number": "0",
+                "outline_level": 0,
+                "duration": "PT0H0M0S",
+                "milestone": False,
+                "summary": True,
+                "percent_complete": 0,
+                "value": "",
+                "predecessors": []
+            },
+            {
+                "name": "Pre-Construction",
+                "outline_number": "1",
+                "outline_level": 1,
+                "duration": "PT80H0M0S",
+                "milestone": False,
+                "summary": False,
+                "percent_complete": 0,
+                "value": "",
+                "predecessors": []
+            },
+            {
+                "name": "Foundation",
+                "outline_number": "2",
+                "outline_level": 1,
+                "duration": "PT120H0M0S",
+                "milestone": False,
+                "summary": False,
+                "percent_complete": 0,
+                "value": "",
+                "predecessors": [{"outline_number": "1", "type": 1, "lag": 0, "lag_format": 7}]
+            },
+            {
+                "name": "Framing",
+                "outline_number": "3",
+                "outline_level": 1,
+                "duration": "PT160H0M0S",
+                "milestone": False,
+                "summary": False,
+                "percent_complete": 0,
+                "value": "",
+                "predecessors": [{"outline_number": "2", "type": 1, "lag": 0, "lag_format": 7}]
+            }
+        ]
 
 
 # Singleton instance

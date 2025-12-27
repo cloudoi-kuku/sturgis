@@ -1,0 +1,7153 @@
+{
+  "name": "Multi-Family",
+  "start_date": "2024-02-08T08:00:00",
+  "status_date": "2024-08-07T08:00:00",
+  "tasks": [
+    {
+      "id": "0",
+      "uid": "0",
+      "name": "23-038 Boone",
+      "outline_number": "0",
+      "outline_level": 0,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "1",
+      "uid": "119598",
+      "name": "23-038 - Boone",
+      "outline_number": "1",
+      "outline_level": 1,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "2",
+      "uid": "282355",
+      "name": "Owner ",
+      "outline_number": "1.1",
+      "outline_level": 2,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "3",
+      "uid": "137560",
+      "name": "Sturgis Prime Contract",
+      "outline_number": "1.1.1",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "4",
+      "uid": "2",
+      "name": "Prime Contract Executed",
+      "outline_number": "1.1.1.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:24:35",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "20",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "5",
+      "uid": "3",
+      "name": "Construction Finish | Substantial Completion",
+      "outline_number": "1.1.1.2",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:25:10",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "25",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "6",
+      "uid": "4",
+      "name": "Final Completion",
+      "outline_number": "1.1.1.3",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:25:32",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "30",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "7",
+      "uid": "311229",
+      "name": "Delays and Impacts",
+      "outline_number": "1.2",
+      "outline_level": 2,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "8",
+      "uid": "9768",
+      "name": "Sewer Redesign",
+      "outline_number": "1.2.1",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "9",
+      "uid": "7",
+      "name": "Sewer Line Redesign - Stop Work",
+      "outline_number": "1.2.1.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:28:32",
+      "actual_start": "2024-05-01T08:00:00",
+      "actual_finish": "2024-05-01T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "18",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "10",
+      "uid": "8",
+      "name": "Design and Re-Permitting Period",
+      "outline_number": "1.2.1.2",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:28:47",
+      "actual_start": "2024-05-01T08:00:00",
+      "actual_finish": "2024-05-01T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "22",
+      "predecessors": [
+        {
+          "outline_number": "1.2.1.1",
+          "type": 1,
+          "lag": 10,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "11",
+      "uid": "9",
+      "name": "AHJ Approval",
+      "outline_number": "1.2.1.3",
+      "outline_level": 4,
+      "duration": "PT528H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 80,
+      "create_date": "2024-08-07T15:29:02",
+      "actual_start": "2024-05-01T08:00:00",
+      "actual_finish": "2024-07-31T17:00:00",
+      "actual_duration": "PT528H0M0S",
+      "value": "23",
+      "predecessors": [
+        {
+          "outline_number": "1.2.1.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "12",
+      "uid": "10",
+      "name": "Sturgis Reprice New Plans (Plans Received 08/06)",
+      "outline_number": "1.2.1.4",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:29:11",
+      "actual_start": "2024-08-06T08:00:00",
+      "actual_finish": null,
+      "actual_duration": "PT8H0M0S",
+      "value": "24",
+      "predecessors": [
+        {
+          "outline_number": "1.2.1.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "13",
+      "uid": "11",
+      "name": "Sturgis Submit Change Request",
+      "outline_number": "1.2.1.5",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:29:20",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "27",
+      "predecessors": [
+        {
+          "outline_number": "1.2.1.4",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "14",
+      "uid": "12",
+      "name": "Owner Approve Change Request",
+      "outline_number": "1.2.1.6",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:29:27",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "28",
+      "predecessors": [
+        {
+          "outline_number": "1.2.1.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "15",
+      "uid": "13",
+      "name": "Sturgis Issue Sub Change Order",
+      "outline_number": "1.2.1.7",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:29:37",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "29",
+      "predecessors": [
+        {
+          "outline_number": "1.2.1.6",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "16",
+      "uid": "103513",
+      "name": "Utilities",
+      "outline_number": "1.3",
+      "outline_level": 2,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "17",
+      "uid": "243587",
+      "name": "GA Power",
+      "outline_number": "1.3.1",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "18",
+      "uid": "144",
+      "name": "GA Power Release Transformer",
+      "outline_number": "1.3.1.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T17:36:31",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "35",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "19",
+      "uid": "123598",
+      "name": "Watershed",
+      "outline_number": "1.3.2",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "20",
+      "uid": "148",
+      "name": "Watershed Plan Established",
+      "outline_number": "1.3.2.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T17:40:56",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "45",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "21",
+      "uid": "53615",
+      "name": "Communication",
+      "outline_number": "1.3.3",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "22",
+      "uid": "146",
+      "name": "AT&T Plan Established",
+      "outline_number": "1.3.3.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T17:36:52",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "38",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "23",
+      "uid": "147",
+      "name": "Comcast Plan Established",
+      "outline_number": "1.3.3.2",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T17:36:59",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "39",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "24",
+      "uid": "195263",
+      "name": "Gas Service",
+      "outline_number": "1.3.4",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "25",
+      "uid": "145",
+      "name": "Georgia Natural Gas - Account Setup",
+      "outline_number": "1.3.4.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T17:36:37",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "37",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "26",
+      "uid": "106989",
+      "name": "Procurement",
+      "outline_number": "1.4",
+      "outline_level": 2,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "27",
+      "uid": "315624",
+      "name": "Div 02 - Sitework",
+      "outline_number": "1.4.1",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "28",
+      "uid": "1",
+      "name": "Sitework Subcontract",
+      "outline_number": "1.4.1.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T14:58:11",
+      "actual_start": "2024-02-23T08:00:00",
+      "actual_finish": "2024-02-23T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "10",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "29",
+      "uid": "5",
+      "name": "Sitework Submittals",
+      "outline_number": "1.4.1.2",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:26:35",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "15",
+      "predecessors": [
+        {
+          "outline_number": "1.4.1.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.2.1.4",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "30",
+      "uid": "6",
+      "name": "Sitework Material Lead Time",
+      "outline_number": "1.4.1.3",
+      "outline_level": 4,
+      "duration": "PT160H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:26:44",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "17",
+      "predecessors": [
+        {
+          "outline_number": "1.4.1.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.2.1.7",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "31",
+      "uid": "140199",
+      "name": "Div 02 - Landscaping",
+      "outline_number": "1.4.2",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "32",
+      "uid": "14",
+      "name": "Landscaping Buyout",
+      "outline_number": "1.4.2.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:31:46",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "19",
+      "predecessors": [
+        {
+          "outline_number": "1.4.3.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "33",
+      "uid": "15",
+      "name": "Landscaping Submittals",
+      "outline_number": "1.4.2.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:31:52",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "21",
+      "predecessors": [
+        {
+          "outline_number": "1.4.2.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "34",
+      "uid": "16",
+      "name": "Landscape Material Lead Time",
+      "outline_number": "1.4.2.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:31:53",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "26",
+      "predecessors": [
+        {
+          "outline_number": "1.4.2.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "35",
+      "uid": "5322",
+      "name": "Div 02 - Hardscape",
+      "outline_number": "1.4.3",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "36",
+      "uid": "20",
+      "name": "Hardscape Subcontract",
+      "outline_number": "1.4.3.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:32:37",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "70",
+      "predecessors": [
+        {
+          "outline_number": "1.2.1.6",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "37",
+      "uid": "21",
+      "name": "Hardscape Submittals",
+      "outline_number": "1.4.3.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:32:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "80",
+      "predecessors": [
+        {
+          "outline_number": "1.4.3.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "38",
+      "uid": "22",
+      "name": "Hardscape Material Lead Time",
+      "outline_number": "1.4.3.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:32:46",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "90",
+      "predecessors": [
+        {
+          "outline_number": "1.4.3.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "39",
+      "uid": "43472",
+      "name": "Div 02 - Bike Racks",
+      "outline_number": "1.4.4",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "40",
+      "uid": "17",
+      "name": "Bike Rack Submittal",
+      "outline_number": "1.4.4.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:32:12",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "40",
+      "predecessors": [
+        {
+          "outline_number": "1.4.2.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "41",
+      "uid": "18",
+      "name": "Bike Rack Procurement",
+      "outline_number": "1.4.4.2",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:32:20",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "50",
+      "predecessors": [
+        {
+          "outline_number": "1.4.4.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "42",
+      "uid": "19",
+      "name": "Bike Rack Lead Time",
+      "outline_number": "1.4.4.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:32:24",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "60",
+      "predecessors": [
+        {
+          "outline_number": "1.4.4.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "43",
+      "uid": "112707",
+      "name": "Div 02 - Asphalt & Striping",
+      "outline_number": "1.4.5",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "44",
+      "uid": "23",
+      "name": "Asphalt & Striping Subcontract",
+      "outline_number": "1.4.5.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:32:52",
+      "actual_start": "2024-04-04T08:00:00",
+      "actual_finish": "2024-04-04T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "100",
+      "predecessors": [
+        {
+          "outline_number": "1.4.3.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "45",
+      "uid": "24",
+      "name": "Asphalt & Striping Submittals",
+      "outline_number": "1.4.5.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:33:06",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "110",
+      "predecessors": [
+        {
+          "outline_number": "1.4.5.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "46",
+      "uid": "25",
+      "name": "Asphalt & Striping Material Lead Time",
+      "outline_number": "1.4.5.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:33:11",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "120",
+      "predecessors": [
+        {
+          "outline_number": "1.4.5.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "47",
+      "uid": "29981",
+      "name": "Div 03 - Concrete",
+      "outline_number": "1.4.6",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "48",
+      "uid": "26",
+      "name": "Concrete Subcontract",
+      "outline_number": "1.4.6.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:36:21",
+      "actual_start": "2024-03-08T08:00:00",
+      "actual_finish": "2024-03-08T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "130",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "49",
+      "uid": "138897",
+      "name": "Concrete Submittals",
+      "outline_number": "1.4.6.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:36:21",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "140",
+      "predecessors": [
+        {
+          "outline_number": "1.4.1.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.6.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "50",
+      "uid": "27",
+      "name": "Concrete material Lead Time",
+      "outline_number": "1.4.6.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:36:22",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "150",
+      "predecessors": [
+        {
+          "outline_number": "1.4.6.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "51",
+      "uid": "112699",
+      "name": "Div 03 - Gypcrete Sub Floors",
+      "outline_number": "1.4.7",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "52",
+      "uid": "28",
+      "name": "Gypcrete Sub Floor - SUBCONTRACT",
+      "outline_number": "1.4.7.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:36:39",
+      "actual_start": "2024-04-29T08:00:00",
+      "actual_finish": "2024-04-29T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "160",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "53",
+      "uid": "29",
+      "name": "Gypcrete Submittals",
+      "outline_number": "1.4.7.2",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:36:46",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "170",
+      "predecessors": [
+        {
+          "outline_number": "1.4.6.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.7.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "54",
+      "uid": "30",
+      "name": "Gypcrete Material Lead Time",
+      "outline_number": "1.4.7.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:36:50",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "180",
+      "predecessors": [
+        {
+          "outline_number": "1.4.7.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "55",
+      "uid": "166848",
+      "name": "Div 04 - Masonry",
+      "outline_number": "1.4.8",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "56",
+      "uid": "31",
+      "name": "Masonry Subcontract",
+      "outline_number": "1.4.8.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:36:55",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "190",
+      "predecessors": [
+        {
+          "outline_number": "1.2.1.6",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "57",
+      "uid": "32",
+      "name": "Masonry Submittals",
+      "outline_number": "1.4.8.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:37:01",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "200",
+      "predecessors": [
+        {
+          "outline_number": "1.4.8.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "58",
+      "uid": "33",
+      "name": "Masonry Material Lead Time ( Dumpster Enclosure )",
+      "outline_number": "1.4.8.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:37:04",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "210",
+      "predecessors": [
+        {
+          "outline_number": "1.4.8.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "59",
+      "uid": "267799",
+      "name": "Div 05 - Metals",
+      "outline_number": "1.4.9",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "60",
+      "uid": "34",
+      "name": "Metals Subcotnract",
+      "outline_number": "1.4.9.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:37:09",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "220",
+      "predecessors": [
+        {
+          "outline_number": "1.2.1.6",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "61",
+      "uid": "35",
+      "name": "Metals Submittals",
+      "outline_number": "1.4.9.2",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:37:15",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "230",
+      "predecessors": [
+        {
+          "outline_number": "1.4.9.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "62",
+      "uid": "36",
+      "name": "Metals Lead Times",
+      "outline_number": "1.4.9.3",
+      "outline_level": 4,
+      "duration": "PT160H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:37:17",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "240",
+      "predecessors": [
+        {
+          "outline_number": "1.4.9.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "63",
+      "uid": "86800",
+      "name": "Div 06 - Timber Framing",
+      "outline_number": "1.4.10",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "64",
+      "uid": "37",
+      "name": "Timber Framing - Material Procurement",
+      "outline_number": "1.4.10.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:37:22",
+      "actual_start": "2024-03-08T08:00:00",
+      "actual_finish": "2024-03-08T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "250",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "65",
+      "uid": "38",
+      "name": "Timber Framing - Subcontract",
+      "outline_number": "1.4.10.2",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:37:33",
+      "actual_start": "2024-03-08T08:00:00",
+      "actual_finish": "2024-03-08T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "260",
+      "predecessors": [
+        {
+          "outline_number": "1.4.10.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "66",
+      "uid": "39",
+      "name": "Timber Framing Submittals",
+      "outline_number": "1.4.10.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:37:38",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "270",
+      "predecessors": [
+        {
+          "outline_number": "1.4.10.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "67",
+      "uid": "40",
+      "name": "Timber Framing - Material Lead Time",
+      "outline_number": "1.4.10.4",
+      "outline_level": 4,
+      "duration": "PT320H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:37:44",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "280",
+      "predecessors": [
+        {
+          "outline_number": "1.4.10.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "68",
+      "uid": "377157",
+      "name": "Div 07 - Insulation",
+      "outline_number": "1.4.11",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "69",
+      "uid": "41",
+      "name": "Insulation Subconctract",
+      "outline_number": "1.4.11.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:37:50",
+      "actual_start": "2024-05-15T08:00:00",
+      "actual_finish": "2024-05-15T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "290",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "70",
+      "uid": "42",
+      "name": "Insulation Submittals",
+      "outline_number": "1.4.11.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:37:59",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "300",
+      "predecessors": [
+        {
+          "outline_number": "1.4.10.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.11.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "71",
+      "uid": "43",
+      "name": "Insulation - Material Lead Time",
+      "outline_number": "1.4.11.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:38:01",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "310",
+      "predecessors": [
+        {
+          "outline_number": "1.4.11.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "72",
+      "uid": "193234",
+      "name": "Div 07 - Roofing",
+      "outline_number": "1.4.12",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "73",
+      "uid": "44",
+      "name": "Roofing Subcontract",
+      "outline_number": "1.4.12.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:38:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "320",
+      "predecessors": [
+        {
+          "outline_number": "1.4.11.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "74",
+      "uid": "45",
+      "name": "Roofing Submittals",
+      "outline_number": "1.4.12.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:38:48",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "330",
+      "predecessors": [
+        {
+          "outline_number": "1.4.12.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "75",
+      "uid": "46",
+      "name": "Roofing - Material Lead Time",
+      "outline_number": "1.4.12.3",
+      "outline_level": 4,
+      "duration": "PT160H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:38:53",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "340",
+      "predecessors": [
+        {
+          "outline_number": "1.4.12.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "76",
+      "uid": "49758",
+      "name": "Div 07 - Siding",
+      "outline_number": "1.4.13",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "77",
+      "uid": "47",
+      "name": "Siding Subcontract",
+      "outline_number": "1.4.13.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:38:57",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "350",
+      "predecessors": [
+        {
+          "outline_number": "1.4.12.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "78",
+      "uid": "48",
+      "name": "Siding Submittals",
+      "outline_number": "1.4.13.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:39:02",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "360",
+      "predecessors": [
+        {
+          "outline_number": "1.4.13.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "79",
+      "uid": "49",
+      "name": "Siding Material Lead Time",
+      "outline_number": "1.4.13.3",
+      "outline_level": 4,
+      "duration": "PT160H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:39:05",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "370",
+      "predecessors": [
+        {
+          "outline_number": "1.4.13.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "80",
+      "uid": "345621",
+      "name": "Div 08 - Doors & Hardware",
+      "outline_number": "1.4.14",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "81",
+      "uid": "50",
+      "name": "Doors & Hardware Subcontract",
+      "outline_number": "1.4.14.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:39:08",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "380",
+      "predecessors": [
+        {
+          "outline_number": "1.4.13.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "82",
+      "uid": "51",
+      "name": "Doors & Hardware Submittals",
+      "outline_number": "1.4.14.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:39:17",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "390",
+      "predecessors": [
+        {
+          "outline_number": "1.4.14.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "83",
+      "uid": "52",
+      "name": "Doors & Hardware Lead Time",
+      "outline_number": "1.4.14.3",
+      "outline_level": 4,
+      "duration": "PT200H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:39:24",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "400",
+      "predecessors": [
+        {
+          "outline_number": "1.4.14.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "84",
+      "uid": "396993",
+      "name": "Div 08 - Storefronts",
+      "outline_number": "1.4.15",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "85",
+      "uid": "53",
+      "name": "Storefront Subcontract",
+      "outline_number": "1.4.15.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:39:29",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "410",
+      "predecessors": [
+        {
+          "outline_number": "1.4.11.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "86",
+      "uid": "54",
+      "name": "Storefront Submittals",
+      "outline_number": "1.4.15.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:39:33",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "420",
+      "predecessors": [
+        {
+          "outline_number": "1.4.15.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "87",
+      "uid": "55",
+      "name": "Storefront Lead Time",
+      "outline_number": "1.4.15.3",
+      "outline_level": 4,
+      "duration": "PT280H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:39:36",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "430",
+      "predecessors": [
+        {
+          "outline_number": "1.4.15.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "88",
+      "uid": "32149",
+      "name": "Div 08 - Windows",
+      "outline_number": "1.4.16",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "89",
+      "uid": "56",
+      "name": "Windows - Subcontract",
+      "outline_number": "1.4.16.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:39:40",
+      "actual_start": "2024-04-30T08:00:00",
+      "actual_finish": "2024-04-30T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "440",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "90",
+      "uid": "57",
+      "name": "Windows - Submittals",
+      "outline_number": "1.4.16.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:39:55",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "450",
+      "predecessors": [
+        {
+          "outline_number": "1.4.10.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.16.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "91",
+      "uid": "58",
+      "name": "Windows - Lead Time",
+      "outline_number": "1.4.16.3",
+      "outline_level": 4,
+      "duration": "PT240H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:39:58",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "460",
+      "predecessors": [
+        {
+          "outline_number": "1.4.16.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "92",
+      "uid": "386381",
+      "name": "Div 09 - Drywall and Misc. Materials",
+      "outline_number": "1.4.17",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "93",
+      "uid": "59",
+      "name": "Drywall & Misc. Materials - Subcontract",
+      "outline_number": "1.4.17.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:40:01",
+      "actual_start": "2024-03-08T08:00:00",
+      "actual_finish": "2024-03-08T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "470",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "94",
+      "uid": "60",
+      "name": "Drywall & Misc. Materials - Submittals",
+      "outline_number": "1.4.17.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:40:06",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "480",
+      "predecessors": [
+        {
+          "outline_number": "1.4.16.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.17.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "95",
+      "uid": "61",
+      "name": "Drywall & Misc. Materials - Lead Time",
+      "outline_number": "1.4.17.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:40:26",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "490",
+      "predecessors": [
+        {
+          "outline_number": "1.4.17.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "96",
+      "uid": "332062",
+      "name": "Div 09 - Flooring",
+      "outline_number": "1.4.18",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "97",
+      "uid": "62",
+      "name": "Floor Subcontract",
+      "outline_number": "1.4.18.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:41:10",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "500",
+      "predecessors": [
+        {
+          "outline_number": "1.4.17.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "98",
+      "uid": "63",
+      "name": "Flooring Submittals",
+      "outline_number": "1.4.18.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:41:19",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "510",
+      "predecessors": [
+        {
+          "outline_number": "1.4.18.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "99",
+      "uid": "64",
+      "name": "Flooring - Material Lead Time",
+      "outline_number": "1.4.18.3",
+      "outline_level": 4,
+      "duration": "PT160H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:41:22",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "520",
+      "predecessors": [
+        {
+          "outline_number": "1.4.18.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "100",
+      "uid": "261102",
+      "name": "Div 09 - Paint",
+      "outline_number": "1.4.19",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "101",
+      "uid": "65",
+      "name": "Paint Subcontract",
+      "outline_number": "1.4.19.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:41:31",
+      "actual_start": "2024-04-29T08:00:00",
+      "actual_finish": "2024-04-29T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "530",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "102",
+      "uid": "66",
+      "name": "Paint Submittals",
+      "outline_number": "1.4.19.2",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:41:35",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "540",
+      "predecessors": [
+        {
+          "outline_number": "1.4.18.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.19.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "103",
+      "uid": "67",
+      "name": "Paint - Material Lead Time",
+      "outline_number": "1.4.19.3",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:41:37",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "550",
+      "predecessors": [
+        {
+          "outline_number": "1.4.19.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "104",
+      "uid": "399878",
+      "name": "Div 10 - Signage",
+      "outline_number": "1.4.20",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "105",
+      "uid": "68",
+      "name": "Signage Subcontract",
+      "outline_number": "1.4.20.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:41:40",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "560",
+      "predecessors": [
+        {
+          "outline_number": "1.4.16.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "106",
+      "uid": "69",
+      "name": "Signage Submittals",
+      "outline_number": "1.4.20.2",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:41:46",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "570",
+      "predecessors": [
+        {
+          "outline_number": "1.4.20.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "107",
+      "uid": "70",
+      "name": "Signage - Material Lead Time",
+      "outline_number": "1.4.20.3",
+      "outline_level": 4,
+      "duration": "PT360H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:41:48",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "580",
+      "predecessors": [
+        {
+          "outline_number": "1.4.20.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "108",
+      "uid": "379104",
+      "name": "Div 10 - Bath Accessories",
+      "outline_number": "1.4.21",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "109",
+      "uid": "71",
+      "name": "Bath Accessories - Subcontract",
+      "outline_number": "1.4.21.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:41:52",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "590",
+      "predecessors": [
+        {
+          "outline_number": "1.4.19.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "110",
+      "uid": "72",
+      "name": "Bath Accessories - Submittals",
+      "outline_number": "1.4.21.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:41:58",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "600",
+      "predecessors": [
+        {
+          "outline_number": "1.4.21.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "111",
+      "uid": "73",
+      "name": "Bath Accessories - Lead Time",
+      "outline_number": "1.4.21.3",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:42:01",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "610",
+      "predecessors": [
+        {
+          "outline_number": "1.4.21.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "112",
+      "uid": "31819",
+      "name": "Div 10 - Fire Extinguishers",
+      "outline_number": "1.4.22",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "113",
+      "uid": "74",
+      "name": "Fire Extinguishers - Subcontract",
+      "outline_number": "1.4.22.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:42:05",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "620",
+      "predecessors": [
+        {
+          "outline_number": "1.4.19.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "114",
+      "uid": "75",
+      "name": "Fire Extinguishers - Submittals",
+      "outline_number": "1.4.22.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:42:11",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "630",
+      "predecessors": [
+        {
+          "outline_number": "1.4.22.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "115",
+      "uid": "76",
+      "name": "Fire Extinguishers - Lead Time",
+      "outline_number": "1.4.22.3",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:42:16",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "640",
+      "predecessors": [
+        {
+          "outline_number": "1.4.22.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "116",
+      "uid": "191216",
+      "name": "Div 10 - Canopies",
+      "outline_number": "1.4.23",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "117",
+      "uid": "77",
+      "name": "Canopies Subcontract",
+      "outline_number": "1.4.23.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:42:26",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "650",
+      "predecessors": [
+        {
+          "outline_number": "1.4.16.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "118",
+      "uid": "78",
+      "name": "Canopies Submittals",
+      "outline_number": "1.4.23.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:42:29",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "660",
+      "predecessors": [
+        {
+          "outline_number": "1.4.23.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "119",
+      "uid": "79",
+      "name": "Canopies - Lead Time",
+      "outline_number": "1.4.23.3",
+      "outline_level": 4,
+      "duration": "PT320H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:42:32",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "670",
+      "predecessors": [
+        {
+          "outline_number": "1.4.23.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "120",
+      "uid": "154538",
+      "name": "Div 11 - Appliances",
+      "outline_number": "1.4.24",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "121",
+      "uid": "80",
+      "name": "Appliances - Subcontract",
+      "outline_number": "1.4.24.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:04",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "680",
+      "predecessors": [
+        {
+          "outline_number": "1.4.23.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "122",
+      "uid": "81",
+      "name": "Appliances - Submittals",
+      "outline_number": "1.4.24.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:09",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "690",
+      "predecessors": [
+        {
+          "outline_number": "1.4.24.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "123",
+      "uid": "82",
+      "name": "Appliances - Lead Time",
+      "outline_number": "1.4.24.3",
+      "outline_level": 4,
+      "duration": "PT320H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:13",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "700",
+      "predecessors": [
+        {
+          "outline_number": "1.4.24.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "124",
+      "uid": "289935",
+      "name": "Div 12 - Window Treatments",
+      "outline_number": "1.4.25",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "125",
+      "uid": "83",
+      "name": "Window Treatment - Subcontract",
+      "outline_number": "1.4.25.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:17",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "710",
+      "predecessors": [
+        {
+          "outline_number": "1.4.24.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "126",
+      "uid": "84",
+      "name": "Window Treatment - Submittals",
+      "outline_number": "1.4.25.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:24",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "720",
+      "predecessors": [
+        {
+          "outline_number": "1.4.25.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "127",
+      "uid": "85",
+      "name": "Window Treatment - Lead Time",
+      "outline_number": "1.4.25.3",
+      "outline_level": 4,
+      "duration": "PT200H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:27",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "730",
+      "predecessors": [
+        {
+          "outline_number": "1.4.25.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "128",
+      "uid": "122931",
+      "name": "Div 15 - Sprinkler",
+      "outline_number": "1.4.26",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "129",
+      "uid": "86",
+      "name": "Sprinkler - Subcontract",
+      "outline_number": "1.4.26.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:31",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "740",
+      "predecessors": [
+        {
+          "outline_number": "1.4.10.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "130",
+      "uid": "87",
+      "name": "Sprinkler - Shop Drawings",
+      "outline_number": "1.4.26.2",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:35",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "750",
+      "predecessors": [
+        {
+          "outline_number": "1.4.26.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "131",
+      "uid": "88",
+      "name": "Sprinkler - Lead Time",
+      "outline_number": "1.4.26.3",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:40",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "760",
+      "predecessors": [
+        {
+          "outline_number": "1.4.26.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "132",
+      "uid": "396453",
+      "name": "Div 15 - Plumbing",
+      "outline_number": "1.4.27",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "133",
+      "uid": "89",
+      "name": "Plumbing Subcontract",
+      "outline_number": "1.4.27.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:43",
+      "actual_start": "2024-04-04T08:00:00",
+      "actual_finish": "2024-04-04T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "770",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "134",
+      "uid": "90",
+      "name": "Plumbing - Submittals",
+      "outline_number": "1.4.27.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:49",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "780",
+      "predecessors": [
+        {
+          "outline_number": "1.4.26.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.27.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "135",
+      "uid": "91",
+      "name": "Plumbing - Material Lead Time",
+      "outline_number": "1.4.27.3",
+      "outline_level": 4,
+      "duration": "PT200H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:54",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "790",
+      "predecessors": [
+        {
+          "outline_number": "1.4.27.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "136",
+      "uid": "351723",
+      "name": "Div 15 - HVAC",
+      "outline_number": "1.4.28",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "137",
+      "uid": "92",
+      "name": "HVAC - Subcontract",
+      "outline_number": "1.4.28.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:43:59",
+      "actual_start": "2024-04-29T08:00:00",
+      "actual_finish": "2024-04-29T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "800",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "138",
+      "uid": "93",
+      "name": "HVAC - Submittals",
+      "outline_number": "1.4.28.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:03",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "810",
+      "predecessors": [
+        {
+          "outline_number": "1.4.26.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.28.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "139",
+      "uid": "94",
+      "name": "HVAC - Material Lead Time",
+      "outline_number": "1.4.28.3",
+      "outline_level": 4,
+      "duration": "PT240H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:06",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "820",
+      "predecessors": [
+        {
+          "outline_number": "1.4.28.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "140",
+      "uid": "197323",
+      "name": "Div 16 - Electrical",
+      "outline_number": "1.4.29",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "141",
+      "uid": "95",
+      "name": "Electrical - Subcontract",
+      "outline_number": "1.4.29.1",
+      "outline_level": 4,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:12",
+      "actual_start": "2024-03-08T08:00:00",
+      "actual_finish": "2024-03-08T17:00:00",
+      "actual_duration": "PT8H0M0S",
+      "value": "830",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "142",
+      "uid": "96",
+      "name": "Electrical - Submittals",
+      "outline_number": "1.4.29.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:17",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "840",
+      "predecessors": [
+        {
+          "outline_number": "1.4.26.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.29.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "143",
+      "uid": "97",
+      "name": "Electrical - Material Lead Time",
+      "outline_number": "1.4.29.3",
+      "outline_level": 4,
+      "duration": "PT240H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:20",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "850",
+      "predecessors": [
+        {
+          "outline_number": "1.4.29.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "144",
+      "uid": "93164",
+      "name": "Div 16 - Low Voltage",
+      "outline_number": "1.4.30",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "145",
+      "uid": "98",
+      "name": "Low Voltage - Subcontract",
+      "outline_number": "1.4.30.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:24",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "860",
+      "predecessors": [
+        {
+          "outline_number": "1.4.29.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.29.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "146",
+      "uid": "99",
+      "name": "Low Voltage - Submittals",
+      "outline_number": "1.4.30.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:29",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "870",
+      "predecessors": [
+        {
+          "outline_number": "1.4.30.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "147",
+      "uid": "100",
+      "name": "Low Voltage - Lead Time",
+      "outline_number": "1.4.30.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:33",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "880",
+      "predecessors": [
+        {
+          "outline_number": "1.4.30.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "148",
+      "uid": "302759",
+      "name": "Div 16 - Lighting",
+      "outline_number": "1.4.31",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "149",
+      "uid": "101",
+      "name": "Lighting - Purchase order",
+      "outline_number": "1.4.31.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:44",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "890",
+      "predecessors": [
+        {
+          "outline_number": "1.4.29.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.29.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "150",
+      "uid": "102",
+      "name": "Lighting Submittals",
+      "outline_number": "1.4.31.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:50",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "900",
+      "predecessors": [
+        {
+          "outline_number": "1.4.31.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "151",
+      "uid": "103",
+      "name": "Lighting - lead Time",
+      "outline_number": "1.4.31.3",
+      "outline_level": 4,
+      "duration": "PT200H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:52",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "910",
+      "predecessors": [
+        {
+          "outline_number": "1.4.31.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "152",
+      "uid": "304237",
+      "name": "Div 16 - Fire Alarm",
+      "outline_number": "1.4.32",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "153",
+      "uid": "104",
+      "name": "Fire Alarm - Subcontract",
+      "outline_number": "1.4.32.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:55",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "920",
+      "predecessors": [
+        {
+          "outline_number": "1.4.29.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.29.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "154",
+      "uid": "105",
+      "name": "Fire Alarm - Submittals",
+      "outline_number": "1.4.32.2",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:44:59",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "930",
+      "predecessors": [
+        {
+          "outline_number": "1.4.32.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "155",
+      "uid": "106",
+      "name": "Fire Alarm - Lead Time",
+      "outline_number": "1.4.32.3",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:45:02",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "940",
+      "predecessors": [
+        {
+          "outline_number": "1.4.32.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "156",
+      "uid": "233170",
+      "name": "Construction",
+      "outline_number": "1.5",
+      "outline_level": 2,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "157",
+      "uid": "8812",
+      "name": "Sitework",
+      "outline_number": "1.5.1",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "158",
+      "uid": "107",
+      "name": "Mobilization",
+      "outline_number": "1.5.1.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:49:49",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "950",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "159",
+      "uid": "108",
+      "name": "Erosion Control - Phase 1",
+      "outline_number": "1.5.1.2",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:49:57",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "960",
+      "predecessors": [
+        {
+          "outline_number": "1.5.1.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "160",
+      "uid": "109",
+      "name": "Demo / Grub",
+      "outline_number": "1.5.1.3",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:50:06",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "970",
+      "predecessors": [
+        {
+          "outline_number": "1.5.1.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "161",
+      "uid": "110",
+      "name": "Rough Grading",
+      "outline_number": "1.5.1.4",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:50:10",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "980",
+      "predecessors": [
+        {
+          "outline_number": "1.5.1.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "162",
+      "uid": "121",
+      "name": "Underground Utilities",
+      "outline_number": "1.5.1.5",
+      "outline_level": 4,
+      "duration": "PT240H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:20:29",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1090",
+      "predecessors": [
+        {
+          "outline_number": "1.4.1.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.1.4",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "163",
+      "uid": "202405",
+      "name": "6 Plex A",
+      "outline_number": "1.5.2",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "164",
+      "uid": "157178",
+      "name": "Foundations & SOG",
+      "outline_number": "1.5.2.1",
+      "outline_level": 4,
+      "duration": "PT96H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:50:15",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1760",
+      "predecessors": [
+        {
+          "outline_number": "1.4.6.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.1.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "165",
+      "uid": "385837",
+      "name": "Structure & Windows",
+      "outline_number": "1.5.2.2",
+      "outline_level": 4,
+      "duration": "PT136H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:05",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1770",
+      "predecessors": [
+        {
+          "outline_number": "1.4.10.4",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.16.3",
+          "type": 0,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "166",
+      "uid": "363336",
+      "name": "Sheathing",
+      "outline_number": "1.5.2.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:10",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1780",
+      "predecessors": [
+        {
+          "outline_number": "1.4.9.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "167",
+      "uid": "306427",
+      "name": "Roof",
+      "outline_number": "1.5.2.4",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:14",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1790",
+      "predecessors": [
+        {
+          "outline_number": "1.4.12.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "168",
+      "uid": "176422",
+      "name": "Siding or Brick Facade",
+      "outline_number": "1.5.2.5",
+      "outline_level": 4,
+      "duration": "PT104H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:19",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1800",
+      "predecessors": [
+        {
+          "outline_number": "1.4.8.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.13.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.15.3",
+          "type": 0,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.4",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "169",
+      "uid": "302562",
+      "name": "MEP Rough",
+      "outline_number": "1.5.2.6",
+      "outline_level": 4,
+      "duration": "PT104H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:28",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1810",
+      "predecessors": [
+        {
+          "outline_number": "1.4.26.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.27.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.28.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.29.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.30.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.31.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.32.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "170",
+      "uid": "32913",
+      "name": "Insulation",
+      "outline_number": "1.5.2.7",
+      "outline_level": 4,
+      "duration": "PT64H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:31",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1820",
+      "predecessors": [
+        {
+          "outline_number": "1.4.11.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "171",
+      "uid": "327512",
+      "name": "Cover Up Inspection",
+      "outline_number": "1.5.2.8",
+      "outline_level": 4,
+      "duration": "PT32H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:33",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1830",
+      "predecessors": [
+        {
+          "outline_number": "1.5.2.6",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.7",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "172",
+      "uid": "140986",
+      "name": "Drywall Install and Finish",
+      "outline_number": "1.5.2.9",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:39",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1840",
+      "predecessors": [
+        {
+          "outline_number": "1.4.17.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.8",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "173",
+      "uid": "361734",
+      "name": "Gypcrete",
+      "outline_number": "1.5.2.10",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:44",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1850",
+      "predecessors": [
+        {
+          "outline_number": "1.4.7.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.9",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "174",
+      "uid": "9873",
+      "name": "MEP Closets",
+      "outline_number": "1.5.2.11",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:24:16",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1860",
+      "predecessors": [
+        {
+          "outline_number": "1.5.2.10",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "175",
+      "uid": "4656",
+      "name": "Conditioned Air",
+      "outline_number": "1.5.2.12",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:24:27",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1870",
+      "predecessors": [
+        {
+          "outline_number": "1.5.2.11",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "176",
+      "uid": "241757",
+      "name": "Doors and Hardware",
+      "outline_number": "1.5.2.13",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:06",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1880",
+      "predecessors": [
+        {
+          "outline_number": "1.4.14.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.12",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "177",
+      "uid": "88943",
+      "name": "Paint Activities",
+      "outline_number": "1.5.2.14",
+      "outline_level": 4,
+      "duration": "PT32H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:09",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1890",
+      "predecessors": [
+        {
+          "outline_number": "1.4.19.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.10",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "178",
+      "uid": "396136",
+      "name": "Cabinets ",
+      "outline_number": "1.5.2.15",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:26",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1900",
+      "predecessors": [
+        {
+          "outline_number": "1.5.2.12",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "179",
+      "uid": "310991",
+      "name": "Flooring Activities",
+      "outline_number": "1.5.2.16",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:29",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1910",
+      "predecessors": [
+        {
+          "outline_number": "1.4.18.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.15",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "180",
+      "uid": "210538",
+      "name": "Appliances",
+      "outline_number": "1.5.2.17",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:52",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1920",
+      "predecessors": [
+        {
+          "outline_number": "1.4.25.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.15",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "181",
+      "uid": "286068",
+      "name": "MEP Trim Out",
+      "outline_number": "1.5.2.18",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:56",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1930",
+      "predecessors": [
+        {
+          "outline_number": "1.4.20.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.21.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.22.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.4.25.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.14",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "182",
+      "uid": "165760",
+      "name": "Final Clean & Punch",
+      "outline_number": "1.5.2.19",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:59",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1940",
+      "predecessors": [
+        {
+          "outline_number": "1.5.2.17",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.18",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "183",
+      "uid": "207466",
+      "name": "Commercial",
+      "outline_number": "1.5.3",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "184",
+      "uid": "166162",
+      "name": "Foundations & SOG",
+      "outline_number": "1.5.3.1",
+      "outline_level": 4,
+      "duration": "PT96H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:50:15",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1560",
+      "predecessors": [
+        {
+          "outline_number": "1.5.2.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "185",
+      "uid": "83314",
+      "name": "Structure & Windows",
+      "outline_number": "1.5.3.2",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:05",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1570",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "186",
+      "uid": "113",
+      "name": "Sheathing",
+      "outline_number": "1.5.3.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:10",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1580",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "187",
+      "uid": "184766",
+      "name": "Roof",
+      "outline_number": "1.5.3.4",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:14",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1590",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "188",
+      "uid": "259112",
+      "name": "Siding or Brick Facade",
+      "outline_number": "1.5.3.5",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:19",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1600",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.4",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "189",
+      "uid": "116",
+      "name": "MEP Rough",
+      "outline_number": "1.5.3.6",
+      "outline_level": 4,
+      "duration": "PT160H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:28",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1610",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "190",
+      "uid": "117",
+      "name": "Insulation",
+      "outline_number": "1.5.3.7",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:31",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1620",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "191",
+      "uid": "118",
+      "name": "Cover Up Inspection",
+      "outline_number": "1.5.3.8",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:33",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1630",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.6",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.3.7",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "192",
+      "uid": "144177",
+      "name": "Drywall Install and Finish",
+      "outline_number": "1.5.3.9",
+      "outline_level": 4,
+      "duration": "PT128H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:39",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1640",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.8",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "193",
+      "uid": "120",
+      "name": "Gypcrete",
+      "outline_number": "1.5.3.10",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:44",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1650",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.9",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "194",
+      "uid": "287026",
+      "name": "MEP Closets",
+      "outline_number": "1.5.3.11",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:24:16",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1660",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.10",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "195",
+      "uid": "29752",
+      "name": "Conditioned Air",
+      "outline_number": "1.5.3.12",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:24:27",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1670",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.11",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "196",
+      "uid": "186158",
+      "name": "Doors and Hardware",
+      "outline_number": "1.5.3.13",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:06",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1680",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.12",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "197",
+      "uid": "91754",
+      "name": "Paint Activities",
+      "outline_number": "1.5.3.14",
+      "outline_level": 4,
+      "duration": "PT32H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:09",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1690",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.10",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "198",
+      "uid": "2547",
+      "name": "Cabinets ",
+      "outline_number": "1.5.3.15",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:26",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1700",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.12",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "199",
+      "uid": "164337",
+      "name": "Flooring Activities",
+      "outline_number": "1.5.3.16",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:29",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1710",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.15",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "200",
+      "uid": "259860",
+      "name": "Appliances",
+      "outline_number": "1.5.3.17",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:52",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1720",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.15",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "201",
+      "uid": "141954",
+      "name": "MEP Trim Out",
+      "outline_number": "1.5.3.18",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:56",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1730",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.14",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "202",
+      "uid": "331505",
+      "name": "Final Clean & Punch",
+      "outline_number": "1.5.3.19",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:59",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1740",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.17",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.3.18",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "203",
+      "uid": "76606",
+      "name": "9 Plex",
+      "outline_number": "1.5.4",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "204",
+      "uid": "237015",
+      "name": "Foundations & SOG",
+      "outline_number": "1.5.4.1",
+      "outline_level": 4,
+      "duration": "PT96H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:50:15",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1360",
+      "predecessors": [
+        {
+          "outline_number": "1.5.3.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "205",
+      "uid": "112",
+      "name": "Structure & Windows",
+      "outline_number": "1.5.4.2",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:05",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1370",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "206",
+      "uid": "197689",
+      "name": "Sheathing",
+      "outline_number": "1.5.4.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:10",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1380",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "207",
+      "uid": "114",
+      "name": "Roof",
+      "outline_number": "1.5.4.4",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:14",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1390",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "208",
+      "uid": "344562",
+      "name": "Siding or Brick Facade",
+      "outline_number": "1.5.4.5",
+      "outline_level": 4,
+      "duration": "PT104H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:19",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1400",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.4",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "209",
+      "uid": "273236",
+      "name": "MEP Rough",
+      "outline_number": "1.5.4.6",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:28",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1410",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "210",
+      "uid": "43744",
+      "name": "Insulation",
+      "outline_number": "1.5.4.7",
+      "outline_level": 4,
+      "duration": "PT56H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:31",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1420",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "211",
+      "uid": "333706",
+      "name": "Cover Up Inspection",
+      "outline_number": "1.5.4.8",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:33",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1430",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.6",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.4.7",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "212",
+      "uid": "177393",
+      "name": "Drywall Install and Finish",
+      "outline_number": "1.5.4.9",
+      "outline_level": 4,
+      "duration": "PT104H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:39",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1440",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.8",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "213",
+      "uid": "73245",
+      "name": "Gypcrete",
+      "outline_number": "1.5.4.10",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:44",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1450",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.9",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "214",
+      "uid": "11520",
+      "name": "MEP Closets",
+      "outline_number": "1.5.4.11",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:24:16",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1460",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.10",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "215",
+      "uid": "309463",
+      "name": "Conditioned Air",
+      "outline_number": "1.5.4.12",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:24:27",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1470",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.11",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "216",
+      "uid": "358416",
+      "name": "Doors and Hardware",
+      "outline_number": "1.5.4.13",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:06",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1480",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.12",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "217",
+      "uid": "333067",
+      "name": "Paint Activities",
+      "outline_number": "1.5.4.14",
+      "outline_level": 4,
+      "duration": "PT32H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:09",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1490",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.10",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "218",
+      "uid": "7104",
+      "name": "Cabinets ",
+      "outline_number": "1.5.4.15",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:26",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1500",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.12",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "219",
+      "uid": "231407",
+      "name": "Flooring Activities",
+      "outline_number": "1.5.4.16",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:29",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1510",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.15",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "220",
+      "uid": "308968",
+      "name": "Appliances",
+      "outline_number": "1.5.4.17",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:52",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1520",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.15",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "221",
+      "uid": "128439",
+      "name": "MEP Trim Out",
+      "outline_number": "1.5.4.18",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:56",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1530",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.14",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "222",
+      "uid": "17074",
+      "name": "Final Clean & Punch",
+      "outline_number": "1.5.4.19",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:59",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1540",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.17",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.4.18",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "223",
+      "uid": "225830",
+      "name": "6 Plex B",
+      "outline_number": "1.5.5",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "224",
+      "uid": "165937",
+      "name": "Foundations & SOG",
+      "outline_number": "1.5.5.1",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:50:15",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1160",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "225",
+      "uid": "220095",
+      "name": "Structure & Windows",
+      "outline_number": "1.5.5.2",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:05",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1170",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "226",
+      "uid": "96678",
+      "name": "Sheathing",
+      "outline_number": "1.5.5.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:10",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1180",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "227",
+      "uid": "159063",
+      "name": "Roof",
+      "outline_number": "1.5.5.4",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:14",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1190",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "228",
+      "uid": "115",
+      "name": "Siding or Brick Facade ",
+      "outline_number": "1.5.5.5",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:19",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1200",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.4",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "229",
+      "uid": "222266",
+      "name": "MEP Rough",
+      "outline_number": "1.5.5.6",
+      "outline_level": 4,
+      "duration": "PT160H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:28",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1210",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "230",
+      "uid": "331609",
+      "name": "Insulation",
+      "outline_number": "1.5.5.7",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:31",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1220",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "231",
+      "uid": "56345",
+      "name": "Cover Up Inspection",
+      "outline_number": "1.5.5.8",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:33",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1230",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.6",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.5.7",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "232",
+      "uid": "76965",
+      "name": "Drywall Install and Finish",
+      "outline_number": "1.5.5.9",
+      "outline_level": 4,
+      "duration": "PT104H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:39",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1240",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.8",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "233",
+      "uid": "199172",
+      "name": "Gypcrete",
+      "outline_number": "1.5.5.10",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:44",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1250",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.9",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "234",
+      "uid": "44151",
+      "name": "MEP Closets",
+      "outline_number": "1.5.5.11",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:24:16",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1260",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.10",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "235",
+      "uid": "343096",
+      "name": "Conditioned Air",
+      "outline_number": "1.5.5.12",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:24:27",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1270",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.11",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "236",
+      "uid": "55008",
+      "name": "Doors and Hardware",
+      "outline_number": "1.5.5.13",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:06",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1280",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.12",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "237",
+      "uid": "310922",
+      "name": "Paint Activities",
+      "outline_number": "1.5.5.14",
+      "outline_level": 4,
+      "duration": "PT32H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:09",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1290",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.10",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "238",
+      "uid": "399745",
+      "name": "Cabinets ",
+      "outline_number": "1.5.5.15",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:26",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1300",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.12",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "239",
+      "uid": "198169",
+      "name": "Flooring Activities",
+      "outline_number": "1.5.5.16",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:29",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1310",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.15",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "240",
+      "uid": "120347",
+      "name": "Appliances",
+      "outline_number": "1.5.5.17",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:52",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1320",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.15",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "241",
+      "uid": "41550",
+      "name": "MEP Trim Out",
+      "outline_number": "1.5.5.18",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:56",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1330",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.14",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "242",
+      "uid": "203888",
+      "name": "Final Clean & Punch",
+      "outline_number": "1.5.5.19",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:59",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1340",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.18",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "243",
+      "uid": "10795",
+      "name": "12 PLEX",
+      "outline_number": "1.5.6",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "244",
+      "uid": "111",
+      "name": "Foundations & SOG",
+      "outline_number": "1.5.6.1",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T15:50:15",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "990",
+      "predecessors": [
+        {
+          "outline_number": "1.5.5.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "245",
+      "uid": "2967",
+      "name": "Structure & Windows",
+      "outline_number": "1.5.6.2",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:05",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1000",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "246",
+      "uid": "74763",
+      "name": "Sheathing",
+      "outline_number": "1.5.6.3",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:10",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1010",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "247",
+      "uid": "303046",
+      "name": "Roof",
+      "outline_number": "1.5.6.4",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:14",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1020",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "248",
+      "uid": "134962",
+      "name": "Siding or Brick Facade ",
+      "outline_number": "1.5.6.5",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:19",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1030",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.4",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "249",
+      "uid": "390887",
+      "name": "MEP Rough",
+      "outline_number": "1.5.6.6",
+      "outline_level": 4,
+      "duration": "PT104H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:28",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1040",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "250",
+      "uid": "362100",
+      "name": "Insulation",
+      "outline_number": "1.5.6.7",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:31",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1050",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.5",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "251",
+      "uid": "50172",
+      "name": "Cover Up Inspection",
+      "outline_number": "1.5.6.8",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:33",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1060",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.6",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.6.7",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "252",
+      "uid": "119",
+      "name": "Drywall Install and Finish",
+      "outline_number": "1.5.6.9",
+      "outline_level": 4,
+      "duration": "PT128H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:39",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1070",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.8",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "253",
+      "uid": "176850",
+      "name": "Gypcrete",
+      "outline_number": "1.5.6.10",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:19:44",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1080",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.9",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "254",
+      "uid": "122",
+      "name": "MEP Closets",
+      "outline_number": "1.5.6.11",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:24:16",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1085",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.10",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "255",
+      "uid": "123",
+      "name": "Conditioned Air",
+      "outline_number": "1.5.6.12",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:24:27",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1087",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.11",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "256",
+      "uid": "124",
+      "name": "Doors and Hardware",
+      "outline_number": "1.5.6.13",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:06",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1088",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.12",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "257",
+      "uid": "125",
+      "name": "Paint Activities",
+      "outline_number": "1.5.6.14",
+      "outline_level": 4,
+      "duration": "PT32H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:09",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1089",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.10",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "258",
+      "uid": "126",
+      "name": "Cabinets ",
+      "outline_number": "1.5.6.15",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:26",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1100",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.12",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "259",
+      "uid": "127",
+      "name": "Flooring Activities",
+      "outline_number": "1.5.6.16",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:29",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1110",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.15",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "260",
+      "uid": "128",
+      "name": "Appliances",
+      "outline_number": "1.5.6.17",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:52",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1120",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.15",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "261",
+      "uid": "129",
+      "name": "MEP Trim Out",
+      "outline_number": "1.5.6.18",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:56",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1130",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.14",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "262",
+      "uid": "130",
+      "name": "Final Clean & Punch",
+      "outline_number": "1.5.6.19",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:26:59",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1140",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.18",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "263",
+      "uid": "140973",
+      "name": "Exterior - Hardscapes",
+      "outline_number": "1.5.7",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "264",
+      "uid": "131",
+      "name": "Hardscape - Curb & Gutter",
+      "outline_number": "1.5.7.1",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:54:05",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1150",
+      "predecessors": [
+        {
+          "outline_number": "1.5.4.19",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "265",
+      "uid": "132",
+      "name": "Hardscapes - Sidewalks",
+      "outline_number": "1.5.7.2",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:54:16",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1155",
+      "predecessors": [
+        {
+          "outline_number": "1.5.7.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "266",
+      "uid": "86616",
+      "name": "Exterior - Irrigation",
+      "outline_number": "1.5.8",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "267",
+      "uid": "133",
+      "name": "Install Irrigation Lines and Sleeves",
+      "outline_number": "1.5.8.1",
+      "outline_level": 4,
+      "duration": "PT64H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:54:20",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1157",
+      "predecessors": [
+        {
+          "outline_number": "1.5.7.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "268",
+      "uid": "134",
+      "name": "Trim out Irrigation Lines and Zones",
+      "outline_number": "1.5.8.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:54:28",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1158",
+      "predecessors": [
+        {
+          "outline_number": "1.5.8.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "269",
+      "uid": "135",
+      "name": "Test Irrigation Systems",
+      "outline_number": "1.5.8.3",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:54:41",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1159",
+      "predecessors": [
+        {
+          "outline_number": "1.5.8.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "270",
+      "uid": "368463",
+      "name": "Exterior - Asphalt",
+      "outline_number": "1.5.9",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "271",
+      "uid": "136",
+      "name": "Install GAB",
+      "outline_number": "1.5.9.1",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:55:03",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1165",
+      "predecessors": [
+        {
+          "outline_number": "1.4.5.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.8.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "272",
+      "uid": "137",
+      "name": "Install Binder",
+      "outline_number": "1.5.9.2",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:55:12",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1167",
+      "predecessors": [
+        {
+          "outline_number": "1.5.9.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "273",
+      "uid": "138",
+      "name": "Install Asphalt",
+      "outline_number": "1.5.9.3",
+      "outline_level": 4,
+      "duration": "PT24H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:55:14",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1168",
+      "predecessors": [
+        {
+          "outline_number": "1.5.9.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "274",
+      "uid": "373892",
+      "name": "Exterior - Landscape",
+      "outline_number": "1.5.10",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "275",
+      "uid": "139",
+      "name": "Install Landscaping Plants and Trees",
+      "outline_number": "1.5.10.1",
+      "outline_level": 4,
+      "duration": "PT120H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:55:21",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1169",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.19",
+          "type": 0,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.7.2",
+          "type": 3,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.8.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "276",
+      "uid": "140",
+      "name": "Landscape Punch",
+      "outline_number": "1.5.10.2",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:55:39",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1175",
+      "predecessors": [
+        {
+          "outline_number": "1.5.10.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "277",
+      "uid": "183290",
+      "name": "Exterior - Striping",
+      "outline_number": "1.5.11",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "278",
+      "uid": "141",
+      "name": "Install Striping",
+      "outline_number": "1.5.11.1",
+      "outline_level": 4,
+      "duration": "PT40H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:55:54",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1177",
+      "predecessors": [
+        {
+          "outline_number": "1.5.9.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "279",
+      "uid": "64875",
+      "name": "Final Inspections",
+      "outline_number": "1.5.12",
+      "outline_level": 3,
+      "duration": "PT8H0M0S",
+      "milestone": false,
+      "summary": true,
+      "percent_complete": 0,
+      "create_date": "2025-12-27T10:13:42",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": null,
+      "value": "",
+      "predecessors": [],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "280",
+      "uid": "142",
+      "name": "Final Inspections",
+      "outline_number": "1.5.12.1",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:57:00",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1178",
+      "predecessors": [
+        {
+          "outline_number": "1.5.6.19",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.5.19",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.4.19",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.3.19",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.2.19",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.10.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.10.2",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.11.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    },
+    {
+      "id": "281",
+      "uid": "143",
+      "name": "Punch and Closeout",
+      "outline_number": "1.5.12.2",
+      "outline_level": 4,
+      "duration": "PT80H0M0S",
+      "milestone": false,
+      "summary": false,
+      "percent_complete": 0,
+      "create_date": "2024-08-07T16:57:04",
+      "actual_start": null,
+      "actual_finish": null,
+      "actual_duration": "PT0H0M0S",
+      "value": "1179",
+      "predecessors": [
+        {
+          "outline_number": "1.5.8.3",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        },
+        {
+          "outline_number": "1.5.12.1",
+          "type": 1,
+          "lag": 0,
+          "lag_format": 7
+        }
+      ],
+      "start_date": null,
+      "finish_date": null
+    }
+  ]
+}

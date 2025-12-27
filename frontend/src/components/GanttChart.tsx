@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
 import type { Task } from '../api/client';
+import { getCriticalPath } from '../api/client';
 import { format, parseISO, addDays, differenceInDays, startOfWeek, addWeeks, addMonths, startOfMonth, eachDayOfInterval, getDay } from 'date-fns';
-import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward } from 'lucide-react';
+import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch } from 'lucide-react';
 
 interface GanttChartProps {
   tasks: Task[];
@@ -40,6 +41,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [showWeekends, setShowWeekends] = useState<boolean>(true);
+  const [isLoadingCriticalPath, setIsLoadingCriticalPath] = useState<boolean>(false);
 
   // Refs for synchronized scrolling
   const taskListRef = useRef<HTMLDivElement>(null);
@@ -68,42 +70,21 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     return `${days} days`;
   };
 
-  // Format predecessors for display (MS Project style)
-  const formatPredecessors = (predecessors: Task['predecessors']): string => {
-    if (!predecessors || predecessors.length === 0) return '';
-
-    return predecessors.map(pred => {
-      // Dependency type mapping
-      const typeMap: { [key: number]: string } = {
-        0: 'FF', // Finish-to-Finish
-        1: 'FS', // Finish-to-Start (default)
-        2: 'SF', // Start-to-Finish
-        3: 'SS', // Start-to-Start
-      };
-
-      const type = typeMap[pred.type] || 'FS';
-
-      // Convert lag from minutes to days (480 min = 1 day)
-      const lagDays = (pred.lag || 0) / 480;
-
-      // Format: "1.2FS" or "1.2FS+5d" or "1.2FS-3d"
-      let result = pred.outline_number;
-
-      // Only show type if not default FS
-      if (pred.type !== 1) {
-        result += type;
-      } else {
-        result += type; // Always show type for clarity
-      }
-
-      // Add lag if non-zero
-      if (lagDays !== 0) {
-        const sign = lagDays > 0 ? '+' : '';
-        result += `${sign}${lagDays}d`;
-      }
-
-      return result;
-    }).join(', ');
+  // Handle critical path calculation and open in new tab
+  const handleOpenCriticalPath = async () => {
+    setIsLoadingCriticalPath(true);
+    try {
+      const result = await getCriticalPath();
+      // Store the result in sessionStorage so the new tab can access it
+      sessionStorage.setItem('criticalPathData', JSON.stringify(result));
+      // Open in a new tab
+      window.open('/critical-path', '_blank');
+    } catch (error) {
+      console.error('Failed to calculate critical path:', error);
+      alert('Failed to calculate critical path. Please try again.');
+    } finally {
+      setIsLoadingCriticalPath(false);
+    }
   };
 
   // Sort tasks by outline number to maintain hierarchy
@@ -156,6 +137,81 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     return visible;
   }, [sortedTasks, expandedTasks]);
 
+  // Format predecessors for display (MS Project style)
+  const formatPredecessors = useCallback((predecessors: Task['predecessors']): string => {
+    if (!predecessors || predecessors.length === 0) return '-';
+
+    try {
+      return predecessors.map(pred => {
+        // Find the task number by outline_number in visibleTasks
+        const predTask = visibleTasks.find(t => t.outline_number === pred.outline_number);
+        const taskNumber = predTask ? visibleTasks.indexOf(predTask) + 1 : pred.outline_number;
+
+        // Dependency type mapping
+        const typeMap: { [key: number]: string } = {
+          0: 'FF', // Finish-to-Finish
+          1: 'FS', // Finish-to-Start (default)
+          2: 'SF', // Start-to-Finish
+          3: 'SS', // Start-to-Start
+        };
+
+        // MS Project lag format:
+        // 3 = minutes, 4 = elapsed minutes, 5 = hours, 6 = elapsed hours
+        // 7 = days, 8 = elapsed days, 9 = weeks, 10 = elapsed weeks
+        // 11 = months, 12 = elapsed months, 19 = percent
+        const lagValue = pred.lag || 0;
+        const lagFormat = pred.lag_format || 7;
+
+        let lagDays = 0;
+        if (lagFormat === 3) {
+          // Minutes
+          lagDays = lagValue / 480; // 8 hours * 60 minutes
+        } else if (lagFormat === 5 || lagFormat === 6) {
+          // Hours or elapsed hours
+          lagDays = lagValue / 8;
+        } else if (lagFormat === 7 || lagFormat === 8) {
+          // Days or elapsed days (most common)
+          lagDays = lagValue;
+        } else if (lagFormat === 9 || lagFormat === 10) {
+          // Weeks or elapsed weeks
+          lagDays = lagValue * 5; // 5 working days per week
+        } else if (lagFormat === 11 || lagFormat === 12) {
+          // Months or elapsed months
+          lagDays = lagValue * 20; // Approximate: 20 working days per month
+        } else {
+          // Default to days
+          lagDays = lagValue;
+        }
+
+        // Start with task number
+        let result = `${taskNumber}`;
+
+        // Add dependency type
+        // MS Project rule: Show type if NOT FS, OR if FS with lag
+        const type = typeMap[pred.type] || 'FS';
+        const hasLag = lagDays !== 0;
+
+        if (pred.type !== 1 || hasLag) {
+          // Show type if: not FS, or FS with lag
+          result += type;
+        }
+
+        // Add lag if non-zero
+        if (hasLag) {
+          const sign = lagDays > 0 ? '+' : '';
+          // Format lag: "10 days" or "1 day" or "2.5 days"
+          const lagStr = lagDays % 1 === 0 ? lagDays.toString() : lagDays.toFixed(1);
+          const dayLabel = Math.abs(lagDays) === 1 ? 'day' : 'days';
+          result += `${sign}${lagStr} ${dayLabel}`;
+        }
+
+        return result;
+      }).join(',');
+    } catch (error) {
+      console.error('Error formatting predecessors:', error, predecessors);
+      return '-';
+    }
+  }, [visibleTasks]);
 
   const calculateTaskDates = useMemo(() => {
     if (!projectStartDate) return new Map<string, Date>();
@@ -190,7 +246,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             const predEnd = addDays(predStart, predDuration);
 
             // Add lag if specified
-            const lagDays = pred.lag || 0;
+            // MS Project stores lag in tenths of minutes
+            // Convert: tenths of minutes -> minutes -> days
+            const lagMinutes = (pred.lag || 0) / 10;
+            const lagDays = lagMinutes / 480;
             const predEndWithLag = addDays(predEnd, lagDays);
 
             if (predEndWithLag > latestPredecessorEnd) {
@@ -447,8 +506,17 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           <span className="stat-item">
             <strong>{projectStats.milestones}</strong> Milestones
           </span>
+          <button
+            className="critical-path-button"
+            onClick={handleOpenCriticalPath}
+            disabled={isLoadingCriticalPath}
+            title="Analyze Critical Path"
+          >
+            <GitBranch size={16} />
+            {isLoadingCriticalPath ? 'Calculating...' : 'Critical Path'}
+          </button>
         </div>
-        
+
         <div className="gantt-controls">
           <div className="gantt-zoom-controls">
             <button
@@ -501,6 +569,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             <div className="gantt-header-cell">Task Name</div>
             <div className="gantt-header-cell">Start Date</div>
             <div className="gantt-header-cell">Duration</div>
+            <div className="gantt-header-cell">Finish Date</div>
             <div className="gantt-header-cell">Predecessors</div>
           </div>
           <div className="gantt-tasks" ref={taskListRef} onScroll={handleTaskListScroll}>
@@ -551,6 +620,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                              summaryDuration % 1 === 0 ? `${summaryDuration} days` :
                              `${summaryDuration.toFixed(1)} days`;
                     })() : formatDuration(task.duration)}
+                  </div>
+                  <div className="gantt-task-finish">
+                    {calculatedStartDate ? (() => {
+                      const duration = task.summary ? calculateSummaryDuration(task) : parseDuration(task.duration);
+                      const finishDate = addDays(calculatedStartDate, duration);
+                      return formatDate(finishDate.toISOString());
+                    })() : '-'}
                   </div>
                   <div className="gantt-task-predecessors" title={formatPredecessors(task.predecessors)}>
                     {formatPredecessors(task.predecessors)}
@@ -799,6 +875,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           </div>
         </div>
       </div>
+
     </div>
   );
 };

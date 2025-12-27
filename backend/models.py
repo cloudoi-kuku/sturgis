@@ -88,6 +88,11 @@ class TaskCategorizationRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str
 
+class GenerateProjectRequest(BaseModel):
+    """Request to generate a complete project from description"""
+    description: str = Field(..., description="Natural language description of the project")
+    project_type: str = Field(default="commercial", description="Type of project: residential, commercial, industrial, renovation")
+
 # Project Optimization Models (MS Project Compliant)
 class OptimizeDurationRequest(BaseModel):
     """Request to optimize project duration"""

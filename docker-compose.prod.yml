@@ -1,0 +1,130 @@
+services:
+  # Ollama AI Service (Production)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: msproject-ollama-prod
+    ports:
+      - "11434:11434"
+    volumes:
+      # Persist Ollama models
+      - ollama-data:/root/.ollama
+    networks:
+      - msproject-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Pull and run the model on startup
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Start Ollama in the background
+        /bin/ollama serve &
+        # Wait for Ollama to be ready
+        sleep 5
+        # Pull the model if not already present
+        ollama pull llama3.2:3b
+        # Keep the container running
+        wait
+
+  # Backend API Service (Production)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: msproject-backend-prod
+    ports:
+      - "8000:8000"
+    volumes:
+      # Only mount data directory, not source code
+      - ./backend/project_data:/app/project_data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=production
+      - OLLAMA_BASE_URL=http://ollama:11434
+    networks:
+      - msproject-network
+    restart: always
+    depends_on:
+      ollama:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Frontend Service (Production)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: msproject-frontend-prod
+    ports:
+      - "80:80"
+      - "443:443"  # For HTTPS
+    depends_on:
+      - backend
+    networks:
+      - msproject-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  msproject-network:
+    driver: bridge
+
+volumes:
+  project-data:
+    driver: local
+  ollama-data:
+    driver: local
+

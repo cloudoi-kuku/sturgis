@@ -1,0 +1,221 @@
+.how-to-use-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.how-to-use-modal .modal-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.how-to-use-modal .modal-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.how-to-use-modal .close-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.how-to-use-modal .close-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.how-to-use-modal .modal-content {
+  padding: 2rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.guide-section {
+  margin-bottom: 2.5rem;
+}
+
+.guide-section:last-child {
+  margin-bottom: 0;
+}
+
+.guide-section h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #667eea;
+}
+
+.step {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.step:last-child {
+  margin-bottom: 0;
+}
+
+.step-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-content h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.step-content p {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+
+.step-content ul {
+  margin-top: 0.5rem;
+  margin-left: 1.5rem;
+  color: #555;
+}
+
+.step-content ul li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.step-content strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.tip {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 0.75rem 1rem;
+  margin-top: 0.75rem;
+  border-radius: 4px;
+  color: #856404;
+}
+
+.tips-section {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.tips-section h3 {
+  border-bottom: 2px solid #667eea;
+  color: #2c3e50;
+}
+
+.tips-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tips-list li {
+  padding: 0.75rem 0;
+  padding-left: 2rem;
+  position: relative;
+  color: #2c3e50;
+  line-height: 1.6;
+}
+
+.tips-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #27ae60;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.how-to-use-modal .modal-footer {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  background: #f8f9fa;
+  border-radius: 0 0 12px 12px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .how-to-use-modal {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .how-to-use-modal .modal-header {
+    padding: 1rem 1.5rem;
+  }
+
+  .how-to-use-modal .modal-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .how-to-use-modal .modal-content {
+    padding: 1.5rem;
+  }
+
+  .step {
+    flex-direction: column;
+  }
+
+  .step-icon {
+    width: 36px;
+    height: 36px;
+  }
+}
+

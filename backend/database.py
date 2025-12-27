@@ -1,0 +1,436 @@
+"""
+SQLite database service for MS Project Configuration Tool
+Handles multi-project persistence with proper isolation
+"""
+import sqlite3
+import json
+from pathlib import Path
+from typing import List, Optional, Dict, Any
+from datetime import datetime
+import uuid
+from contextlib import contextmanager
+
+
+class DatabaseService:
+    """SQLite database service for project management"""
+    
+    def __init__(self, db_path: str = "project_data/projects.db"):
+        self.db_path = Path(db_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.init_database()
+    
+    @contextmanager
+    def get_connection(self):
+        """Context manager for database connections"""
+        conn = sqlite3.connect(str(self.db_path))
+        conn.row_factory = sqlite3.Row  # Enable column access by name
+        try:
+            yield conn
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            conn.close()
+    
+    def init_database(self):
+        """Initialize database schema"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Projects table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS projects (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    start_date TEXT NOT NULL,
+                    status_date TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    is_active INTEGER DEFAULT 0,
+                    xml_template TEXT
+                )
+            """)
+            
+            # Tasks table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id TEXT PRIMARY KEY,
+                    project_id TEXT NOT NULL,
+                    uid TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    outline_number TEXT NOT NULL,
+                    outline_level INTEGER NOT NULL,
+                    duration TEXT,
+                    value TEXT,
+                    milestone INTEGER DEFAULT 0,
+                    summary INTEGER DEFAULT 0,
+                    percent_complete INTEGER DEFAULT 0,
+                    start_date TEXT,
+                    finish_date TEXT,
+                    actual_start TEXT,
+                    actual_finish TEXT,
+                    actual_duration TEXT,
+                    create_date TEXT,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Predecessors table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS predecessors (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id TEXT NOT NULL,
+                    project_id TEXT NOT NULL,
+                    outline_number TEXT NOT NULL,
+                    type INTEGER DEFAULT 1,
+                    lag INTEGER DEFAULT 0,
+                    lag_format INTEGER DEFAULT 7,
+                    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Create indexes for better performance
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_outline ON tasks(project_id, outline_number)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_predecessors_task ON predecessors(task_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_predecessors_project ON predecessors(project_id)")
+            
+            conn.commit()
+    
+    def create_project(self, name: str, start_date: str, status_date: str, xml_template: Optional[str] = None) -> str:
+        """Create a new project and return its ID"""
+        project_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Deactivate all other projects
+            cursor.execute("UPDATE projects SET is_active = 0")
+            
+            # Insert new project
+            cursor.execute("""
+                INSERT INTO projects (id, name, start_date, status_date, created_at, updated_at, is_active, xml_template)
+                VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+            """, (project_id, name, start_date, status_date, now, now, xml_template))
+            
+        return project_id
+    
+    def get_project(self, project_id: str) -> Optional[Dict[str, Any]]:
+        """Get a project by ID"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM projects WHERE id = ?", (project_id,))
+            row = cursor.fetchone()
+            
+            if row:
+                return dict(row)
+        return None
+    
+    def get_active_project(self) -> Optional[Dict[str, Any]]:
+        """Get the currently active project"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM projects WHERE is_active = 1 LIMIT 1")
+            row = cursor.fetchone()
+
+            if row:
+                return dict(row)
+        return None
+
+    def list_projects(self) -> List[Dict[str, Any]]:
+        """List all projects"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT p.*, COUNT(t.id) as task_count
+                FROM projects p
+                LEFT JOIN tasks t ON p.id = t.project_id
+                GROUP BY p.id
+                ORDER BY p.updated_at DESC
+            """)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def switch_project(self, project_id: str) -> bool:
+        """Switch to a different project"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Check if project exists
+            cursor.execute("SELECT id FROM projects WHERE id = ?", (project_id,))
+            if not cursor.fetchone():
+                return False
+
+            # Deactivate all projects
+            cursor.execute("UPDATE projects SET is_active = 0")
+
+            # Activate the selected project
+            cursor.execute("UPDATE projects SET is_active = 1, updated_at = ? WHERE id = ?",
+                         (datetime.now().isoformat(), project_id))
+
+            return True
+
+    def update_project_metadata(self, project_id: str, name: str, start_date: str, status_date: str) -> bool:
+        """Update project metadata"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE projects
+                SET name = ?, start_date = ?, status_date = ?, updated_at = ?
+                WHERE id = ?
+            """, (name, start_date, status_date, datetime.now().isoformat(), project_id))
+
+            return cursor.rowcount > 0
+
+    def delete_project(self, project_id: str) -> bool:
+        """Delete a project and all its tasks"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+            return cursor.rowcount > 0
+
+    def save_xml_template(self, project_id: str, xml_content: str) -> bool:
+        """Save XML template for a project"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE projects
+                SET xml_template = ?, updated_at = ?
+                WHERE id = ?
+            """, (xml_content, datetime.now().isoformat(), project_id))
+
+            return cursor.rowcount > 0
+
+    def get_xml_template(self, project_id: str) -> Optional[str]:
+        """Get XML template for a project"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT xml_template FROM projects WHERE id = ?", (project_id,))
+            row = cursor.fetchone()
+
+            if row and row['xml_template']:
+                return row['xml_template']
+        return None
+
+    def create_task(self, project_id: str, task_data: Dict[str, Any]) -> str:
+        """Create a new task"""
+        task_id = task_data.get('id', str(uuid.uuid4()))
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                INSERT INTO tasks (
+                    id, project_id, uid, name, outline_number, outline_level,
+                    duration, value, milestone, summary, percent_complete,
+                    start_date, finish_date, actual_start, actual_finish, actual_duration, create_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                task_id, project_id, task_data.get('uid', task_id),
+                task_data['name'], task_data['outline_number'], task_data.get('outline_level', 1),
+                task_data.get('duration'), task_data.get('value', ''),
+                1 if task_data.get('milestone', False) else 0,
+                1 if task_data.get('summary', False) else 0,
+                task_data.get('percent_complete', 0),
+                task_data.get('start_date'), task_data.get('finish_date'),
+                task_data.get('actual_start'), task_data.get('actual_finish'),
+                task_data.get('actual_duration'), task_data.get('create_date')
+            ))
+
+            # Insert predecessors
+            for pred in task_data.get('predecessors', []):
+                cursor.execute("""
+                    INSERT INTO predecessors (task_id, project_id, outline_number, type, lag, lag_format)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    task_id, project_id, pred['outline_number'],
+                    pred.get('type', 1), pred.get('lag', 0), pred.get('lag_format', 7)
+                ))
+
+            # Update project timestamp
+            cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
+                         (datetime.now().isoformat(), project_id))
+
+        return task_id
+
+    def get_tasks(self, project_id: str) -> List[Dict[str, Any]]:
+        """Get all tasks for a project"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Get all tasks
+            cursor.execute("""
+                SELECT * FROM tasks
+                WHERE project_id = ?
+                ORDER BY outline_number
+            """, (project_id,))
+
+            tasks = []
+            for row in cursor.fetchall():
+                task = dict(row)
+                # Convert boolean fields
+                task['milestone'] = bool(task['milestone'])
+                task['summary'] = bool(task['summary'])
+
+                # Get predecessors for this task
+                cursor.execute("""
+                    SELECT outline_number, type, lag, lag_format
+                    FROM predecessors
+                    WHERE task_id = ?
+                """, (task['id'],))
+
+                task['predecessors'] = [dict(pred) for pred in cursor.fetchall()]
+                tasks.append(task)
+
+            return tasks
+
+    def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """Get a single task by ID"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
+            row = cursor.fetchone()
+
+            if row:
+                task = dict(row)
+                task['milestone'] = bool(task['milestone'])
+                task['summary'] = bool(task['summary'])
+
+                # Get predecessors
+                cursor.execute("""
+                    SELECT outline_number, type, lag, lag_format
+                    FROM predecessors
+                    WHERE task_id = ?
+                """, (task_id,))
+
+                task['predecessors'] = [dict(pred) for pred in cursor.fetchall()]
+                return task
+
+        return None
+
+    def update_task(self, task_id: str, task_data: Dict[str, Any]) -> bool:
+        """Update an existing task"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Get project_id for this task
+            cursor.execute("SELECT project_id FROM tasks WHERE id = ?", (task_id,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+
+            project_id = row['project_id']
+
+            # Build update query dynamically based on provided fields
+            update_fields = []
+            values = []
+
+            for field in ['name', 'outline_number', 'duration', 'value', 'percent_complete',
+                         'start_date', 'finish_date', 'actual_start', 'actual_finish', 'actual_duration']:
+                if field in task_data:
+                    update_fields.append(f"{field} = ?")
+                    values.append(task_data[field])
+
+            for field in ['milestone', 'summary']:
+                if field in task_data:
+                    update_fields.append(f"{field} = ?")
+                    values.append(1 if task_data[field] else 0)
+
+            if update_fields:
+                values.append(task_id)
+                cursor.execute(f"""
+                    UPDATE tasks
+                    SET {', '.join(update_fields)}
+                    WHERE id = ?
+                """, values)
+
+            # Update predecessors if provided
+            if 'predecessors' in task_data:
+                # Delete existing predecessors
+                cursor.execute("DELETE FROM predecessors WHERE task_id = ?", (task_id,))
+
+                # Insert new predecessors
+                for pred in task_data['predecessors']:
+                    cursor.execute("""
+                        INSERT INTO predecessors (task_id, project_id, outline_number, type, lag, lag_format)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        task_id, project_id, pred['outline_number'],
+                        pred.get('type', 1), pred.get('lag', 0), pred.get('lag_format', 7)
+                    ))
+
+            # Update project timestamp
+            cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
+                         (datetime.now().isoformat(), project_id))
+
+            return True
+
+    def delete_task(self, task_id: str) -> bool:
+        """Delete a task"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Get project_id before deleting
+            cursor.execute("SELECT project_id FROM tasks WHERE id = ?", (task_id,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+
+            project_id = row['project_id']
+
+            # Delete task (predecessors will be deleted by CASCADE)
+            cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+
+            # Update project timestamp
+            cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
+                         (datetime.now().isoformat(), project_id))
+
+            return cursor.rowcount > 0
+
+    def bulk_create_tasks(self, project_id: str, tasks: List[Dict[str, Any]]) -> int:
+        """Bulk create tasks for a project (used during XML import)"""
+        count = 0
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            for task_data in tasks:
+                task_id = task_data.get('id', str(uuid.uuid4()))
+
+                cursor.execute("""
+                    INSERT INTO tasks (
+                        id, project_id, uid, name, outline_number, outline_level,
+                        duration, value, milestone, summary, percent_complete,
+                        start_date, finish_date, actual_start, actual_finish, actual_duration, create_date
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    task_id, project_id, task_data.get('uid', task_id),
+                    task_data['name'], task_data['outline_number'], task_data.get('outline_level', 1),
+                    task_data.get('duration'), task_data.get('value', ''),
+                    1 if task_data.get('milestone', False) else 0,
+                    1 if task_data.get('summary', False) else 0,
+                    task_data.get('percent_complete', 0),
+                    task_data.get('start_date'), task_data.get('finish_date'),
+                    task_data.get('actual_start'), task_data.get('actual_finish'),
+                    task_data.get('actual_duration'), task_data.get('create_date')
+                ))
+
+                # Insert predecessors
+                for pred in task_data.get('predecessors', []):
+                    cursor.execute("""
+                        INSERT INTO predecessors (task_id, project_id, outline_number, type, lag, lag_format)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        task_id, project_id, pred['outline_number'],
+                        pred.get('type', 1), pred.get('lag', 0), pred.get('lag_format', 7)
+                    ))
+
+                count += 1
+
+            # Update project timestamp
+            cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
+                         (datetime.now().isoformat(), project_id))
+
+        return count
+

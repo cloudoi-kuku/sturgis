@@ -283,13 +283,66 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     <option value={3}>Start-to-Start (SS)</option>
                   </select>
 
-                  <input
-                    type="number"
-                    value={pred.lag}
-                    onChange={(e) => updatePredecessor(index, 'lag', parseInt(e.target.value))}
-                    placeholder="Lag"
-                    className="lag-input"
-                  />
+                  <div className="lag-input-group">
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={(() => {
+                        // Convert lag to days based on lag_format for display
+                        const lagFormat = pred.lag_format || 7;
+                        const lagValue = pred.lag || 0;
+                        switch (lagFormat) {
+                          case 3: // Minutes
+                            return lagValue / 480;
+                          case 4: // Elapsed minutes
+                            return lagValue / 1440;
+                          case 5: // Hours
+                            return lagValue / 8;
+                          case 6: // Elapsed hours
+                            return lagValue / 24;
+                          case 7: // Days
+                            return lagValue;
+                          case 8: // Elapsed days
+                            return lagValue;
+                          case 9: // Weeks
+                            return lagValue * 5;
+                          case 10: // Elapsed weeks
+                            return lagValue * 7;
+                          case 11: // Months
+                            return lagValue * 20;
+                          case 12: // Elapsed months
+                            return lagValue * 30;
+                          default:
+                            return lagValue / 480;
+                        }
+                      })()}
+                      onChange={(e) => {
+                        // Convert days back to the original lag_format
+                        const days = parseFloat(e.target.value) || 0;
+                        const lagFormat = pred.lag_format || 7;
+                        let lagValue = 0;
+
+                        switch (lagFormat) {
+                          case 3: lagValue = days * 480; break;
+                          case 4: lagValue = days * 1440; break;
+                          case 5: lagValue = days * 8; break;
+                          case 6: lagValue = days * 24; break;
+                          case 7: lagValue = days; break;
+                          case 8: lagValue = days; break;
+                          case 9: lagValue = days / 5; break;
+                          case 10: lagValue = days / 7; break;
+                          case 11: lagValue = days / 20; break;
+                          case 12: lagValue = days / 30; break;
+                          default: lagValue = days * 480; break;
+                        }
+
+                        updatePredecessor(index, 'lag', lagValue);
+                      }}
+                      placeholder="0"
+                      className="lag-input"
+                    />
+                    <span className="lag-unit">days</span>
+                  </div>
 
                   <button
                     type="button"

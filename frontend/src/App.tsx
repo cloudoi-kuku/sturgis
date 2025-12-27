@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient
 import { GanttChart } from './components/GanttChart';
 import { TaskEditor } from './components/TaskEditor';
 import { ProjectMetadataEditor } from './components/ProjectMetadataEditor';
+import { ProjectManager } from './components/ProjectManager';
 import { AIChat } from './components/AIChat';
 import {
   uploadProject,
@@ -21,7 +22,7 @@ import type {
   TaskUpdate,
   ProjectMetadata,
 } from './api/client';
-import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle } from 'lucide-react';
+import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen } from 'lucide-react';
 import { parseISO, addDays, differenceInDays } from 'date-fns';
 import './App.css';
 
@@ -31,6 +32,7 @@ function AppContent() {
   const [selectedTask, setSelectedTask] = useState<Task | undefined>();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isMetadataOpen, setIsMetadataOpen] = useState(false);
+  const [isProjectManagerOpen, setIsProjectManagerOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const queryClientInstance = useQueryClient();
@@ -150,6 +152,12 @@ function AppContent() {
       console.error('Validation error:', error);
       alert('Error validating project.');
     }
+  };
+
+  const handleProjectChanged = () => {
+    // Refresh all data when project changes
+    queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
+    queryClientInstance.invalidateQueries({ queryKey: ['metadata'] });
   };
 
   const handleExport = async () => {
@@ -281,6 +289,15 @@ function AppContent() {
           <h1>MS Project Configuration Tool</h1>
         </div>
         <div className="header-actions">
+          <button
+            className="action-button"
+            onClick={() => setIsProjectManagerOpen(true)}
+            title="Manage Projects"
+          >
+            <FolderOpen size={18} />
+            Projects
+          </button>
+
           <label className="upload-button">
             <Upload size={18} />
             Upload XML
@@ -404,6 +421,12 @@ function AppContent() {
       <AIChat
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
+      />
+
+      <ProjectManager
+        isOpen={isProjectManagerOpen}
+        onClose={() => setIsProjectManagerOpen(false)}
+        onProjectChanged={handleProjectChanged}
       />
     </div>
   );
