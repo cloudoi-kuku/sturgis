@@ -932,11 +932,11 @@ Conversation history is maintained, so you can reference previous messages.
 CRITICAL INSTRUCTIONS:
 1. Return ONLY valid JSON - no markdown, no explanations, no extra text
 2. Use this EXACT structure:
-{
+{{
   "project_name": "string",
   "start_date": "YYYY-MM-DD",
   "tasks": [
-    {
+    {{
       "name": "Task name",
       "outline_number": "1.1",
       "outline_level": 1,
@@ -944,9 +944,9 @@ CRITICAL INSTRUCTIONS:
       "milestone": false,
       "summary": false,
       "predecessors": ["1.0"]
-    }
+    }}
   ]
-}
+}}
 
 3. Create a hierarchical task structure:
    - Level 0: Project root (outline "0", summary=true)
@@ -1017,19 +1017,32 @@ Remember: Return ONLY the JSON object, nothing else."""
                 # Transform tasks to MS Project format
                 formatted_tasks = []
                 for task in tasks:
+                    # Skip invalid tasks
+                    if not isinstance(task, dict):
+                        print(f"Skipping invalid task (not a dict): {task}")
+                        continue
+
                     # Convert predecessors from outline numbers to proper format
                     predecessors = []
-                    for pred_outline in task.get("predecessors", []):
-                        if pred_outline and pred_outline != "0":
-                            predecessors.append({
-                                "outline_number": pred_outline,
-                                "type": 1,  # Finish-to-Start
-                                "lag": 0,
-                                "lag_format": 7  # Days
-                            })
+                    pred_list = task.get("predecessors", [])
+                    if isinstance(pred_list, list):
+                        for pred_outline in pred_list:
+                            if pred_outline and pred_outline != "0":
+                                predecessors.append({
+                                    "outline_number": str(pred_outline),
+                                    "type": 1,  # Finish-to-Start
+                                    "lag": 0,
+                                    "lag_format": 7  # Days
+                                })
 
                     # Convert duration to ISO 8601 format
                     duration_days = task.get("duration_days", 1)
+                    # Ensure duration_days is a number
+                    try:
+                        duration_days = float(duration_days) if duration_days else 1
+                    except (ValueError, TypeError):
+                        print(f"Invalid duration_days for task {task.get('name')}: {duration_days}, using 1")
+                        duration_days = 1
                     duration_hours = int(duration_days * 8)  # 8-hour workday
                     duration_iso = f"PT{duration_hours}H0M0S"
 
@@ -1045,6 +1058,36 @@ Remember: Return ONLY the JSON object, nothing else."""
                         "predecessors": predecessors
                     }
                     formatted_tasks.append(formatted_task)
+
+                # Ensure there's a project summary task (outline "0") with correct name
+                project_name = result.get("project_name", "Generated Project")
+                root_task_index = None
+                for i, t in enumerate(formatted_tasks):
+                    if t.get("outline_number") == "0":
+                        root_task_index = i
+                        break
+
+                if root_task_index is not None:
+                    # Update existing root task to have project name
+                    formatted_tasks[root_task_index]["name"] = project_name
+                    formatted_tasks[root_task_index]["summary"] = True
+                    formatted_tasks[root_task_index]["outline_level"] = 0
+                    formatted_tasks[root_task_index]["duration"] = "PT0H0M0S"
+                else:
+                    # Create new root task
+                    root_task = {
+                        "name": project_name,
+                        "outline_number": "0",
+                        "outline_level": 0,
+                        "duration": "PT0H0M0S",
+                        "milestone": False,
+                        "summary": True,
+                        "percent_complete": 0,
+                        "value": "",
+                        "predecessors": []
+                    }
+                    # Insert at the beginning
+                    formatted_tasks.insert(0, root_task)
 
                 return {
                     "success": True,

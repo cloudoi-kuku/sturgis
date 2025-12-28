@@ -150,13 +150,16 @@ class MSProjectXMLProcessor:
     
     def add_task(self, project_data: Dict[str, Any], task_data: Dict[str, Any]) -> Dict[str, Any]:
         """Add a new task to the project"""
-        # Generate new UID and ID
-        max_uid = max([int(t["uid"]) for t in project_data["tasks"]], default=0)
-        max_id = max([int(t["id"]) for t in project_data["tasks"]], default=0)
+        import uuid
+
+        # Always use UUIDs for new tasks to avoid database ID collisions
+        # This ensures that tasks from different projects never have conflicting IDs
+        new_id = str(uuid.uuid4())
+        new_uid = str(uuid.uuid4())
 
         new_task = {
-            "id": str(max_id + 1),
-            "uid": str(max_uid + 1),
+            "id": new_id,
+            "uid": new_uid,
             **task_data,
             "outline_level": len(task_data["outline_number"].split('.')),
             "summary": False,
@@ -165,10 +168,16 @@ class MSProjectXMLProcessor:
         }
 
         project_data["tasks"].append(new_task)
-        return new_task
+
+        # Recalculate summary tasks after adding new task
+        project_data["tasks"] = self._calculate_summary_tasks(project_data["tasks"])
+
+        # Return the updated task (with potentially updated summary status)
+        return next((t for t in project_data["tasks"] if t["id"] == new_id), new_task)
 
     def update_task(self, project_data: Dict[str, Any], task_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update an existing task"""
+        updated_task = None
         for task in project_data["tasks"]:
             if task["id"] == task_id or task["outline_number"] == task_id:
                 print(f"DEBUG xml_processor: Found task {task_id}, current predecessors: {task.get('predecessors', [])}")
@@ -177,7 +186,15 @@ class MSProjectXMLProcessor:
                 if "outline_number" in updates:
                     task["outline_level"] = len(updates["outline_number"].split('.'))
                 print(f"DEBUG xml_processor: After update, predecessors: {task.get('predecessors', [])}")
-                return task
+                updated_task = task
+                break
+
+        if updated_task:
+            # Recalculate summary tasks after update
+            project_data["tasks"] = self._calculate_summary_tasks(project_data["tasks"])
+            # Return the updated task with potentially updated summary status
+            return next((t for t in project_data["tasks"] if t["id"] == updated_task["id"]), updated_task)
+
         return None
 
     def delete_task(self, project_data: Dict[str, Any], task_id: str) -> bool:
@@ -219,6 +236,9 @@ class MSProjectXMLProcessor:
                     pred for pred in task["predecessors"]
                     if pred["outline_number"] not in deleted_outline_numbers
                 ]
+
+        # Recalculate summary tasks after deletion
+        project_data["tasks"] = self._calculate_summary_tasks(project_data["tasks"])
 
         return True
 

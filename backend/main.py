@@ -115,6 +115,9 @@ def load_project_from_db(project_id: Optional[str] = None):
             }
             current_project_id = project_id
 
+            # Calculate summary tasks after loading
+            current_project["tasks"] = xml_processor._calculate_summary_tasks(current_project["tasks"])
+
             # Load XML template if available
             xml_content = db.get_xml_template(project_id)
             if xml_content:
@@ -327,7 +330,10 @@ async def get_tasks():
     """Get all tasks in the current project"""
     if not current_project:
         raise HTTPException(status_code=404, detail="No project loaded")
-    
+
+    # Ensure summary tasks are calculated before returning
+    current_project["tasks"] = xml_processor._calculate_summary_tasks(current_project.get("tasks", []))
+
     return {"tasks": current_project.get("tasks", [])}
 
 
@@ -346,10 +352,17 @@ async def create_task(task: TaskCreate):
         raise HTTPException(status_code=400, detail=validation["errors"])
 
     # Add the task to in-memory project
+    # This also recalculates summary tasks for all affected tasks
     new_task = xml_processor.add_task(current_project, task_dict)
 
-    # Save to database
+    # Save the new task to database
     db.create_task(current_project_id, new_task)
+
+    # Update all tasks in database to reflect summary status changes
+    # (parent tasks may have become summary tasks)
+    for task in current_project.get("tasks", []):
+        if task["id"] != new_task["id"]:  # Don't update the new task twice
+            db.update_task(task["id"], task)
 
     # Save XML template
     save_project_to_db()
@@ -365,16 +378,38 @@ async def update_task(task_id: str, task: TaskUpdate):
     if not current_project or not current_project_id:
         raise HTTPException(status_code=404, detail="No project loaded")
 
-    # Update the task in memory
+    # Find the existing task
+    existing_task = None
+    for t in current_project.get("tasks", []):
+        if t["id"] == task_id or t["outline_number"] == task_id:
+            existing_task = t
+            break
+
+    if not existing_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Merge updates with existing task for validation
     updates = task.model_dump(exclude_unset=True)
     print(f"DEBUG: Updating task {task_id} with updates: {updates}")
+
+    # Create a merged task dict for validation
+    merged_task = {**existing_task, **updates}
+
+    # Validate the updated task
+    validation = validator.validate_task(merged_task, current_project.get("tasks", []))
+    if not validation["valid"]:
+        raise HTTPException(status_code=400, detail=validation["errors"])
+
+    # Update the task in memory
+    # This also recalculates summary tasks for all affected tasks
     updated_task = xml_processor.update_task(current_project, task_id, updates)
 
     if not updated_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Update in database
-    db.update_task(task_id, updated_task)
+    # Update all tasks in database to reflect summary status changes
+    for task in current_project.get("tasks", []):
+        db.update_task(task["id"], task)
 
     # Save XML template
     save_project_to_db()
@@ -391,6 +426,8 @@ async def delete_task(task_id: str):
     if not current_project or not current_project_id:
         raise HTTPException(status_code=404, detail="No project loaded")
 
+    # Delete the task from memory
+    # This also recalculates summary tasks for all affected tasks
     success = xml_processor.delete_task(current_project, task_id)
 
     if not success:
@@ -398,6 +435,11 @@ async def delete_task(task_id: str):
 
     # Delete from database
     db.delete_task(task_id)
+
+    # Update all remaining tasks in database to reflect summary status changes
+    # (parent tasks may no longer be summary tasks if all children were deleted)
+    for task in current_project.get("tasks", []):
+        db.update_task(task["id"], task)
 
     # Save XML template
     save_project_to_db()

@@ -166,6 +166,22 @@ class AICommandHandler:
         if not task:
             return {"success": False, "message": f"Task {task_outline} not found", "changes": []}
 
+        # Validate: Milestone tasks must have zero duration
+        if task.get("milestone", False) and duration_days != 0:
+            return {
+                "success": False,
+                "message": f"Cannot set duration for milestone task {task_outline} '{task['name']}'. Milestone tasks must have zero duration.",
+                "changes": []
+            }
+
+        # Validate: Summary tasks should not have duration set directly
+        if task.get("summary", False):
+            return {
+                "success": False,
+                "message": f"Cannot set duration for summary task {task_outline} '{task['name']}'. Summary task durations are calculated from their children.",
+                "changes": []
+            }
+
         old_duration = task.get("duration", "")
         # Convert days to ISO 8601 format (PT{hours}H0M0S)
         hours = duration_days * 8  # 8 hours per day
@@ -192,8 +208,16 @@ class AICommandHandler:
         if not task:
             return {"success": False, "message": f"Task {task_outline} not found", "changes": []}
 
+        # Validate: Summary tasks should not have predecessors
+        if task.get("summary", False):
+            return {
+                "success": False,
+                "message": f"Cannot set lag for summary task {task_outline} '{task['name']}'. Summary tasks should not have predecessors.",
+                "changes": []
+            }
+
         if not task.get("predecessors") or len(task["predecessors"]) == 0:
-            return {"success": False, "message": f"Task {task_outline} has no predecessors", "changes": []}
+            return {"success": False, "message": f"Task {task_outline} '{task['name']}' has no predecessors", "changes": []}
 
         # Set lag on first predecessor (in minutes: 480 min = 1 day)
         predecessor = task["predecessors"][0]
@@ -222,6 +246,14 @@ class AICommandHandler:
         task = self._find_task_by_outline(project, task_outline)
         if not task:
             return {"success": False, "message": f"Task {task_outline} not found", "changes": []}
+
+        # Validate: Summary tasks should not have predecessors
+        if task.get("summary", False):
+            return {
+                "success": False,
+                "message": f"Cannot remove lag from summary task {task_outline} '{task['name']}'. Summary tasks should not have predecessors.",
+                "changes": []
+            }
 
         if not task.get("predecessors"):
             return {"success": False, "message": f"Task {task_outline} has no predecessors", "changes": []}
