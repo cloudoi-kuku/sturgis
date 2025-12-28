@@ -10,33 +10,40 @@ class ProjectValidator:
         """Validate the entire project"""
         errors = []
         warnings = []
-        
+
         # Validate metadata
         if not project_data.get("name"):
             errors.append({"field": "name", "message": "Project name is required"})
-        
+
         if not project_data.get("start_date"):
             errors.append({"field": "start_date", "message": "Start date is required"})
         else:
             if not self._validate_date_format(project_data["start_date"]):
                 errors.append({"field": "start_date", "message": "Invalid date format"})
-        
+
         if not project_data.get("status_date"):
             errors.append({"field": "status_date", "message": "Status date is required"})
         else:
             if not self._validate_date_format(project_data["status_date"]):
                 errors.append({"field": "status_date", "message": "Invalid date format"})
-        
+
         # Validate tasks
         tasks = project_data.get("tasks", [])
         outline_numbers = set()
-        
+
         for task in tasks:
-            task_errors = self._validate_task_structure(task, tasks)
+            task_validation = self._validate_task_structure(task, tasks)
+            task_errors = task_validation.get("errors", [])
+            task_warnings = task_validation.get("warnings", [])
+
             for error in task_errors:
                 error["task_id"] = task.get("id", task.get("outline_number", "unknown"))
             errors.extend(task_errors)
-            
+
+            for warning in task_warnings:
+                warning["task_id"] = task.get("id", task.get("outline_number", "unknown"))
+            warnings.extend(task_warnings)
+
             # Check for duplicate outline numbers
             outline = task.get("outline_number")
             if outline in outline_numbers:
@@ -46,11 +53,11 @@ class ProjectValidator:
                     "task_id": task.get("id")
                 })
             outline_numbers.add(outline)
-        
+
         # Validate predecessor relationships
         predecessor_errors = self._validate_predecessors(tasks)
         errors.extend(predecessor_errors)
-        
+
         return {
             "valid": len(errors) == 0,
             "errors": errors,
@@ -59,16 +66,20 @@ class ProjectValidator:
     
     def validate_task(self, task_data: Dict[str, Any], existing_tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Validate a single task"""
-        errors = self._validate_task_structure(task_data, existing_tasks)
-        
+        validation = self._validate_task_structure(task_data, existing_tasks)
+        errors = validation.get("errors", [])
+        warnings = validation.get("warnings", [])
+
         return {
             "valid": len(errors) == 0,
-            "errors": errors
+            "errors": errors,
+            "warnings": warnings
         }
     
-    def _validate_task_structure(self, task: Dict[str, Any], all_tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _validate_task_structure(self, task: Dict[str, Any], all_tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Validate task structure and fields"""
         errors = []
+        warnings = []
 
         # Validate name
         if not task.get("name"):
@@ -114,7 +125,7 @@ class ProjectValidator:
                 "field": "predecessors",
                 "message": "Summary tasks should not have predecessors. Add dependencies to child tasks instead."
             })
-        
+
         # Validate predecessors
         for pred in task.get("predecessors", []):
             if not pred.get("outline_number"):
@@ -122,7 +133,7 @@ class ProjectValidator:
                     "field": "predecessors",
                     "message": "Predecessor outline number is required"
                 })
-            
+
             # Check if predecessor exists
             pred_exists = any(t.get("outline_number") == pred["outline_number"] for t in all_tasks)
             if not pred_exists and task.get("outline_number") != pred["outline_number"]:
@@ -130,7 +141,7 @@ class ProjectValidator:
                     "field": "predecessors",
                     "message": f"Predecessor task {pred['outline_number']} not found"
                 })
-            
+
             # Validate dependency type
             # Per MS Project XML Schema (mspdi_pj12.xsd):
             # 0=FF (Finish-to-Finish), 1=FS (Finish-to-Start), 2=SF (Start-to-Finish), 3=SS (Start-to-Start)
@@ -140,8 +151,24 @@ class ProjectValidator:
                     "field": "predecessors",
                     "message": f"Invalid dependency type: {dep_type}. Must be 0 (FF), 1 (FS), 2 (SF), or 3 (SS)"
                 })
-        
-        return errors
+
+            # Warn about suspicious lag values
+            # Large lag values (>365 days) when LagFormat=7 (days) might indicate data corruption
+            lag = pred.get("lag", 0)
+            lag_format = pred.get("lag_format", 7)
+
+            if lag_format == 7 and abs(lag) > 365:
+                warnings.append({
+                    "field": "predecessors",
+                    "message": f"⚠️ Suspicious lag value detected: {lag} days for predecessor {pred['outline_number']}. "
+                               f"This seems unusually large. Please verify this is correct. "
+                               f"(Task: {task.get('name', 'Unknown')})"
+                })
+
+        return {
+            "errors": errors,
+            "warnings": warnings
+        }
     
     def _validate_predecessors(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Validate predecessor relationships for circular dependencies"""

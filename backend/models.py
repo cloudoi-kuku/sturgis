@@ -87,11 +87,13 @@ class TaskCategorizationRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    project_id: Optional[str] = None  # Specific project this chat is for
 
 class GenerateProjectRequest(BaseModel):
     """Request to generate a complete project from description"""
     description: str = Field(..., description="Natural language description of the project")
     project_type: str = Field(default="commercial", description="Type of project: residential, commercial, industrial, renovation")
+    project_id: Optional[str] = None  # If provided, populate this specific project
 
 # Project Optimization Models (MS Project Compliant)
 class OptimizeDurationRequest(BaseModel):

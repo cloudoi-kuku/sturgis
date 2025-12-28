@@ -13,13 +13,14 @@ interface Message {
 interface AIChatProps {
   isOpen: boolean;
   onClose: () => void;
+  projectId?: string | null;  // The specific project this chat is for
 }
 
-export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose }) => {
+export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "Hi! I'm your construction project AI assistant. I can help you:\n\n🏗️ **Generate entire projects from scratch:**\nJust describe what you want to build! For example:\n• 'Create a 3-bedroom residential home with 2-car garage and full basement'\n• 'Generate a 10,000 sq ft office building renovation with new HVAC'\n• 'Build a 20,000 sq ft warehouse with loading docks and office space'\n\nI'll create a complete project with 30-50 tasks, realistic durations, dependencies, and milestones!\n\n✨ **Modify existing projects:**\n• 'Change task 1.2 duration to 10 days'\n• 'Set lag for task 2.3 to 5 days'\n• 'Set project start date to 2024-01-15'\n• 'Add 10% buffer to all tasks'\n\n💡 **Answer questions:**\n• 'What's the critical path?'\n• 'How long will this project take?'\n• 'What tasks depend on task 1.5?'\n\nWhat would you like to do?",
+      content: `Hi! I'm your construction project AI assistant${projectId ? ' for this project' : ''}. I can help you:\n\n🏗️ **Generate entire projects from scratch:**\nJust describe what you want to build! For example:\n• 'Create a 3-bedroom residential home with 2-car garage and full basement'\n• 'Generate a 10,000 sq ft office building renovation with new HVAC'\n• 'Build a 20,000 sq ft warehouse with loading docks and office space'\n\nI'll create a complete project with 30-50 tasks, realistic durations, dependencies, and milestones!\n\n✨ **Modify existing projects:**\n• 'Change task 1.2 duration to 10 days'\n• 'Set lag for task 2.3 to 5 days'\n• 'Set project start date to 2024-01-15'\n• 'Add 10% buffer to all tasks'\n\n💡 **Answer questions:**\n• 'What's the critical path?'\n• 'How long will this project take?'\n• 'What tasks depend on task 1.5?'\n\nWhat would you like to do?`,
       timestamp: new Date()
     }
   ]);
@@ -52,7 +53,10 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose }) => {
       const response = await fetch('http://localhost:8000/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input })
+        body: JSON.stringify({
+          message: input,
+          project_id: projectId  // Send the specific project ID
+        })
       });
 
       if (!response.ok) throw new Error('Chat request failed');
@@ -75,7 +79,8 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose }) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               description: input,
-              project_type: 'commercial' // Will be detected by backend
+              project_type: 'commercial', // Will be detected by backend
+              project_id: projectId  // Populate this specific project if it's empty
             })
           });
 

@@ -93,11 +93,21 @@ class MSProjectXMLProcessor:
                     # Find the outline number for this UID
                     pred_outline = self._find_outline_by_uid(pred_uid_elem.text)
                     if pred_outline:
+                        # Parse lag value from XML
+                        lag_value = int(pred_lag_elem.text) if pred_lag_elem is not None else 0
+                        lag_format = int(pred_lag_format_elem.text) if pred_lag_format_elem is not None else 7
+
+                        # IMPORTANT: MS Project stores lag in different units based on LagFormat:
+                        # Format 3 = Minutes (need to keep as-is, 480 min = 1 day)
+                        # Format 7 = Days (stored directly as days, NOT minutes)
+                        # Format 8 = Elapsed Days (stored directly as days)
+                        # We store everything internally in the same format as MS Project XML
+
                         predecessors.append({
                             "outline_number": pred_outline,
                             "type": int(pred_type_elem.text) if pred_type_elem is not None else 1,
-                            "lag": int(pred_lag_elem.text) if pred_lag_elem is not None else 0,
-                            "lag_format": int(pred_lag_format_elem.text) if pred_lag_format_elem is not None else 7
+                            "lag": lag_value,
+                            "lag_format": lag_format
                         })
 
             return {

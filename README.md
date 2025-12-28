@@ -56,9 +56,10 @@ docker-compose up -d
 Then open http://localhost in your browser.
 
 **📖 Documentation:**
-- **Docker Setup**: [DOCKER-README.md](DOCKER-README.md)
-- **AI Features**: [AI-SERVICE-README.md](AI-SERVICE-README.md)
-- **Ollama Integration**: [OLLAMA-INTEGRATION-SUMMARY.md](OLLAMA-INTEGRATION-SUMMARY.md)
+- **Complete Documentation**: [docs/](docs/) - All documentation organized by category
+- **Quick Start**: [docs/guides/QUICKSTART.md](docs/guides/QUICKSTART.md)
+- **Docker Setup**: [docs/deployment/DOCKER-README.md](docs/deployment/DOCKER-README.md)
+- **AI Features**: [docs/features/](docs/features/) - All AI features documented
 
 ---
 
@@ -205,16 +206,42 @@ npm run build
 
 The production build will be in `frontend/dist/`
 
+## Documentation
+
+📚 **[Complete Documentation](docs/)** - All documentation organized by category:
+
+- **[Features](docs/features/)** - Feature documentation and guides
+- **[Guides](docs/guides/)** - Setup and usage guides
+- **[Deployment](docs/deployment/)** - Deployment and configuration
+- **[Architecture](docs/architecture/)** - Technical architecture
+- **[Troubleshooting](docs/troubleshooting/)** - Problem solving
+
+### Recent Updates (2025-12-27)
+- ⭐ **Historical Learning** - AI learns from your past projects
+- ⭐ **Chat Project Context** - Chat works with correct project
+- ⭐ **Lag Validation** - Warns about suspicious lag values
+
+See [docs/CHANGES_SUMMARY.md](docs/CHANGES_SUMMARY.md) for complete changelog.
+
 ## Troubleshooting
 
-### CORS Issues
-- Ensure the backend is running on port 8000
-- Check that `VITE_API_URL` in `frontend/.env` matches your backend URL
+See [docs/troubleshooting/](docs/troubleshooting/) for comprehensive troubleshooting guides.
 
-### Validation Errors
-- Check the validation panel for specific error messages
-- Ensure all outline numbers are unique
+### Quick Fixes
+
+**CORS Issues:**
+- Ensure backend runs on port 8000
+- Check `VITE_API_URL` in `frontend/.env`
+
+**Validation Errors:**
+- Check validation panel for details
+- Ensure outline numbers are unique
 - Verify predecessor tasks exist
+
+**AI Not Working:**
+- Install Ollama: `curl -fsSL https://ollama.com/install.sh | sh`
+- Pull model: `ollama pull llama3.2:3b`
+- See [docs/troubleshooting/AI_FEATURES_TROUBLESHOOTING.md](docs/troubleshooting/AI_FEATURES_TROUBLESHOOTING.md)
 
 ## License
 

@@ -729,7 +729,7 @@ Respond ONLY with JSON: {"category": "<type>", "confidence": <0-100>}"""
         except:
             return False
 
-    async def chat(self, user_message: str, project_context: Optional[Dict] = None) -> str:
+    async def chat(self, user_message: str, project_context: Optional[Dict] = None, historical_data: Optional[List[Dict]] = None) -> str:
         """
         Conversational AI chat for construction project assistance
         Can also detect and handle project generation requests
@@ -749,8 +749,15 @@ Respond ONLY with JSON: {"category": "<type>", "confidence": <0-100>}"""
         if len(user_message.split()) > 10 and any(word in message_lower for word in ["sq ft", "square", "bedroom", "story", "floor"]):
             is_generation_request = True
 
-        # If it's a generation request, handle it specially
-        if is_generation_request and not project_context:
+        # Check if project is empty (no tasks or very few tasks)
+        is_empty_project = False
+        if project_context:
+            tasks = project_context.get("tasks", [])
+            non_summary_tasks = [t for t in tasks if not t.get("summary")]
+            is_empty_project = len(non_summary_tasks) == 0
+
+        # If it's a generation request and (no project OR empty project), handle it specially
+        if is_generation_request and (not project_context or is_empty_project):
             # Detect project type
             project_type = "commercial"  # default
             if any(word in message_lower for word in ["residential", "home", "house", "bedroom", "family"]):
@@ -760,16 +767,20 @@ Respond ONLY with JSON: {"category": "<type>", "confidence": <0-100>}"""
             elif any(word in message_lower for word in ["renovation", "remodel", "retrofit", "upgrade"]):
                 project_type = "renovation"
 
-            # Generate the project
+            # Generate the project with historical context
             try:
-                result = await self.generate_project(user_message, project_type)
+                result = await self.generate_project(user_message, project_type, historical_data)
                 if result.get("success"):
                     # Return special JSON response that frontend can detect
+                    historical_note = ""
+                    if historical_data and len(historical_data) > 0:
+                        historical_note = f" I've used patterns from {len(historical_data)} of your past projects to ensure consistency with your company's standards."
+
                     return json.dumps({
                         "type": "project_generation",
                         "project_name": result.get("project_name"),
                         "task_count": len(result.get("tasks", [])),
-                        "message": f"I've generated a complete {project_type} project based on your description! The project '{result['project_name']}' has {len(result.get('tasks', []))} tasks organized into phases. Would you like me to explain the structure or make any adjustments?"
+                        "message": f"I've generated a complete {project_type} project based on your description! The project '{result['project_name']}' has {len(result.get('tasks', []))} tasks organized into phases.{historical_note} Would you like me to explain the structure or make any adjustments?"
                     })
                 else:
                     return "I tried to generate a project but encountered an issue. Could you provide more details about what you'd like to build?"
@@ -860,12 +871,63 @@ Conversation history is maintained, so you can reference previous messages.
         """Clear conversation history"""
         self.chat_history = []
 
-    async def generate_project(self, description: str, project_type: str = "commercial") -> Dict:
+    async def generate_project(self, description: str, project_type: str = "commercial", historical_data: Optional[List[Dict]] = None) -> Dict:
         """
         Generate a complete construction project from a description
+        Uses historical project data to maintain consistency with company practices
         Returns: {"tasks": [...], "metadata": {...}, "success": bool}
         """
-        system_prompt = """You are an expert construction project manager. Generate a complete, realistic construction project schedule.
+        # Build historical context from past projects
+        historical_context = ""
+        if historical_data and len(historical_data) > 0:
+            historical_context = "\n\nHISTORICAL PROJECT PATTERNS (Use these as guidelines for consistency):\n"
+
+            # Analyze common task names and durations
+            task_patterns = {}
+            phase_patterns = {}
+
+            for project in historical_data:
+                for task in project.get('tasks', []):
+                    task_name = task.get('name', '').lower()
+                    duration = task.get('duration', 'PT0H0M0S')
+                    outline_level = task.get('outline_level', 1)
+
+                    # Extract duration in days
+                    import re
+                    match = re.search(r'PT(\d+)H', duration)
+                    if match:
+                        hours = int(match.group(1))
+                        days = hours / 8
+
+                        # Track task patterns
+                        if not task.get('summary') and task_name:
+                            if task_name not in task_patterns:
+                                task_patterns[task_name] = []
+                            task_patterns[task_name].append(days)
+
+                        # Track phase patterns
+                        if task.get('summary') and outline_level == 1:
+                            phase_name = task.get('name', '')
+                            if phase_name not in phase_patterns:
+                                phase_patterns[phase_name] = True
+
+            # Add common task examples
+            if task_patterns:
+                historical_context += "\nCommon tasks from past projects:\n"
+                for task_name, durations in list(task_patterns.items())[:15]:
+                    avg_duration = sum(durations) / len(durations)
+                    historical_context += f"  - '{task_name}': typically {avg_duration:.1f} days\n"
+
+            # Add common phases
+            if phase_patterns:
+                historical_context += "\nCommon phases used:\n"
+                for phase_name in list(phase_patterns.keys())[:10]:
+                    historical_context += f"  - {phase_name}\n"
+
+            historical_context += "\nIMPORTANT: Use similar task names and durations to maintain consistency with company standards.\n"
+
+        system_prompt = f"""You are an expert construction project manager. Generate a complete, realistic construction project schedule.
+{historical_context}
 
 CRITICAL INSTRUCTIONS:
 1. Return ONLY valid JSON - no markdown, no explanations, no extra text

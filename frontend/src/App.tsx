@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { GanttChart } from './components/GanttChart';
 import { TaskEditor } from './components/TaskEditor';
@@ -35,6 +35,7 @@ function AppContent() {
   const [isProjectManagerOpen, setIsProjectManagerOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
+  const [validationWarnings, setValidationWarnings] = useState<any[]>([]);
   const queryClientInstance = useQueryClient();
 
   // Queries
@@ -94,6 +95,20 @@ function AppContent() {
     },
   });
 
+  // Listen for project updates from AI chat
+  useEffect(() => {
+    const handleProjectUpdate = () => {
+      // Refresh all data when AI chat modifies the project
+      queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
+      queryClientInstance.invalidateQueries({ queryKey: ['metadata'] });
+    };
+
+    window.addEventListener('projectUpdated', handleProjectUpdate);
+    return () => {
+      window.removeEventListener('projectUpdated', handleProjectUpdate);
+    };
+  }, [queryClientInstance]);
+
   // Handlers
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -142,11 +157,18 @@ function AppContent() {
   const handleValidate = async () => {
     try {
       const result = await validateProject();
-      setValidationErrors(result.errors);
-      if (result.valid) {
-        alert('✅ Project validation passed! No errors found.');
+      setValidationErrors(result.errors || []);
+      setValidationWarnings(result.warnings || []);
+
+      const errorCount = result.errors?.length || 0;
+      const warningCount = result.warnings?.length || 0;
+
+      if (result.valid && warningCount === 0) {
+        alert('✅ Project validation passed! No errors or warnings found.');
+      } else if (result.valid && warningCount > 0) {
+        alert(`⚠️ Project validation passed with ${warningCount} warning(s). Check the validation panel.`);
       } else {
-        alert(`❌ Validation failed with ${result.errors.length} error(s). Check the validation panel.`);
+        alert(`❌ Validation failed with ${errorCount} error(s) and ${warningCount} warning(s). Check the validation panel.`);
       }
     } catch (error) {
       console.error('Validation error:', error);
@@ -347,20 +369,41 @@ function AppContent() {
         </div>
       )}
 
-      {validationErrors.length > 0 && (
+      {(validationErrors.length > 0 || validationWarnings.length > 0) && (
         <div className="validation-panel">
-          <div className="validation-header">
-            <AlertCircle size={18} />
-            <h3>Validation Errors ({validationErrors.length})</h3>
-          </div>
-          <ul className="validation-errors">
-            {validationErrors.map((error, index) => (
-              <li key={index}>
-                <strong>{error.field}:</strong> {error.message}
-                {error.task_id && <span className="task-id"> (Task: {error.task_id})</span>}
-              </li>
-            ))}
-          </ul>
+          {validationErrors.length > 0 && (
+            <>
+              <div className="validation-header">
+                <AlertCircle size={18} />
+                <h3>Validation Errors ({validationErrors.length})</h3>
+              </div>
+              <ul className="validation-errors">
+                {validationErrors.map((error, index) => (
+                  <li key={index}>
+                    <strong>{error.field}:</strong> {error.message}
+                    {error.task_id && <span className="task-id"> (Task: {error.task_id})</span>}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {validationWarnings.length > 0 && (
+            <>
+              <div className="validation-header validation-warning-header">
+                <AlertCircle size={18} />
+                <h3>Validation Warnings ({validationWarnings.length})</h3>
+              </div>
+              <ul className="validation-warnings">
+                {validationWarnings.map((warning, index) => (
+                  <li key={index}>
+                    <strong>{warning.field}:</strong> {warning.message}
+                    {warning.task_id && <span className="task-id"> (Task: {warning.task_id})</span>}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
       )}
 
@@ -421,6 +464,7 @@ function AppContent() {
       <AIChat
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
+        projectId={metadata?.project_id}
       />
 
       <ProjectManager

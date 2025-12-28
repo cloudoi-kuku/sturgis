@@ -200,6 +200,11 @@ body {
   margin-bottom: 0.5rem;
 }
 
+.validation-warning-header {
+  color: #ff8c00;
+  margin-top: 1rem;
+}
+
 .validation-errors {
   list-style: none;
   padding-left: 1.5rem;
@@ -207,6 +212,17 @@ body {
 
 .validation-errors li {
   color: #856404;
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.validation-warnings {
+  list-style: none;
+  padding-left: 1.5rem;
+}
+
+.validation-warnings li {
+  color: #ff8c00;
   margin: 0.25rem 0;
   font-size: 0.9rem;
 }

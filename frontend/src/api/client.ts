@@ -54,6 +54,7 @@ export type TaskUpdate = {
 }
 
 export type ProjectMetadata = {
+  project_id?: string;
   name: string;
   start_date: string;
   status_date: string;
@@ -71,25 +72,17 @@ export type ValidationResult = {
   warnings: ValidationError[];
 }
 
-export type ProjectListItem = {
-  id: string;
-  name: string;
-  task_count: number;
-  start_date: string;
-  is_active: boolean;
-}
-
 // API Functions
 export const uploadProject = async (file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-
+  
   const response = await apiClient.post('/api/project/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
-
+  
   return response.data;
 };
 
@@ -135,41 +128,11 @@ export const exportProject = async (): Promise<Blob> => {
   return response.data;
 };
 
-// Multi-Project Management Functions
-export const getAllProjects = async (): Promise<ProjectListItem[]> => {
-  const response = await apiClient.get('/api/projects');
-  return response.data.projects;
-};
-
-export const createNewProject = async (name: string = "New Project") => {
-  const response = await apiClient.post('/api/projects/new', null, {
-    params: { name }
-  });
-  return response.data;
-};
-
-export const switchProject = async (projectId: string) => {
-  const response = await apiClient.post(`/api/projects/${projectId}/switch`);
-  return response.data;
-};
-
-export const deleteProject = async (projectId: string) => {
-  const response = await apiClient.delete(`/api/projects/${projectId}`);
-  return response.data;
-};
-
-// Critical Path Analysis
-export const getCriticalPath = async () => {
+export const getCriticalPath = async (): Promise<{
+  critical_tasks: Task[];
+  total_duration_days: number;
+  critical_task_ids: string[];
+}> => {
   const response = await apiClient.get('/api/critical-path');
   return response.data;
 };
-
-// AI Project Generation
-export const generateProject = async (description: string, projectType: string = "commercial") => {
-  const response = await apiClient.post('/api/ai/generate-project', {
-    description,
-    project_type: projectType
-  });
-  return response.data;
-};
-

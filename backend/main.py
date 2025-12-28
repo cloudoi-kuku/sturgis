@@ -288,8 +288,9 @@ async def get_project_metadata():
     """Get current project metadata"""
     if not current_project:
         raise HTTPException(status_code=404, detail="No project loaded")
-    
+
     return {
+        "project_id": current_project_id,
         "name": current_project.get("name"),
         "start_date": current_project.get("start_date"),
         "status_date": current_project.get("status_date"),
@@ -534,20 +535,47 @@ async def chat_with_ai(request: ChatRequest):
     Conversational AI chat for construction project assistance with command execution
     Can answer questions AND modify tasks/project based on natural language commands
     Returns AI response as text, plus any modifications made
+
+    If project_id is provided, uses that specific project.
+    Otherwise, uses the currently active project.
     """
-    global current_project
+    global current_project, current_project_id
 
     try:
+        # Determine which project to use
+        target_project = current_project
+        target_project_id = current_project_id
+
+        if request.project_id:
+            # Use the specific project requested
+            project_data = db.get_project(request.project_id)
+            if project_data:
+                # Load tasks for this project
+                tasks = db.get_tasks(request.project_id)
+                target_project = {
+                    "name": project_data["name"],
+                    "start_date": project_data["start_date"],
+                    "status_date": project_data["status_date"],
+                    "tasks": tasks
+                }
+                target_project_id = request.project_id
+
         # First, check if the message contains a command
         command = ai_command_handler.parse_command(request.message)
 
-        if command and current_project:
-            # Execute the command
-            result = ai_command_handler.execute_command(command, current_project)
+        if command and target_project:
+            # Execute the command on the target project
+            result = ai_command_handler.execute_command(command, target_project)
 
             if result["success"]:
                 # Save changes to database
-                save_project_to_db()
+                if request.project_id:
+                    # Save to the specific project
+                    for task in target_project.get("tasks", []):
+                        db.update_task(task["id"], task)
+                else:
+                    # Save to current project
+                    save_project_to_db()
 
                 # Generate AI response confirming the change
                 response = f"✅ {result['message']}\n\n"
@@ -583,10 +611,12 @@ async def chat_with_ai(request: ChatRequest):
                     "error": result["message"]
                 }
 
-        # No command detected, use normal AI chat
+        # No command detected, use normal AI chat with historical context
+        historical_data = db.get_historical_project_data(limit=5)
         response = await ai_service.chat(
             user_message=request.message,
-            project_context=current_project
+            project_context=target_project,  # Use target project, not current
+            historical_data=historical_data
         )
         return {
             "response": response,
@@ -607,7 +637,7 @@ async def clear_chat_history():
 async def generate_project_from_description(request: GenerateProjectRequest):
     """
     Generate a complete construction project from a natural language description.
-    Creates a new project with tasks, durations, dependencies, and dates.
+    Can either create a new project OR populate an existing empty project.
 
     Returns: {
         "success": bool,
@@ -620,10 +650,15 @@ async def generate_project_from_description(request: GenerateProjectRequest):
     global current_project, current_project_id
 
     try:
-        # Generate project using AI
+        # Get historical project data for AI learning
+        historical_data = db.get_historical_project_data(limit=5)
+        print(f"Using {len(historical_data)} historical projects as guidelines")
+
+        # Generate project using AI with historical context
         result = await ai_service.generate_project(
             description=request.description,
-            project_type=request.project_type
+            project_type=request.project_type,
+            historical_data=historical_data
         )
 
         if not result.get("success", False):
@@ -632,29 +667,63 @@ async def generate_project_from_description(request: GenerateProjectRequest):
                 detail=f"AI project generation failed: {result.get('error', 'Unknown error')}"
             )
 
-        # Create project in database
         project_name = result.get("project_name", "AI Generated Project")
         start_date = result.get("start_date", datetime.now().strftime("%Y-%m-%d"))
-
-        project_id = db.create_project(
-            name=project_name,
-            start_date=start_date,
-            status_date=start_date
-        )
-
-        # Bulk insert generated tasks
         tasks = result.get("tasks", [])
+
+        # Check if we should populate existing empty project or create new one
+        populate_existing = False
+
+        # If a specific project_id was provided, check if it's empty
+        if request.project_id:
+            project_data = db.get_project(request.project_id)
+            if project_data:
+                existing_tasks = db.get_tasks(request.project_id)
+                non_summary_tasks = [t for t in existing_tasks if not t.get("summary")]
+                if len(non_summary_tasks) == 0:
+                    # Empty project - populate it
+                    populate_existing = True
+                    project_id = request.project_id
+                    print(f"Populating specific empty project: {project_data.get('name')} (ID: {project_id})")
+        # Otherwise, check current project
+        elif current_project and current_project_id:
+            existing_tasks = current_project.get("tasks", [])
+            non_summary_tasks = [t for t in existing_tasks if not t.get("summary")]
+            if len(non_summary_tasks) == 0:
+                # Empty project - populate it instead of creating new one
+                populate_existing = True
+                project_id = current_project_id
+                print(f"Populating current empty project: {current_project.get('name')} (ID: {project_id})")
+
+        if not populate_existing:
+            # Create new project in database
+            project_id = db.create_project(
+                name=project_name,
+                start_date=start_date,
+                status_date=start_date
+            )
+            print(f"Created new project: {project_name} (ID: {project_id})")
+
+        # Add project_id and generate UIDs for each task
+        import uuid
+        for task in tasks:
+            task["id"] = str(uuid.uuid4())
+            task["uid"] = task["id"]
+            task["project_id"] = project_id
+
+        # Insert generated tasks
         if tasks:
-            # Add project_id and generate UIDs for each task
-            import uuid
-            for task in tasks:
-                task["id"] = str(uuid.uuid4())
-                task["uid"] = task["id"]
-                task["project_id"] = project_id
+            if populate_existing:
+                # Clear any existing tasks first (should be none, but just in case)
+                db.delete_all_tasks(project_id)
 
             db.bulk_create_tasks(project_id, tasks)
 
-        # Update in-memory state to the new project
+        # Update project metadata if populating existing
+        if populate_existing:
+            db.update_project_metadata(project_id, project_name, start_date, start_date)
+
+        # Update in-memory state
         current_project = {
             "name": project_name,
             "start_date": start_date,
@@ -666,12 +735,13 @@ async def generate_project_from_description(request: GenerateProjectRequest):
         # Clear XML template for AI-generated project
         xml_processor.xml_root = None
 
+        action = "populated" if populate_existing else "created"
         return {
             "success": True,
             "project_id": project_id,
             "project_name": project_name,
             "task_count": len(tasks),
-            "message": f"Successfully generated project '{project_name}' with {len(tasks)} tasks"
+            "message": f"Successfully {action} project '{project_name}' with {len(tasks)} tasks"
         }
 
     except HTTPException:

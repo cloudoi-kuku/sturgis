@@ -153,6 +153,53 @@ class DatabaseService:
             """)
             return [dict(row) for row in cursor.fetchall()]
 
+    def get_historical_project_data(self, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Get historical project data for AI learning
+        Returns recent projects with their tasks for pattern analysis
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Get recent projects (excluding current empty ones)
+            cursor.execute("""
+                SELECT p.id, p.name, p.start_date, p.status_date
+                FROM projects p
+                WHERE (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND summary = 0) > 5
+                ORDER BY p.updated_at DESC
+                LIMIT ?
+            """, (limit,))
+
+            projects = []
+            for row in cursor.fetchall():
+                project = dict(row)
+
+                # Get tasks for this project
+                cursor.execute("""
+                    SELECT name, outline_number, outline_level, duration,
+                           milestone, summary, percent_complete
+                    FROM tasks
+                    WHERE project_id = ?
+                    ORDER BY outline_number
+                """, (project['id'],))
+
+                project['tasks'] = [dict(task) for task in cursor.fetchall()]
+
+                # Get predecessor patterns
+                cursor.execute("""
+                    SELECT t.name, t.outline_number, p.outline_number as pred_outline,
+                           p.type, p.lag, p.lag_format
+                    FROM tasks t
+                    JOIN predecessors p ON t.id = p.task_id
+                    WHERE t.project_id = ?
+                """, (project['id'],))
+
+                project['dependencies'] = [dict(dep) for dep in cursor.fetchall()]
+
+                projects.append(project)
+
+            return projects
+
     def switch_project(self, project_id: str) -> bool:
         """Switch to a different project"""
         with self.get_connection() as conn:
@@ -388,6 +435,21 @@ class DatabaseService:
                          (datetime.now().isoformat(), project_id))
 
             return cursor.rowcount > 0
+
+    def delete_all_tasks(self, project_id: str) -> int:
+        """Delete all tasks for a project"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Delete all tasks (predecessors will be deleted by CASCADE)
+            cursor.execute("DELETE FROM tasks WHERE project_id = ?", (project_id,))
+            deleted_count = cursor.rowcount
+
+            # Update project timestamp
+            cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
+                         (datetime.now().isoformat(), project_id))
+
+            return deleted_count
 
     def bulk_create_tasks(self, project_id: str, tasks: List[Dict[str, Any]]) -> int:
         """Bulk create tasks for a project (used during XML import)"""
