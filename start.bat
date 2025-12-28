@@ -1,8 +1,8 @@
 @echo off
-REM Quick start script for MS Project Configuration Tool (Windows)
+REM Quick start script for Project Configuration Tool (Windows)
 
 echo ========================================
-echo MS Project Configuration Tool - Docker Setup
+echo Project Configuration Tool - Docker Setup
 echo ========================================
 echo.
 
@@ -80,7 +80,7 @@ if %errorlevel% equ 0 (
 
 echo.
 echo ========================================
-echo MS Project Configuration Tool is running!
+echo Project Configuration Tool is running!
 echo ========================================
 echo.
 echo Access the application at:

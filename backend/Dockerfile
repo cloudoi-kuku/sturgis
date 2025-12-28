@@ -1,4 +1,4 @@
-# Backend Dockerfile for MS Project Configuration Tool
+# Backend Dockerfile for Project Configuration Tool
 FROM python:3.11-slim
 
 # Set working directory

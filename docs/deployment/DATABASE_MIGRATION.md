@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MS Project Configuration Tool now uses SQLite for persistent storage instead of JSON files. This provides:
+The Project Configuration Tool now uses SQLite for persistent storage instead of JSON files. This provides:
 
 - **Better multi-project support**: Each project is properly isolated in the database
 - **Data integrity**: Foreign key constraints ensure data consistency

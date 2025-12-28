@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MS Project Configuration Tool includes a **fully integrated local AI service** powered by Ollama and Llama 3.2. This provides intelligent features without requiring any cloud API keys or external dependencies.
+The Project Configuration Tool includes a **fully integrated local AI service** powered by Ollama and Llama 3.2. This provides intelligent features without requiring any cloud API keys or external dependencies.
 
 ---
 

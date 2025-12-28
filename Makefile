@@ -1,11 +1,11 @@
-# Makefile for MS Project Configuration Tool
+# Makefile for Project Configuration Tool
 # Simplifies Docker commands for development and deployment
 
 .PHONY: help build up down restart logs clean test backup restore
 
 # Default target
 help:
-	@echo "MS Project Configuration Tool - Docker Commands"
+	@echo "Project Configuration Tool - Docker Commands"
 	@echo ""
 	@echo "Development:"
 	@echo "  make build          - Build Docker images"

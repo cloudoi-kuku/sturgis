@@ -2,7 +2,7 @@
 
 ## ✅ What Was Accomplished
 
-The MS Project Configuration Tool has been fully dockerized for cross-platform deployment on **Windows, macOS, and Linux**.
+The Project Configuration Tool has been fully dockerized for cross-platform deployment on **Windows, macOS, and Linux**.
 
 ---
 
@@ -321,7 +321,7 @@ After deployment, verify:
 
 ## 🎉 Success!
 
-Your MS Project Configuration Tool is now fully dockerized and ready to run on any operating system! 🚀
+Your Project Configuration Tool is now fully dockerized and ready to run on any operating system! 🚀
 
 **Start it with**: `./start.sh` (Linux/Mac) or `start.bat` (Windows)
 

@@ -1,4 +1,4 @@
-# Quick Start Guide - MS Project Configuration Tool
+# Quick Start Guide - Project Configuration Tool
 
 Get up and running in 5 minutes!
 
@@ -85,7 +85,7 @@ VITE v7.3.0  ready in 353 ms
 
 Open your browser and go to: **http://localhost:5173**
 
-You should see the MS Project Configuration Tool interface.
+You should see the Project Configuration Tool interface.
 
 ### 2. Upload Your First Project
 
@@ -248,7 +248,7 @@ Now that you're up and running:
 
 ## Summary
 
-You now have a fully functional MS Project configuration tool running locally! 
+You now have a fully functional Project Configuration Tool running locally! 
 
 **What you can do:**
 - ✅ Upload MS Project XML files

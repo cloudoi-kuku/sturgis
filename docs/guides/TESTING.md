@@ -1,4 +1,4 @@
-# Testing Guide - MS Project Configuration Tool
+# Testing Guide - Project Configuration Tool
 
 ## Quick Start Testing
 
@@ -23,7 +23,7 @@ Frontend should be running at: http://localhost:5173
 
 Open your browser to: http://localhost:5173
 
-You should see the MS Project Configuration Tool interface with an "Upload XML" button.
+You should see the Project Configuration Tool interface with an "Upload XML" button.
 
 ## Testing Workflow
 

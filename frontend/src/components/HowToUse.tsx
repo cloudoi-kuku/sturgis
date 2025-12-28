@@ -13,7 +13,7 @@ export function HowToUse({ isOpen, onClose }: HowToUseProps) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="how-to-use-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>📖 How to Use - MS Project Configuration Tool</h2>
+          <h2>📖 How to Use - Project Configuration Tool</h2>
           <button className="close-button" onClick={onClose}>
             <X size={24} />
           </button>

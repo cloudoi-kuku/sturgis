@@ -1,5 +1,5 @@
 """
-SQLite database service for MS Project Configuration Tool
+SQLite database service for Project Configuration Tool
 Handles multi-project persistence with proper isolation
 """
 import sqlite3

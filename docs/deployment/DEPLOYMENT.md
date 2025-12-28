@@ -1,4 +1,4 @@
-# Deployment Guide - MS Project Configuration Tool
+# Deployment Guide - Project Configuration Tool
 
 ## Production Deployment Options
 

@@ -2,7 +2,7 @@
 
 ## Current State Analysis
 
-Your MS Project Configuration Tool currently operates as a single-user application with:
+Your Project Configuration Tool currently operates as a single-user application with:
 - **Frontend**: React with TypeScript, using React Query for state management
 - **Backend**: FastAPI with Python, using in-memory storage
 - **AI Integration**: Ollama-based chat assistant for project guidance

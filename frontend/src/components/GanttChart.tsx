@@ -468,6 +468,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     
     skipSyncRef.current.timeline = true;
     timelineBodyRef.current.scrollTop = e.currentTarget.scrollTop;
+    
+    // Reset the flag after a small delay to ensure the sync operation completes
+    setTimeout(() => {
+      skipSyncRef.current.timeline = false;
+    }, 0);
   }, []);
 
   const handleTimelineScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -479,6 +484,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     // Only sync vertical scrolling, leave horizontal scrolling independent
     skipSyncRef.current.taskList = true;
     taskListRef.current.scrollTop = e.currentTarget.scrollTop;
+    
+    // Reset the flag after a small delay to ensure the sync operation completes
+    setTimeout(() => {
+      skipSyncRef.current.taskList = false;
+    }, 0);
   }, []);
 
   // Removed zoom controls - using fixed month width instead

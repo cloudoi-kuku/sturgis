@@ -1,6 +1,6 @@
 # 🐳 Docker Deployment Guide
 
-This guide explains how to run the MS Project Configuration Tool using Docker on any operating system.
+This guide explains how to run the Project Configuration Tool using Docker on any operating system.
 
 ## 📋 Prerequisites
 
@@ -511,7 +511,7 @@ After deployment, verify:
 
 ## 🎉 Success!
 
-Your MS Project Configuration Tool is now running in Docker! 🚀
+Your Project Configuration Tool is now running in Docker! 🚀
 
 Access it at: **http://localhost**
 

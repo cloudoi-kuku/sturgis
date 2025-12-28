@@ -1,4 +1,4 @@
-# MS Project Configuration Tool - Web Edition
+# Project Configuration Tool - Web Edition
 
 A modern web-based tool for configuring and managing Microsoft Project XML files with an interactive Gantt chart visualization.
 

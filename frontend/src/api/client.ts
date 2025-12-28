@@ -58,6 +58,7 @@ export type ProjectMetadata = {
   name: string;
   start_date: string;
   status_date: string;
+  task_count?: number;
 }
 
 export type ValidationError = {
@@ -136,3 +137,48 @@ export const getCriticalPath = async (): Promise<{
   const response = await apiClient.get('/api/critical-path');
   return response.data;
 };
+
+// Project Management Functions
+export const getAllProjects = async (): Promise<{
+  projects: Array<{
+    id: string;
+    name: string;
+    task_count: number;
+    start_date: string;
+    is_active: boolean;
+  }>;
+}> => {
+  const response = await apiClient.get('/api/projects');
+  return response.data;
+};
+
+export const createNewProject = async (name: string = "New Project"): Promise<{
+  success: boolean;
+  message: string;
+  project_id: string;
+  project: any;
+}> => {
+  const response = await apiClient.post('/api/projects/new', null, {
+    params: { name }
+  });
+  return response.data;
+};
+
+export const switchProject = async (projectId: string): Promise<{
+  success: boolean;
+  message: string;
+  project_id: string;
+  project: any;
+}> => {
+  const response = await apiClient.post(`/api/projects/${projectId}/switch`);
+  return response.data;
+};
+
+export const deleteProject = async (projectId: string): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  const response = await apiClient.delete(`/api/projects/${projectId}`);
+  return response.data;
+};
+

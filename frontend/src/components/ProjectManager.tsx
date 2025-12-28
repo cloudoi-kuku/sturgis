@@ -29,8 +29,8 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
   const loadProjects = async () => {
     setLoading(true);
     try {
-      const projectList = await getAllProjects();
-      setProjects(projectList);
+      const response = await getAllProjects();
+      setProjects(response.projects);
     } catch (error) {
       console.error('Failed to load projects:', error);
       alert('Failed to load projects');

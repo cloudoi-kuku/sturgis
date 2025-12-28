@@ -1,9 +1,9 @@
 #!/bin/bash
-# Quick start script for MS Project Configuration Tool (Linux/Mac)
+# Quick start script for Project Configuration Tool (Linux/Mac)
 
 set -e
 
-echo "🚀 MS Project Configuration Tool - Docker Setup"
+echo "🚀 Project Configuration Tool - Docker Setup"
 echo "================================================"
 echo ""
 
@@ -74,7 +74,7 @@ fi
 
 echo ""
 echo "================================================"
-echo "✅ MS Project Configuration Tool is running!"
+echo "✅ Project Configuration Tool is running!"
 echo "================================================"
 echo ""
 echo "🌐 Access the application at:"

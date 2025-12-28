@@ -2,7 +2,7 @@
 
 ## Summary
 
-Successfully implemented SQLite database for proper multi-project support in the MS Project Configuration Tool. The system now handles multiple projects independently with proper data isolation and persistence.
+Successfully implemented SQLite database for proper multi-project support in the Project Configuration Tool. The system now handles multiple projects independently with proper data isolation and persistence.
 
 ## What Was Accomplished
 

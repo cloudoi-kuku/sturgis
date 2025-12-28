@@ -1,8 +1,8 @@
-# Architecture Documentation - MS Project Configuration Tool
+# Architecture Documentation - Project Configuration Tool
 
 ## System Overview
 
-The MS Project Configuration Tool is a modern web-based application that allows users to visually edit Microsoft Project XML files through an interactive Gantt chart interface.
+The Project Configuration Tool is a modern web-based application that allows users to visually edit Microsoft Project XML files through an interactive Gantt chart interface.
 
 ## Architecture Diagram
 

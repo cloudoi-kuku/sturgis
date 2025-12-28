@@ -308,7 +308,7 @@ function AppContent() {
       <header className="app-header">
         <div className="header-left">
           <img src="/sturgis-logo.png" alt="Sturgis Logo" className="app-logo" />
-          <h1>MS Project Configuration Tool</h1>
+          <h1>Project Configuration Tool</h1>
         </div>
         <div className="header-actions">
           <button
