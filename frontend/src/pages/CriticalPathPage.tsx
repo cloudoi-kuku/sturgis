@@ -32,6 +32,12 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
     return `${days} day${days !== 1 ? 's' : ''}`;
   };
 
+  // Format day number to readable format (Day 1, Day 2, etc.)
+  const formatDayNumber = (dayNum: number | undefined): string => {
+    if (dayNum === undefined || dayNum === null) return 'N/A';
+    return `Day ${Math.round(dayNum * 10) / 10}`;
+  };
+
   // Sort tasks based on selected criteria
   const sortedTasks = [...criticalTasks].sort((a, b) => {
     switch (sortBy) {
@@ -47,11 +53,15 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
   });
 
   const handleExportCSV = () => {
-    const headers = ['WBS', 'Task Name', 'Duration', 'Float (days)', 'Progress (%)'];
+    const headers = ['WBS', 'Task Name', 'Duration', 'Early Start', 'Early Finish', 'Late Start', 'Late Finish', 'Float (days)', 'Progress (%)'];
     const rows = sortedTasks.map(task => [
       task.outline_number,
       task.name,
       formatDuration(task.duration),
+      task.early_start !== undefined ? task.early_start.toFixed(1) : 'N/A',
+      task.early_finish !== undefined ? task.early_finish.toFixed(1) : 'N/A',
+      task.late_start !== undefined ? task.late_start.toFixed(1) : 'N/A',
+      task.late_finish !== undefined ? task.late_finish.toFixed(1) : 'N/A',
       (taskFloats[task.id] || 0).toFixed(1),
       task.percent_complete.toString(),
     ]);
@@ -76,6 +86,7 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
       '═══════════════════════════════════════════════════════════',
       `Total Critical Tasks: ${criticalTasks.length}`,
       `Project Duration: ${projectDuration.toFixed(1)} days`,
+      `Generated: ${new Date().toLocaleString()}`,
       '',
       'CRITICAL TASKS:',
       '───────────────────────────────────────────────────────────',
@@ -85,12 +96,22 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
           `${index + 1}. ${task.name}`,
           `   WBS: ${task.outline_number}`,
           `   Duration: ${formatDuration(task.duration)}`,
-          `   Float: ${(taskFloats[task.id] || 0).toFixed(1)} days`,
-          `   Progress: ${task.percent_complete}%`,
+          `   ┌─────────────────────────────────────┐`,
+          `   │ Early Start:  Day ${task.early_start !== undefined ? task.early_start.toFixed(1).padStart(6) : '  N/A '}  │ Early Finish: Day ${task.early_finish !== undefined ? task.early_finish.toFixed(1).padStart(6) : '  N/A '} │`,
+          `   │ Late Start:   Day ${task.late_start !== undefined ? task.late_start.toFixed(1).padStart(6) : '  N/A '}  │ Late Finish:  Day ${task.late_finish !== undefined ? task.late_finish.toFixed(1).padStart(6) : '  N/A '} │`,
+          `   └─────────────────────────────────────┘`,
+          `   Float: ${(taskFloats[task.id] || 0).toFixed(1)} days | Progress: ${task.percent_complete}%`,
           '',
         ].join('\n');
       }),
       '═══════════════════════════════════════════════════════════',
+      '',
+      'LEGEND:',
+      '  ES = Early Start  - Earliest possible start day',
+      '  EF = Early Finish - Earliest possible finish day',
+      '  LS = Late Start   - Latest allowable start day',
+      '  LF = Late Finish  - Latest allowable finish day',
+      '  Float = Slack time before task delays project',
     ].join('\n');
 
     const blob = new Blob([text], { type: 'text/plain' });
@@ -207,8 +228,30 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
                           </div>
                         </div>
                         <div className="timeline-dates">
-                          <span>📅 Start: {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'N/A'}</span>
-                          <span>🏁 Finish: {task.finish_date ? new Date(task.finish_date).toLocaleDateString() : 'N/A'}</span>
+                          <span>Start: {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'N/A'}</span>
+                          <span>Finish: {task.finish_date ? new Date(task.finish_date).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                        <div className="timeline-cpm-dates">
+                          <div className="cpm-row">
+                            <div className="cpm-item early">
+                              <span className="cpm-label">Early Start</span>
+                              <span className="cpm-value">{formatDayNumber(task.early_start)}</span>
+                            </div>
+                            <div className="cpm-item early">
+                              <span className="cpm-label">Early Finish</span>
+                              <span className="cpm-value">{formatDayNumber(task.early_finish)}</span>
+                            </div>
+                          </div>
+                          <div className="cpm-row">
+                            <div className="cpm-item late">
+                              <span className="cpm-label">Late Start</span>
+                              <span className="cpm-value">{formatDayNumber(task.late_start)}</span>
+                            </div>
+                            <div className="cpm-item late">
+                              <span className="cpm-label">Late Finish</span>
+                              <span className="cpm-value">{formatDayNumber(task.late_finish)}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       {task.predecessors && task.predecessors.length > 0 && (
@@ -240,76 +283,127 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
           <div className="network-view">
             <div className="network-header">
               <h2>Critical Path Network Diagram</h2>
-              <p>Sequential flow of critical tasks • {sortedTasks.length} critical tasks</p>
+              <p>CPM Activity-on-Node diagram showing ES/EF/LS/LF • {sortedTasks.length} critical tasks</p>
             </div>
             <div className="network-container">
-              <svg className="network-svg" width={Math.max(1400, sortedTasks.length * 280)} height={Math.max(600, Math.ceil(sortedTasks.length / 4) * 150 + 100)}>
+              <svg className="network-svg" width={Math.max(1200, sortedTasks.length * 340)} height={220}>
                 <defs>
                   <marker
                     id="arrowhead"
                     markerWidth="10"
                     markerHeight="10"
                     refX="9"
-                    refY="3"
+                    refY="5"
                     orient="auto"
                   >
-                    <polygon points="0 0, 10 3, 0 6" fill="#e74c3c" />
+                    <polygon points="0 0, 10 5, 0 10" fill="#e74c3c" />
                   </marker>
+                  <linearGradient id="nodeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#fff5f5" />
+                    <stop offset="100%" stopColor="#ffffff" />
+                  </linearGradient>
                 </defs>
 
                 {sortedTasks.map((task, index) => {
-                  const x = 80 + (index % 4) * 320;
-                  const y = 60 + Math.floor(index / 4) * 180;
+                  const nodeWidth = 280;
+                  const nodeHeight = 140;
+                  const nodeSpacing = 60;
+                  const x = 40 + index * (nodeWidth + nodeSpacing);
+                  const y = 40;
                   const duration = parseDuration(task.duration);
 
-                  // Only draw connection to previous critical task in sequence
-                  const connection = index > 0 ? (() => {
-                    const prevIndex = index - 1;
-                    const prevX = 80 + (prevIndex % 4) * 320;
-                    const prevY = 60 + Math.floor(prevIndex / 4) * 180;
-
-                    return (
+                  // Draw connection line from previous node
+                  const connection = index > 0 ? (
+                    <g key={`conn-${index}`}>
                       <line
-                        key={`conn-${index}`}
-                        x1={prevX + 120}
-                        y1={prevY + 40}
-                        x2={x}
-                        y2={y + 40}
+                        x1={x - nodeSpacing + 5}
+                        y1={y + nodeHeight / 2}
+                        x2={x - 5}
+                        y2={y + nodeHeight / 2}
                         stroke="#e74c3c"
                         strokeWidth="3"
                         markerEnd="url(#arrowhead)"
-                        opacity="0.7"
                       />
-                    );
-                  })() : null;
+                    </g>
+                  ) : null;
 
                   return (
                     <g key={task.id}>
                       {connection}
+                      {/* Main node rectangle */}
                       <rect
                         className="network-node"
                         x={x}
                         y={y}
-                        width="240"
-                        height="80"
+                        width={nodeWidth}
+                        height={nodeHeight}
                         rx="8"
-                        fill="white"
+                        fill="url(#nodeGradient)"
                         stroke="#e74c3c"
                         strokeWidth="3"
                       />
-                      <text x={x + 120} y={y + 25} textAnchor="middle" fontSize="11" fontWeight="bold" fill="#e74c3c">
+
+                      {/* Top row: ES | Duration | EF */}
+                      <line x1={x} y1={y + 35} x2={x + nodeWidth} y2={y + 35} stroke="#e74c3c" strokeWidth="1" opacity="0.3" />
+                      <line x1={x + nodeWidth/3} y1={y} x2={x + nodeWidth/3} y2={y + 35} stroke="#e74c3c" strokeWidth="1" opacity="0.3" />
+                      <line x1={x + 2*nodeWidth/3} y1={y} x2={x + 2*nodeWidth/3} y2={y + 35} stroke="#e74c3c" strokeWidth="1" opacity="0.3" />
+
+                      <text x={x + nodeWidth/6} y={y + 14} textAnchor="middle" fontSize="9" fill="#27ae60" fontWeight="600">ES</text>
+                      <text x={x + nodeWidth/6} y={y + 28} textAnchor="middle" fontSize="11" fill="#27ae60" fontWeight="700">
+                        {task.early_start !== undefined ? task.early_start.toFixed(1) : '—'}
+                      </text>
+
+                      <text x={x + nodeWidth/2} y={y + 14} textAnchor="middle" fontSize="9" fill="#3498db" fontWeight="600">DUR</text>
+                      <text x={x + nodeWidth/2} y={y + 28} textAnchor="middle" fontSize="11" fill="#3498db" fontWeight="700">{duration}d</text>
+
+                      <text x={x + 5*nodeWidth/6} y={y + 14} textAnchor="middle" fontSize="9" fill="#27ae60" fontWeight="600">EF</text>
+                      <text x={x + 5*nodeWidth/6} y={y + 28} textAnchor="middle" fontSize="11" fill="#27ae60" fontWeight="700">
+                        {task.early_finish !== undefined ? task.early_finish.toFixed(1) : '—'}
+                      </text>
+
+                      {/* Middle: Task Name and WBS */}
+                      <text x={x + nodeWidth/2} y={y + 58} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#e74c3c">
                         {task.outline_number}
                       </text>
-                      <text x={x + 120} y={y + 45} textAnchor="middle" fontSize="13" fontWeight="600" fill="#2c3e50">
-                        {task.name.length > 25 ? task.name.substring(0, 25) + '...' : task.name}
+                      <text x={x + nodeWidth/2} y={y + 78} textAnchor="middle" fontSize="12" fontWeight="600" fill="#2c3e50">
+                        {task.name.length > 28 ? task.name.substring(0, 28) + '...' : task.name}
                       </text>
-                      <text x={x + 120} y={y + 65} textAnchor="middle" fontSize="11" fill="#7f8c8d">
-                        {duration}d • {task.percent_complete}%
+                      <text x={x + nodeWidth/2} y={y + 95} textAnchor="middle" fontSize="10" fill="#7f8c8d">
+                        Progress: {task.percent_complete}%
+                      </text>
+
+                      {/* Bottom row: LS | Float | LF */}
+                      <line x1={x} y1={y + nodeHeight - 35} x2={x + nodeWidth} y2={y + nodeHeight - 35} stroke="#e74c3c" strokeWidth="1" opacity="0.3" />
+                      <line x1={x + nodeWidth/3} y1={y + nodeHeight - 35} x2={x + nodeWidth/3} y2={y + nodeHeight} stroke="#e74c3c" strokeWidth="1" opacity="0.3" />
+                      <line x1={x + 2*nodeWidth/3} y1={y + nodeHeight - 35} x2={x + 2*nodeWidth/3} y2={y + nodeHeight} stroke="#e74c3c" strokeWidth="1" opacity="0.3" />
+
+                      <text x={x + nodeWidth/6} y={y + nodeHeight - 22} textAnchor="middle" fontSize="9" fill="#9b59b6" fontWeight="600">LS</text>
+                      <text x={x + nodeWidth/6} y={y + nodeHeight - 8} textAnchor="middle" fontSize="11" fill="#9b59b6" fontWeight="700">
+                        {task.late_start !== undefined ? task.late_start.toFixed(1) : '—'}
+                      </text>
+
+                      <text x={x + nodeWidth/2} y={y + nodeHeight - 22} textAnchor="middle" fontSize="9" fill="#e67e22" fontWeight="600">FLOAT</text>
+                      <text x={x + nodeWidth/2} y={y + nodeHeight - 8} textAnchor="middle" fontSize="11" fill="#e67e22" fontWeight="700">
+                        {(taskFloats[task.id] || 0).toFixed(1)}d
+                      </text>
+
+                      <text x={x + 5*nodeWidth/6} y={y + nodeHeight - 22} textAnchor="middle" fontSize="9" fill="#9b59b6" fontWeight="600">LF</text>
+                      <text x={x + 5*nodeWidth/6} y={y + nodeHeight - 8} textAnchor="middle" fontSize="11" fill="#9b59b6" fontWeight="700">
+                        {task.late_finish !== undefined ? task.late_finish.toFixed(1) : '—'}
                       </text>
                     </g>
                   );
                 })}
               </svg>
+            </div>
+            <div className="network-legend">
+              <div className="legend-section">
+                <span className="legend-title">Legend:</span>
+                <span className="legend-item"><span className="legend-color" style={{background: '#27ae60'}}></span> ES/EF = Early Start/Finish</span>
+                <span className="legend-item"><span className="legend-color" style={{background: '#9b59b6'}}></span> LS/LF = Late Start/Finish</span>
+                <span className="legend-item"><span className="legend-color" style={{background: '#e67e22'}}></span> Float = Slack Time</span>
+                <span className="legend-item"><span className="legend-color" style={{background: '#3498db'}}></span> DUR = Duration</span>
+              </div>
             </div>
           </div>
         )}
@@ -322,10 +416,12 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
                   <th>WBS</th>
                   <th>Task Name</th>
                   <th>Duration</th>
+                  <th className="cpm-header">ES</th>
+                  <th className="cpm-header">EF</th>
+                  <th className="cpm-header">LS</th>
+                  <th className="cpm-header">LF</th>
                   <th>Float</th>
                   <th>Progress</th>
-                  <th>Start Date</th>
-                  <th>Finish Date</th>
                 </tr>
               </thead>
               <tbody>
@@ -334,6 +430,10 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
                     <td className="wbs-cell">{task.outline_number}</td>
                     <td className="task-name-cell">{task.name}</td>
                     <td>{formatDuration(task.duration)}</td>
+                    <td className="cpm-cell early">{formatDayNumber(task.early_start)}</td>
+                    <td className="cpm-cell early">{formatDayNumber(task.early_finish)}</td>
+                    <td className="cpm-cell late">{formatDayNumber(task.late_start)}</td>
+                    <td className="cpm-cell late">{formatDayNumber(task.late_finish)}</td>
                     <td className="float-cell">{(taskFloats[task.id] || 0).toFixed(1)}d</td>
                     <td>
                       <div className="progress-cell">
@@ -341,12 +441,14 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
                         <span>{task.percent_complete}%</span>
                       </div>
                     </td>
-                    <td>{task.start_date ? new Date(task.start_date).toLocaleDateString() : 'N/A'}</td>
-                    <td>{task.finish_date ? new Date(task.finish_date).toLocaleDateString() : 'N/A'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <div className="table-legend">
+              <span className="legend-item"><span className="legend-dot early"></span> ES = Early Start, EF = Early Finish</span>
+              <span className="legend-item"><span className="legend-dot late"></span> LS = Late Start, LF = Late Finish</span>
+            </div>
           </div>
         )}
       </div>

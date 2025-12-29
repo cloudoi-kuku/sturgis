@@ -31,6 +31,13 @@ export type Task = {
   predecessors: Predecessor[];
   start_date?: string;
   finish_date?: string;
+  // Critical Path Method fields (populated by /api/critical-path)
+  early_start?: number;
+  early_finish?: number;
+  late_start?: number;
+  late_finish?: number;
+  total_float?: number;
+  is_critical?: boolean;
 }
 
 export type TaskCreate = {
@@ -71,6 +78,13 @@ export type ValidationResult = {
   valid: boolean;
   errors: ValidationError[];
   warnings: ValidationError[];
+}
+
+export type CriticalPathResult = {
+  critical_tasks: Task[];
+  project_duration: number;
+  task_floats: Record<string, number>;
+  critical_task_ids: string[];
 }
 
 // API Functions
@@ -131,7 +145,8 @@ export const exportProject = async (): Promise<Blob> => {
 
 export const getCriticalPath = async (): Promise<{
   critical_tasks: Task[];
-  total_duration_days: number;
+  project_duration: number;
+  task_floats: Record<string, number>;
   critical_task_ids: string[];
 }> => {
   const response = await apiClient.get('/api/critical-path');

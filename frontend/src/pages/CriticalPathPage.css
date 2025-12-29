@@ -549,3 +549,251 @@
   transition: width 0.3s;
 }
 
+/* CPM Dates in Timeline View */
+.timeline-cpm-dates {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+}
+
+.cpm-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.cpm-row:last-child {
+  margin-bottom: 0;
+}
+
+.cpm-item {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+}
+
+.cpm-item.early {
+  background: rgba(39, 174, 96, 0.1);
+  border: 1px solid rgba(39, 174, 96, 0.2);
+}
+
+.cpm-item.late {
+  background: rgba(155, 89, 182, 0.1);
+  border: 1px solid rgba(155, 89, 182, 0.2);
+}
+
+.cpm-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7f8c8d;
+}
+
+.cpm-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.cpm-item.early .cpm-value {
+  color: #27ae60;
+}
+
+.cpm-item.late .cpm-value {
+  color: #9b59b6;
+}
+
+/* Table CPM Headers and Cells */
+.cpm-header {
+  background: rgba(255, 255, 255, 0.1) !important;
+  font-size: 0.9rem;
+  text-align: center !important;
+}
+
+.cpm-cell {
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.cpm-cell.early {
+  color: #27ae60;
+  background: rgba(39, 174, 96, 0.05);
+}
+
+.cpm-cell.late {
+  color: #9b59b6;
+  background: rgba(155, 89, 182, 0.05);
+}
+
+/* Table Legend */
+.table-legend {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  justify-content: center;
+}
+
+.table-legend .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.table-legend .legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.table-legend .legend-dot.early {
+  background: #27ae60;
+}
+
+.table-legend .legend-dot.late {
+  background: #9b59b6;
+}
+
+/* Network Legend */
+.network-legend {
+  margin-top: 1.5rem;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid #dee2e6;
+}
+
+.legend-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.legend-title {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 0.95rem;
+}
+
+.network-legend .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+/* Print Styles - Only print page content */
+@media print {
+  /* Hide everything first */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the critical path page and its contents */
+  .critical-path-page,
+  .critical-path-page * {
+    visibility: visible;
+  }
+
+  .critical-path-page {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+  }
+
+  /* Hide navigation elements when printing */
+  .back-button,
+  .header-actions,
+  .page-tabs {
+    display: none !important;
+  }
+
+  /* Adjust header for print */
+  .page-header {
+    background: #e74c3c !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding: 1rem 2rem !important;
+  }
+
+  .page-title h1 {
+    font-size: 1.5rem;
+  }
+
+  /* Content adjustments */
+  .page-content {
+    padding: 1rem !important;
+  }
+
+  .timeline-view,
+  .network-view,
+  .table-view {
+    box-shadow: none !important;
+    border: 1px solid #dee2e6;
+  }
+
+  /* Network diagram print */
+  .network-container {
+    overflow: visible !important;
+  }
+
+  .network-svg {
+    max-width: 100%;
+    height: auto !important;
+  }
+
+  /* Table print adjustments */
+  .critical-path-table {
+    font-size: 0.85rem;
+  }
+
+  .critical-path-table th,
+  .critical-path-table td {
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  /* Timeline print adjustments */
+  .timeline-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Hide info section on print */
+  .info-section {
+    display: none !important;
+  }
+
+  /* Ensure colors print */
+  .timeline-dot,
+  .timeline-progress-bar,
+  .progress-bar-mini,
+  .badge,
+  .cpm-item {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Print page breaks */
+  .timeline-item {
+    break-inside: avoid;
+  }
+}
+
