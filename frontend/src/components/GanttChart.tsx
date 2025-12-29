@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useCallback } from 'react';
 import type { Task } from '../api/client';
 import { getCriticalPath } from '../api/client';
 import { format, parseISO, addDays, differenceInDays, startOfWeek, addWeeks, addMonths, startOfMonth, eachDayOfInterval, getDay } from 'date-fns';
-import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch } from 'lucide-react';
+import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 
 interface GanttChartProps {
   tasks: Task[];
@@ -469,6 +469,20 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     });
   }, []);
 
+  const expandAll = useCallback(() => {
+    const allSummaryIds = new Set<string>();
+    tasks.forEach(task => {
+      if (task.summary) {
+        allSummaryIds.add(task.id);
+      }
+    });
+    setExpandedTasks(allSummaryIds);
+  }, [tasks]);
+
+  const collapseAll = useCallback(() => {
+    setExpandedTasks(new Set());
+  }, []);
+
   const handleZoomIn = useCallback(() => {
     if (zoomLevel === 'month') setZoomLevel('week');
     else if (zoomLevel === 'week') setZoomLevel('day');
@@ -620,6 +634,24 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 ))}
               </select>
             )}
+
+            <button
+              className="control-button"
+              onClick={expandAll}
+              title="Expand All Tasks"
+            >
+              <ChevronsUpDown size={16} />
+              Expand All
+            </button>
+
+            <button
+              className="control-button"
+              onClick={collapseAll}
+              title="Collapse All Tasks"
+            >
+              <ChevronsDownUp size={16} />
+              Collapse All
+            </button>
           </div>
         </div>
       </div>
