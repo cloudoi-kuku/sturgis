@@ -105,19 +105,15 @@
 
 /* Responsive design improvements */
 @media (max-width: 1200px) {
-  .gantt-container {
-    max-height: 500px;
-  }
-  
   .gantt-task-list {
     min-width: 500px;
     max-width: 500px;
   }
-  
+
   .gantt-header {
     grid-template-columns: 200px 120px 80px 70px;
   }
-  
+
   .gantt-task-row {
     grid-template-columns: 200px 120px 80px 70px;
   }
@@ -129,29 +125,27 @@
     gap: 1rem;
     align-items: flex-start;
   }
-  
+
   .gantt-stats {
     gap: 1rem;
   }
-  
+
   .gantt-controls {
     width: 100%;
     justify-content: space-between;
   }
-  
+
   .gantt-container {
     flex-direction: column;
-    max-height: none;
   }
-  
+
   .gantt-task-list {
     max-width: none;
     min-width: 100%;
-    max-height: 300px;
+    flex: 0 0 300px;
   }
-  
+
   .gantt-timeline {
-    max-width: none;
-    max-height: 400px;
+    flex: 1;
   }
 }

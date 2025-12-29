@@ -8,6 +8,9 @@ html,
 body {
   overflow-x: hidden;
   width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
@@ -18,14 +21,19 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+#root {
+  height: 100%;
+  width: 100%;
+}
+
 .app {
-  min-height: 100vh;
+  height: 100vh;
   width: 100%;
   max-width: 100vw;
   display: flex;
   flex-direction: column;
   background: #f5f7fa;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .app-header {
@@ -152,11 +160,16 @@ body {
 
 .project-info {
   background: white;
-  padding: 1rem 2rem;
+  padding: 0.75rem 2rem;
   border-bottom: 1px solid #e1e8ed;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 50px;
+  max-height: 50px;
 }
 
 .project-metadata h2 {
@@ -187,9 +200,14 @@ body {
 .validation-panel {
   background: #fff3cd;
   border: 1px solid #ffc107;
-  border-radius: 6px;
-  margin: 1rem 2rem;
-  padding: 1rem;
+  border-radius: 0;
+  margin: 0;
+  padding: 1rem 2rem;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 100vw;
+  border-left: none;
+  border-right: none;
 }
 
 .validation-header {
@@ -234,8 +252,15 @@ body {
 
 .app-main {
   flex: 1;
-  padding: 2rem;
-  overflow: auto;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100vw;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: calc(100vh - 110px);
 }
 
 .loading {
@@ -247,8 +272,13 @@ body {
 
 .empty-state {
   text-align: center;
-  padding: 4rem 2rem;
+  padding: 2rem;
   color: #7f8c8d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
 }
 
 .empty-state svg {
@@ -268,18 +298,29 @@ body {
 /* Gantt Chart Styles */
 .gantt-chart {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
+  width: 100%;
+  max-width: 100vw;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
 }
 
 .gantt-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
-  background: #f8f9fa;
+  padding: 0.75rem 1.5rem;
+  background: white;
   border-bottom: 1px solid #e1e8ed;
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 60px;
+  max-height: 60px;
 }
 
 .gantt-controls {
@@ -366,10 +407,13 @@ body {
 
 .gantt-container {
   display: flex;
-  max-height: 600px;
+  flex: 1;
   overflow: hidden;
   width: 100%;
   max-width: 100vw;
+  min-height: 0;
+  max-height: calc(100vh - 170px);
+  margin: 0;
 }
 
 .gantt-task-list {
@@ -378,6 +422,8 @@ body {
   border-right: 2px solid #e1e8ed;
   flex-shrink: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .gantt-header {
@@ -401,10 +447,12 @@ body {
 }
 
 .gantt-tasks {
-  max-height: 550px;
+  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
+  min-height: 0;
+  max-height: calc(100vh - 280px);
 }
 
 .gantt-task-row {
@@ -478,11 +526,6 @@ body {
   font-size: 0.85rem;
 }
 
-.gantt-task-predecessors {
-  /* Inherits default styling from parent selector above */
-  /* Same font, size, and color as other columns */
-}
-
 .gantt-task-predecessors:empty::after {
   content: '-';
   color: #bdc3c7;
@@ -533,16 +576,18 @@ body {
 
 .gantt-timeline {
   flex: 1;
-  max-width: calc(100vw - 700px);
   overflow-x: auto;
   overflow-y: hidden;
   position: relative;
-  min-height: 600px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .gantt-timeline-content {
   position: relative;
-  min-height: 600px;
+  flex: 1;
+  min-height: 0;
 }
 
 .gantt-timeline-header {
@@ -554,6 +599,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .gantt-timeline-header-unit {
@@ -637,10 +683,11 @@ body {
 
 .gantt-timeline-body {
   position: relative;
-  min-height: 550px;
-  max-height: 550px;
+  flex: 1;
   overflow-y: auto;
   overflow-x: scroll;
+  min-height: 0;
+  max-height: calc(100vh - 280px);
 }
 
 .gantt-timeline-row {
