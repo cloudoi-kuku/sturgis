@@ -23,8 +23,6 @@ import type {
   Task,
   TaskCreate,
   TaskUpdate,
-  ProjectMetadata,
-  ProjectCalendar,
 } from './api/client';
 import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar } from 'lucide-react';
 import { parseISO, addDays, differenceInDays } from 'date-fns';
