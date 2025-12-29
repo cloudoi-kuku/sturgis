@@ -24,7 +24,10 @@ from models import (
     GenerateProjectRequest,
     OptimizeDurationRequest,
     OptimizationResult,
-    ApplyOptimizationRequest
+    ApplyOptimizationRequest,
+    ProjectCalendar,
+    CalendarException,
+    CalendarExceptionCreate
 )
 from xml_processor import MSProjectXMLProcessor
 from validator import ProjectValidator
@@ -953,6 +956,123 @@ async def apply_optimization_strategy(request: ApplyOptimizationRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to apply optimization: {str(e)}")
+
+
+# ============================================================================
+# CALENDAR MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@app.get("/api/calendar")
+async def get_calendar():
+    """
+    Get the calendar configuration for the current project.
+    Returns work week settings, hours per day, and all exceptions (holidays).
+    """
+    global current_project_id
+
+    if not current_project_id:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    try:
+        calendar = db.get_project_calendar(current_project_id)
+        return calendar
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get calendar: {str(e)}")
+
+
+@app.put("/api/calendar")
+async def update_calendar(calendar: ProjectCalendar):
+    """
+    Update the calendar configuration for the current project.
+    Updates work week and hours per day settings.
+    """
+    global current_project_id
+
+    if not current_project_id:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    try:
+        # Save calendar settings
+        db.save_project_calendar(
+            current_project_id,
+            calendar.work_week,
+            calendar.hours_per_day
+        )
+
+        # Update exceptions if provided
+        # First, get existing exceptions to compare
+        existing = db.get_calendar_exceptions(current_project_id)
+        existing_dates = {e['exception_date'] for e in existing}
+        new_dates = {e.exception_date for e in calendar.exceptions}
+
+        # Remove exceptions that are no longer in the list
+        for exc in existing:
+            if exc['exception_date'] not in new_dates:
+                db.remove_calendar_exception(current_project_id, exc['exception_date'])
+
+        # Add or update exceptions
+        for exc in calendar.exceptions:
+            db.add_calendar_exception(
+                current_project_id,
+                exc.exception_date,
+                exc.name,
+                exc.is_working
+            )
+
+        return {"success": True, "message": "Calendar updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update calendar: {str(e)}")
+
+
+@app.post("/api/calendar/exceptions")
+async def add_calendar_exception(exception: CalendarExceptionCreate):
+    """
+    Add a calendar exception (holiday or working day override).
+    """
+    global current_project_id
+
+    if not current_project_id:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    try:
+        exception_id = db.add_calendar_exception(
+            current_project_id,
+            exception.exception_date,
+            exception.name,
+            exception.is_working
+        )
+
+        return {
+            "success": True,
+            "message": f"Exception added for {exception.exception_date}",
+            "id": exception_id
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to add exception: {str(e)}")
+
+
+@app.delete("/api/calendar/exceptions/{exception_date}")
+async def remove_calendar_exception(exception_date: str):
+    """
+    Remove a calendar exception by date.
+    Date format: YYYY-MM-DD
+    """
+    global current_project_id
+
+    if not current_project_id:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    try:
+        removed = db.remove_calendar_exception(current_project_id, exception_date)
+
+        if removed:
+            return {"success": True, "message": f"Exception removed for {exception_date}"}
+        else:
+            raise HTTPException(status_code=404, detail=f"No exception found for {exception_date}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to remove exception: {str(e)}")
 
 
 if __name__ == "__main__":

@@ -87,6 +87,20 @@ export type CriticalPathResult = {
   critical_task_ids: string[];
 }
 
+// Calendar Types
+export type CalendarException = {
+  id?: number;
+  exception_date: string;  // YYYY-MM-DD format
+  name: string;
+  is_working: boolean;  // false = holiday, true = working day override
+}
+
+export type ProjectCalendar = {
+  work_week: number[];  // 1=Monday, 7=Sunday
+  hours_per_day: number;
+  exceptions: CalendarException[];
+}
+
 // API Functions
 export const uploadProject = async (file: File) => {
   const formData = new FormData();
@@ -194,6 +208,37 @@ export const deleteProject = async (projectId: string): Promise<{
   message: string;
 }> => {
   const response = await apiClient.delete(`/api/projects/${projectId}`);
+  return response.data;
+};
+
+// Calendar Management Functions
+export const getCalendar = async (): Promise<ProjectCalendar> => {
+  const response = await apiClient.get('/api/calendar');
+  return response.data;
+};
+
+export const updateCalendar = async (calendar: ProjectCalendar): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  const response = await apiClient.put('/api/calendar', calendar);
+  return response.data;
+};
+
+export const addCalendarException = async (exception: Omit<CalendarException, 'id'>): Promise<{
+  success: boolean;
+  message: string;
+  id: number;
+}> => {
+  const response = await apiClient.post('/api/calendar/exceptions', exception);
+  return response.data;
+};
+
+export const removeCalendarException = async (exceptionDate: string): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  const response = await apiClient.delete(`/api/calendar/exceptions/${exceptionDate}`);
   return response.data;
 };
 

@@ -183,6 +183,11 @@ body {
   font-size: 0.9rem;
 }
 
+.project-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .settings-button {
   background: none;
   border: none;
@@ -190,11 +195,15 @@ body {
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 4px;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .settings-button:hover {
   background: #ecf0f1;
+  color: #3498db;
 }
 
 .validation-panel {

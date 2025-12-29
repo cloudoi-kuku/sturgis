@@ -150,3 +150,29 @@ class ApplyOptimizationRequest(BaseModel):
     strategy_id: str = Field(..., description="ID of strategy to apply")
     changes: List[OptimizationChange] = Field(..., description="Changes to apply")
 
+
+# Calendar Models
+class CalendarException(BaseModel):
+    """Calendar exception (holiday or working day override)"""
+    id: Optional[int] = None
+    exception_date: str = Field(..., description="Exception date in YYYY-MM-DD format")
+    name: str = Field(..., description="Name of the exception (e.g., 'Christmas Day')")
+    is_working: bool = Field(default=False, description="True if this is a working day override, False for holiday")
+
+
+class ProjectCalendar(BaseModel):
+    """Project calendar configuration"""
+    work_week: List[int] = Field(
+        default=[1, 2, 3, 4, 5],
+        description="Working days of week (1=Monday, 7=Sunday). Default: Mon-Fri"
+    )
+    hours_per_day: int = Field(default=8, ge=1, le=24, description="Working hours per day")
+    exceptions: List[CalendarException] = Field(default_factory=list, description="List of holidays and exceptions")
+
+
+class CalendarExceptionCreate(BaseModel):
+    """Model for creating a calendar exception"""
+    exception_date: str = Field(..., description="Exception date in YYYY-MM-DD format")
+    name: str = Field(..., description="Name of the exception")
+    is_working: bool = Field(default=False, description="True for working day override, False for holiday")
+

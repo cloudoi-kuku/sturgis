@@ -91,12 +91,40 @@ class DatabaseService:
                 )
             """)
             
+            # Project calendar table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS project_calendar (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id TEXT NOT NULL UNIQUE,
+                    work_week TEXT DEFAULT '1,2,3,4,5',
+                    hours_per_day INTEGER DEFAULT 8,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+                )
+            """)
+
+            # Calendar exceptions table (holidays, working day overrides)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS calendar_exceptions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id TEXT NOT NULL,
+                    exception_date TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    is_working INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                    UNIQUE(project_id, exception_date)
+                )
+            """)
+
             # Create indexes for better performance
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_outline ON tasks(project_id, outline_number)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_predecessors_task ON predecessors(task_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_predecessors_project ON predecessors(project_id)")
-            
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_calendar_exceptions_project ON calendar_exceptions(project_id)")
+
             conn.commit()
     
     def create_project(self, name: str, start_date: str, status_date: str, xml_template: Optional[str] = None) -> str:
@@ -495,4 +523,135 @@ class DatabaseService:
                          (datetime.now().isoformat(), project_id))
 
         return count
+
+    # ============================================================================
+    # CALENDAR MANAGEMENT
+    # ============================================================================
+
+    def get_project_calendar(self, project_id: str) -> Dict[str, Any]:
+        """Get calendar configuration for a project, creating default if not exists"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Get calendar config
+            cursor.execute("""
+                SELECT work_week, hours_per_day
+                FROM project_calendar
+                WHERE project_id = ?
+            """, (project_id,))
+            row = cursor.fetchone()
+
+            if row:
+                work_week = [int(d) for d in row['work_week'].split(',')]
+                hours_per_day = row['hours_per_day']
+            else:
+                # Return defaults (Mon-Fri, 8 hours)
+                work_week = [1, 2, 3, 4, 5]
+                hours_per_day = 8
+
+            # Get exceptions
+            cursor.execute("""
+                SELECT id, exception_date, name, is_working
+                FROM calendar_exceptions
+                WHERE project_id = ?
+                ORDER BY exception_date
+            """, (project_id,))
+
+            exceptions = []
+            for exc_row in cursor.fetchall():
+                exceptions.append({
+                    'id': exc_row['id'],
+                    'exception_date': exc_row['exception_date'],
+                    'name': exc_row['name'],
+                    'is_working': bool(exc_row['is_working'])
+                })
+
+            return {
+                'work_week': work_week,
+                'hours_per_day': hours_per_day,
+                'exceptions': exceptions
+            }
+
+    def save_project_calendar(self, project_id: str, work_week: List[int], hours_per_day: int) -> bool:
+        """Save or update calendar configuration for a project"""
+        now = datetime.now().isoformat()
+        work_week_str = ','.join(str(d) for d in work_week)
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Check if calendar exists
+            cursor.execute("SELECT id FROM project_calendar WHERE project_id = ?", (project_id,))
+            exists = cursor.fetchone() is not None
+
+            if exists:
+                cursor.execute("""
+                    UPDATE project_calendar
+                    SET work_week = ?, hours_per_day = ?, updated_at = ?
+                    WHERE project_id = ?
+                """, (work_week_str, hours_per_day, now, project_id))
+            else:
+                cursor.execute("""
+                    INSERT INTO project_calendar (project_id, work_week, hours_per_day, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (project_id, work_week_str, hours_per_day, now, now))
+
+            # Update project timestamp
+            cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?", (now, project_id))
+
+            return True
+
+    def add_calendar_exception(self, project_id: str, exception_date: str, name: str, is_working: bool = False) -> int:
+        """Add a calendar exception (holiday or working day override)"""
+        now = datetime.now().isoformat()
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                INSERT OR REPLACE INTO calendar_exceptions (project_id, exception_date, name, is_working, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (project_id, exception_date, name, 1 if is_working else 0, now))
+
+            # Update project timestamp
+            cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?", (now, project_id))
+
+            return cursor.lastrowid
+
+    def remove_calendar_exception(self, project_id: str, exception_date: str) -> bool:
+        """Remove a calendar exception by date"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                DELETE FROM calendar_exceptions
+                WHERE project_id = ? AND exception_date = ?
+            """, (project_id, exception_date))
+
+            if cursor.rowcount > 0:
+                # Update project timestamp
+                cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
+                             (datetime.now().isoformat(), project_id))
+                return True
+
+            return False
+
+    def get_calendar_exceptions(self, project_id: str) -> List[Dict[str, Any]]:
+        """Get all calendar exceptions for a project"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT id, exception_date, name, is_working
+                FROM calendar_exceptions
+                WHERE project_id = ?
+                ORDER BY exception_date
+            """, (project_id,))
+
+            return [{
+                'id': row['id'],
+                'exception_date': row['exception_date'],
+                'name': row['name'],
+                'is_working': bool(row['is_working'])
+            } for row in cursor.fetchall()]
 

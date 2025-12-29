@@ -5,6 +5,7 @@ import { TaskEditor } from './components/TaskEditor';
 import { ProjectMetadataEditor } from './components/ProjectMetadataEditor';
 import { ProjectManager } from './components/ProjectManager';
 import { AIChat } from './components/AIChat';
+import { CalendarManager } from './components/CalendarManager';
 import {
   uploadProject,
   getTasks,
@@ -15,14 +16,17 @@ import {
   deleteTask,
   validateProject,
   exportProject,
+  getCalendar,
+  updateCalendar,
 } from './api/client';
 import type {
   Task,
   TaskCreate,
   TaskUpdate,
   ProjectMetadata,
+  ProjectCalendar,
 } from './api/client';
-import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen } from 'lucide-react';
+import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar } from 'lucide-react';
 import { parseISO, addDays, differenceInDays } from 'date-fns';
 import './App.css';
 
@@ -34,6 +38,7 @@ function AppContent() {
   const [isMetadataOpen, setIsMetadataOpen] = useState(false);
   const [isProjectManagerOpen, setIsProjectManagerOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<any[]>([]);
   const queryClientInstance = useQueryClient();
@@ -49,6 +54,12 @@ function AppContent() {
   const { data: metadata } = useQuery({
     queryKey: ['metadata'],
     queryFn: getProjectMetadata,
+    retry: false,
+  });
+
+  const { data: calendarData } = useQuery({
+    queryKey: ['calendar'],
+    queryFn: getCalendar,
     retry: false,
   });
 
@@ -92,6 +103,15 @@ function AppContent() {
     onSuccess: () => {
       queryClientInstance.invalidateQueries({ queryKey: ['metadata'] });
       setIsMetadataOpen(false);
+    },
+  });
+
+  const updateCalendarMutation = useMutation({
+    mutationFn: updateCalendar,
+    onSuccess: () => {
+      queryClientInstance.invalidateQueries({ queryKey: ['calendar'] });
+      queryClientInstance.invalidateQueries({ queryKey: ['tasks'] }); // Refresh tasks as dates may change
+      setIsCalendarOpen(false);
     },
   });
 
@@ -374,9 +394,14 @@ function AppContent() {
               )}
             </p>
           </div>
-          <button className="settings-button" onClick={() => setIsMetadataOpen(true)}>
-            <Settings size={18} />
-          </button>
+          <div className="project-actions">
+            <button className="settings-button" onClick={() => setIsCalendarOpen(true)} title="Calendar Settings">
+              <Calendar size={18} />
+            </button>
+            <button className="settings-button" onClick={() => setIsMetadataOpen(true)} title="Project Settings">
+              <Settings size={18} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -482,6 +507,15 @@ function AppContent() {
         isOpen={isProjectManagerOpen}
         onClose={() => setIsProjectManagerOpen(false)}
         onProjectChanged={handleProjectChanged}
+      />
+
+      <CalendarManager
+        isOpen={isCalendarOpen}
+        onClose={() => setIsCalendarOpen(false)}
+        calendar={calendarData}
+        onSave={async (calendar) => {
+          await updateCalendarMutation.mutateAsync(calendar);
+        }}
       />
     </div>
   );
