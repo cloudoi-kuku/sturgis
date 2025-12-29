@@ -111,15 +111,26 @@ function AppContent() {
 
   // Handlers
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('=== File upload triggered ===');
     const file = event.target.files?.[0];
+    console.log('Selected file:', file);
+
     if (file) {
       try {
+        console.log('Starting upload mutation...');
         await uploadMutation.mutateAsync(file);
+        console.log('Upload successful!');
+        alert('Project uploaded successfully!');
       } catch (error) {
         console.error('Upload error:', error);
-        alert('Error uploading file. Please try again.');
+        alert(`Error uploading file: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
+    } else {
+      console.log('No file selected');
     }
+
+    // Reset the input so the same file can be uploaded again
+    event.target.value = '';
   };
 
   const handleCreateTask = () => {

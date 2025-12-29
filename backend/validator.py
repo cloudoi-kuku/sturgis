@@ -122,7 +122,7 @@ class ProjectValidator:
                     "field": "predecessors",
                     "message": "Predecessor outline number is required"
                 })
-            
+
             # Check if predecessor exists
             pred_exists = any(t.get("outline_number") == pred["outline_number"] for t in all_tasks)
             if not pred_exists and task.get("outline_number") != pred["outline_number"]:
@@ -130,7 +130,7 @@ class ProjectValidator:
                     "field": "predecessors",
                     "message": f"Predecessor task {pred['outline_number']} not found"
                 })
-            
+
             # Validate dependency type
             # Per MS Project XML Schema (mspdi_pj12.xsd):
             # 0=FF (Finish-to-Finish), 1=FS (Finish-to-Start), 2=SF (Start-to-Finish), 3=SS (Start-to-Start)
@@ -139,6 +139,40 @@ class ProjectValidator:
                 errors.append({
                     "field": "predecessors",
                     "message": f"Invalid dependency type: {dep_type}. Must be 0 (FF), 1 (FS), 2 (SF), or 3 (SS)"
+                })
+
+            # Validate lag values (convert to days for validation)
+            lag_value = pred.get("lag", 0)
+            lag_format = pred.get("lag_format", 7)
+
+            # Convert lag to days based on format
+            lag_days = 0
+            if lag_format == 3:  # Minutes
+                lag_days = lag_value / 480  # 8 hours * 60 minutes
+            elif lag_format == 5 or lag_format == 6:  # Hours or elapsed hours
+                lag_days = lag_value / 8
+            elif lag_format == 7 or lag_format == 8:  # Days or elapsed days
+                lag_days = lag_value
+            elif lag_format == 9 or lag_format == 10:  # Weeks or elapsed weeks
+                lag_days = lag_value * 5
+            elif lag_format == 11 or lag_format == 12:  # Months or elapsed months
+                lag_days = lag_value * 20
+            else:
+                lag_days = lag_value  # Default to days
+
+            # Flag unreasonable lag values (more than 2 years = 730 days)
+            if abs(lag_days) > 730:
+                errors.append({
+                    "field": "predecessors",
+                    "message": f"Unreasonable lag value for predecessor {pred['outline_number']}: {lag_days:.1f} days (>2 years). This may indicate a data error."
+                })
+
+            # Validate lag format
+            valid_lag_formats = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 19]
+            if lag_format not in valid_lag_formats:
+                errors.append({
+                    "field": "predecessors",
+                    "message": f"Invalid lag format: {lag_format}. Must be one of {valid_lag_formats}"
                 })
         
         return errors

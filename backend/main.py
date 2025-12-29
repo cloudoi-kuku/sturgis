@@ -253,29 +253,50 @@ async def upload_project(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File must be an XML file")
 
     try:
+        print(f"=== Starting XML upload: {file.filename} ===")
         content = await file.read()
+        print(f"File size: {len(content)} bytes")
+
         xml_content = content.decode('utf-8')
+        print("File decoded successfully")
 
         # Parse the XML and extract project data
+        print("Parsing XML...")
         project_data = xml_processor.parse_xml(xml_content)
+        print(f"Parsed project: {project_data.get('name')}")
+        print(f"Found {len(project_data.get('tasks', []))} tasks")
 
         # Create project in database
+        print("Creating project in database...")
         project_id = db.create_project(
             name=project_data.get('name', 'Imported Project'),
             start_date=project_data.get('start_date', datetime.now().strftime("%Y-%m-%d")),
             status_date=project_data.get('status_date', datetime.now().strftime("%Y-%m-%d")),
             xml_template=xml_content
         )
+        print(f"Project created with ID: {project_id}")
 
-        # Bulk insert tasks
+        # Generate new UUIDs for tasks (XML IDs are not globally unique)
         tasks = project_data.get('tasks', [])
         if tasks:
+            print(f"Generating UUIDs for {len(tasks)} tasks...")
+            import uuid
+            for task in tasks:
+                # Generate new UUID for database (preserve original ID in a separate field if needed)
+                task["id"] = str(uuid.uuid4())
+                # Keep UID from XML or generate new one
+                if not task.get("uid"):
+                    task["uid"] = task["id"]
+
+            print(f"Inserting {len(tasks)} tasks...")
             db.bulk_create_tasks(project_id, tasks)
+            print("Tasks inserted successfully")
 
         # Update in-memory state
         current_project = project_data
         current_project_id = project_id
 
+        print("=== Upload completed successfully ===")
         return {
             "success": True,
             "message": "Project uploaded successfully",
@@ -283,6 +304,12 @@ async def upload_project(file: UploadFile = File(...)):
             "project": project_data
         }
     except Exception as e:
+        print(f"=== UPLOAD ERROR ===")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        print(f"=== END ERROR ===")
         raise HTTPException(status_code=500, detail=f"Error parsing XML: {str(e)}")
 
 

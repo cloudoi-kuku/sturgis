@@ -102,6 +102,20 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     });
   }, [tasks]);
 
+  // Create a map of outline_number to permanent row number (1-based)
+  const taskRowNumbers = useMemo(() => {
+    const rowMap = new Map<string, number>();
+    let rowNumber = 1;
+    sortedTasks.forEach((task) => {
+      // Skip the main project task (outline "0")
+      if (task.outline_number !== '0') {
+        rowMap.set(task.outline_number, rowNumber);
+        rowNumber++;
+      }
+    });
+    return rowMap;
+  }, [sortedTasks]);
+
   // Filter visible tasks based on expand/collapse state
   const visibleTasks = useMemo(() => {
     const visible: Task[] = [];
@@ -109,7 +123,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
     sortedTasks.forEach(task => {
       const outline = task.outline_number;
-      
+
       // Skip the main project task (outline "0") to avoid duplicates
       if (outline === '0') {
         return;
@@ -143,9 +157,14 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
     try {
       return predecessors.map(pred => {
-        // Find the task number by outline_number in visibleTasks
-        const predTask = visibleTasks.find(t => t.outline_number === pred.outline_number);
-        const taskNumber = predTask ? visibleTasks.indexOf(predTask) + 1 : pred.outline_number;
+        // Get the permanent row number for this predecessor
+        const taskNumber = taskRowNumbers.get(pred.outline_number);
+
+        if (!taskNumber) {
+          // Task doesn't exist - broken reference
+          console.warn(`⚠️ Broken predecessor reference: ${pred.outline_number} (task does not exist)`);
+          return `❌${pred.outline_number}`;
+        }
 
         // Dependency type mapping
         const typeMap: { [key: number]: string } = {
@@ -203,6 +222,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           const lagStr = lagDays % 1 === 0 ? lagDays.toString() : lagDays.toFixed(1);
           const dayLabel = Math.abs(lagDays) === 1 ? 'day' : 'days';
           result += `${sign}${lagStr} ${dayLabel}`;
+
+          // Flag unreasonable lag values (>2 years)
+          if (Math.abs(lagDays) > 730) {
+            result += ' ⚠️';
+          }
         }
 
         return result;
@@ -211,7 +235,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       console.error('Error formatting predecessors:', error, predecessors);
       return '-';
     }
-  }, [visibleTasks]);
+  }, [taskRowNumbers]);
 
   const calculateTaskDates = useMemo(() => {
     if (!projectStartDate) return new Map<string, Date>();
@@ -586,6 +610,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             {visibleTasks.map((task, index) => {
               const taskPos = taskPositions.find(p => p.task.id === task.id);
               const calculatedStartDate = taskPos?.startDate;
+              // Get the permanent row number for this task
+              const rowNumber = taskRowNumbers.get(task.outline_number) || index + 1;
 
               return (
                 <div
@@ -594,7 +620,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   onClick={() => onTaskClick(task)}
                 >
                   <div className="gantt-task-number">
-                    {index + 1}
+                    {rowNumber}
                   </div>
                   <div className="gantt-task-wbs">{task.outline_number}</div>
                   <div className="gantt-task-name" style={{ paddingLeft: getTaskIndent(task.outline_level) }}>
