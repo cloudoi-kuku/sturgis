@@ -2,18 +2,21 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Task } from '../api/client';
 import { Printer, FileText, Table as TableIcon, BarChart3, Network, ArrowLeft } from 'lucide-react';
+import { parseISO, addDays, format } from 'date-fns';
 import './CriticalPathPage.css';
 
 interface CriticalPathPageProps {
   criticalTasks: Task[];
   projectDuration: number;
   taskFloats: Record<string, number>;
+  projectStartDate?: string;
 }
 
 export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
   criticalTasks,
   projectDuration,
   taskFloats,
+  projectStartDate,
 }) => {
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<'outline' | 'duration' | 'float'>('outline');
@@ -38,6 +41,18 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
     return `Day ${Math.round(dayNum * 10) / 10}`;
   };
 
+  // Convert day number to actual calendar date
+  const dayToDate = (dayNum: number | undefined): string => {
+    if (dayNum === undefined || dayNum === null || !projectStartDate) return 'N/A';
+    try {
+      const startDate = parseISO(projectStartDate);
+      const targetDate = addDays(startDate, dayNum);
+      return format(targetDate, 'MMM d, yyyy');
+    } catch {
+      return 'N/A';
+    }
+  };
+
   // Sort tasks based on selected criteria
   const sortedTasks = [...criticalTasks].sort((a, b) => {
     switch (sortBy) {
@@ -53,15 +68,13 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
   });
 
   const handleExportCSV = () => {
-    const headers = ['WBS', 'Task Name', 'Duration', 'Early Start', 'Early Finish', 'Late Start', 'Late Finish', 'Float (days)', 'Progress (%)'];
+    const headers = ['WBS', 'Task Name', 'Duration', 'Start Date', 'Finish Date', 'Float (days)', 'Progress (%)'];
     const rows = sortedTasks.map(task => [
       task.outline_number,
       task.name,
       formatDuration(task.duration),
-      task.early_start !== undefined ? task.early_start.toFixed(1) : 'N/A',
-      task.early_finish !== undefined ? task.early_finish.toFixed(1) : 'N/A',
-      task.late_start !== undefined ? task.late_start.toFixed(1) : 'N/A',
-      task.late_finish !== undefined ? task.late_finish.toFixed(1) : 'N/A',
+      dayToDate(task.early_start),
+      dayToDate(task.early_finish),
       (taskFloats[task.id] || 0).toFixed(1),
       task.percent_complete.toString(),
     ]);
@@ -96,22 +109,13 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
           `${index + 1}. ${task.name}`,
           `   WBS: ${task.outline_number}`,
           `   Duration: ${formatDuration(task.duration)}`,
-          `   ┌─────────────────────────────────────┐`,
-          `   │ Early Start:  Day ${task.early_start !== undefined ? task.early_start.toFixed(1).padStart(6) : '  N/A '}  │ Early Finish: Day ${task.early_finish !== undefined ? task.early_finish.toFixed(1).padStart(6) : '  N/A '} │`,
-          `   │ Late Start:   Day ${task.late_start !== undefined ? task.late_start.toFixed(1).padStart(6) : '  N/A '}  │ Late Finish:  Day ${task.late_finish !== undefined ? task.late_finish.toFixed(1).padStart(6) : '  N/A '} │`,
-          `   └─────────────────────────────────────┘`,
+          `   Start: ${dayToDate(task.early_start)}`,
+          `   Finish: ${dayToDate(task.early_finish)}`,
           `   Float: ${(taskFloats[task.id] || 0).toFixed(1)} days | Progress: ${task.percent_complete}%`,
           '',
         ].join('\n');
       }),
       '═══════════════════════════════════════════════════════════',
-      '',
-      'LEGEND:',
-      '  ES = Early Start  - Earliest possible start day',
-      '  EF = Early Finish - Earliest possible finish day',
-      '  LS = Late Start   - Latest allowable start day',
-      '  LF = Late Finish  - Latest allowable finish day',
-      '  Float = Slack time before task delays project',
     ].join('\n');
 
     const blob = new Blob([text], { type: 'text/plain' });
@@ -228,8 +232,8 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
                           </div>
                         </div>
                         <div className="timeline-dates">
-                          <span>Start: {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'N/A'}</span>
-                          <span>Finish: {task.finish_date ? new Date(task.finish_date).toLocaleDateString() : 'N/A'}</span>
+                          <span>Start: {dayToDate(task.early_start)}</span>
+                          <span>Finish: {dayToDate(task.early_finish)}</span>
                         </div>
                         <div className="timeline-cpm-dates">
                           <div className="cpm-row">
@@ -416,10 +420,8 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
                   <th>WBS</th>
                   <th>Task Name</th>
                   <th>Duration</th>
-                  <th className="cpm-header">ES</th>
-                  <th className="cpm-header">EF</th>
-                  <th className="cpm-header">LS</th>
-                  <th className="cpm-header">LF</th>
+                  <th>Start Date</th>
+                  <th>Finish Date</th>
                   <th>Float</th>
                   <th>Progress</th>
                 </tr>
@@ -430,10 +432,8 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
                     <td className="wbs-cell">{task.outline_number}</td>
                     <td className="task-name-cell">{task.name}</td>
                     <td>{formatDuration(task.duration)}</td>
-                    <td className="cpm-cell early">{formatDayNumber(task.early_start)}</td>
-                    <td className="cpm-cell early">{formatDayNumber(task.early_finish)}</td>
-                    <td className="cpm-cell late">{formatDayNumber(task.late_start)}</td>
-                    <td className="cpm-cell late">{formatDayNumber(task.late_finish)}</td>
+                    <td>{dayToDate(task.early_start)}</td>
+                    <td>{dayToDate(task.early_finish)}</td>
                     <td className="float-cell">{(taskFloats[task.id] || 0).toFixed(1)}d</td>
                     <td>
                       <div className="progress-cell">
@@ -445,10 +445,6 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
                 ))}
               </tbody>
             </table>
-            <div className="table-legend">
-              <span className="legend-item"><span className="legend-dot early"></span> ES = Early Start, EF = Early Finish</span>
-              <span className="legend-item"><span className="legend-dot late"></span> LS = Late Start, LF = Late Finish</span>
-            </div>
           </div>
         )}
       </div>

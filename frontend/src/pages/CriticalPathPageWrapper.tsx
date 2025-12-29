@@ -3,15 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { CriticalPathPage } from './CriticalPathPage';
 import type { CriticalPathResult } from '../api/client';
 
+interface CriticalPathDataWithStartDate extends CriticalPathResult {
+  projectStartDate?: string;
+}
+
 export const CriticalPathPageWrapper = () => {
   const navigate = useNavigate();
-  const [criticalPathData, setCriticalPathData] = useState<CriticalPathResult | null>(null);
+  const [criticalPathData, setCriticalPathData] = useState<CriticalPathDataWithStartDate | null>(null);
 
   useEffect(() => {
     const dataStr = sessionStorage.getItem('criticalPathData');
     if (dataStr) {
       try {
-        const data = JSON.parse(dataStr) as CriticalPathResult;
+        const data = JSON.parse(dataStr) as CriticalPathDataWithStartDate;
         setCriticalPathData(data);
       } catch (error) {
         console.error('Failed to parse critical path data:', error);
@@ -25,10 +29,10 @@ export const CriticalPathPageWrapper = () => {
 
   if (!criticalPathData) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '100vh',
         fontSize: '1.2rem',
         color: '#7f8c8d'
@@ -43,6 +47,7 @@ export const CriticalPathPageWrapper = () => {
       criticalTasks={criticalPathData.critical_tasks}
       projectDuration={criticalPathData.project_duration}
       taskFloats={criticalPathData.task_floats}
+      projectStartDate={criticalPathData.projectStartDate}
     />
   );
 };

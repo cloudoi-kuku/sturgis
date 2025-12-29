@@ -78,7 +78,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     try {
       const result = await getCriticalPath();
       // Store the result in sessionStorage so the new tab can access it
-      sessionStorage.setItem('criticalPathData', JSON.stringify(result));
+      // Include projectStartDate so we can convert day numbers to actual dates
+      sessionStorage.setItem('criticalPathData', JSON.stringify({
+        ...result,
+        projectStartDate: projectStartDate
+      }));
       // Open in a new tab
       window.open('/critical-path', '_blank');
     } catch (error) {

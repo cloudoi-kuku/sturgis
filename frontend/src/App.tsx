@@ -7,6 +7,7 @@ import { ProjectManager } from './components/ProjectManager';
 import { AIChat } from './components/AIChat';
 import { CalendarManager } from './components/CalendarManager';
 import { BaselineManager } from './components/BaselineManager';
+import { HowToUse } from './components/HowToUse';
 import {
   uploadProject,
   getTasks,
@@ -25,7 +26,7 @@ import type {
   TaskCreate,
   TaskUpdate,
 } from './api/client';
-import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch } from 'lucide-react';
+import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle } from 'lucide-react';
 import { parseISO, addDays, differenceInDays } from 'date-fns';
 import './App.css';
 
@@ -39,6 +40,7 @@ function AppContent() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isBaselineManagerOpen, setIsBaselineManagerOpen] = useState(false);
+  const [isHowToUseOpen, setIsHowToUseOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<any[]>([]);
   const queryClientInstance = useQueryClient();
@@ -380,6 +382,15 @@ function AppContent() {
             <MessageCircle size={18} />
             AI Chat
           </button>
+
+          <button
+            className="action-button"
+            onClick={() => setIsHowToUseOpen(true)}
+            title="How to Use"
+          >
+            <HelpCircle size={18} />
+            Help
+          </button>
         </div>
       </header>
 
@@ -527,6 +538,11 @@ function AppContent() {
         onBaselineChanged={() => {
           queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
         }}
+      />
+
+      <HowToUse
+        isOpen={isHowToUseOpen}
+        onClose={() => setIsHowToUseOpen(false)}
       />
     </div>
   );

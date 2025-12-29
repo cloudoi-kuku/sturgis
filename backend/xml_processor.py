@@ -51,8 +51,13 @@ class MSProjectXMLProcessor:
             duration_elem = task_elem.find('msproj:Duration', self.NS)
             milestone_elem = task_elem.find('msproj:Milestone', self.NS)
             summary_elem = task_elem.find('msproj:Summary', self.NS)
+            # Try Start first, then fall back to EarlyStart (MS Project uses different elements)
             start_elem = task_elem.find('msproj:Start', self.NS)
+            if start_elem is None:
+                start_elem = task_elem.find('msproj:EarlyStart', self.NS)
             finish_elem = task_elem.find('msproj:Finish', self.NS)
+            if finish_elem is None:
+                finish_elem = task_elem.find('msproj:EarlyFinish', self.NS)
 
             # Read PhysicalPercentComplete (preferred for construction projects)
             # Fall back to PercentComplete if PhysicalPercentComplete doesn't exist
@@ -292,18 +297,19 @@ class MSProjectXMLProcessor:
         """
         Automatically detect summary tasks and calculate their properties based on children.
         A task is a summary task if other tasks have outline numbers that start with its outline number.
+        IMPORTANT: This function preserves the original task order - do NOT sort!
+        MS Project uses OutlineNumber to determine hierarchy, not task order in the file.
         """
-        # Sort tasks by outline number for proper hierarchy
-        sorted_tasks = sorted(tasks, key=lambda t: [int(x) for x in t["outline_number"].split('.')])
+        # Build a set of all outline numbers for faster lookup
+        all_outlines = {task["outline_number"] for task in tasks}
 
         # Identify which tasks are summary tasks
-        for i, task in enumerate(sorted_tasks):
+        for task in tasks:
             outline = task["outline_number"]
             has_children = False
 
             # Check if any other task is a child of this task
-            for other_task in sorted_tasks:
-                other_outline = other_task["outline_number"]
+            for other_outline in all_outlines:
                 # A task is a child if its outline starts with parent's outline + "."
                 if other_outline.startswith(outline + ".") and other_outline != outline:
                     has_children = True
@@ -316,7 +322,8 @@ class MSProjectXMLProcessor:
             if has_children:
                 task["milestone"] = False
 
-        return sorted_tasks
+        # Return tasks in original order - do NOT sort!
+        return tasks
 
     def generate_xml(self, project_data: Dict[str, Any]) -> str:
         """Generate MS Project XML from project data"""
@@ -352,9 +359,23 @@ class MSProjectXMLProcessor:
             # Clear existing tasks
             tasks_elem.clear()
 
-            # Add tasks from project data
+            # Build UID mapping: map any non-numeric UIDs to sequential numbers
+            # MS Project requires numeric UIDs
+            uid_mapping = {}
+            next_uid = 1  # Start from 1 (0 is reserved for project summary)
             for task_data in project_data["tasks"]:
-                task_elem = self._create_task_element(task_data, project_data["tasks"])
+                original_uid = str(task_data.get("uid", ""))
+                # Check if UID is numeric
+                if original_uid.isdigit():
+                    uid_mapping[original_uid] = original_uid
+                else:
+                    # Non-numeric UID (like UUID), assign sequential number
+                    uid_mapping[original_uid] = str(next_uid)
+                    next_uid += 1
+
+            # Add tasks from project data with sequential IDs for MS Project
+            for index, task_data in enumerate(project_data["tasks"]):
+                task_elem = self._create_task_element(task_data, project_data["tasks"], index, uid_mapping)
                 tasks_elem.append(task_elem)
 
         # Convert to string with proper XML declaration
@@ -366,7 +387,7 @@ class MSProjectXMLProcessor:
 
         return xml_string
 
-    def _create_task_element(self, task_data: Dict[str, Any], all_tasks: List[Dict[str, Any]]) -> ET.Element:
+    def _create_task_element(self, task_data: Dict[str, Any], all_tasks: List[Dict[str, Any]], task_index: int = 0, uid_mapping: Dict[str, str] = None) -> ET.Element:
         """Create an XML element for a task"""
         # Helper function to create namespaced elements
         def create_elem(parent, tag, text=None):
@@ -377,10 +398,28 @@ class MSProjectXMLProcessor:
 
         task_elem = ET.Element('{http://schemas.microsoft.com/project}Task')
 
+        # Get the mapped UID (numeric) for MS Project compatibility
+        original_uid = str(task_data.get("uid", ""))
+        mapped_uid = uid_mapping.get(original_uid, original_uid) if uid_mapping else original_uid
+
+        # Check if this is the project summary task (UID=0 or outline_number=0)
+        is_project_summary = original_uid == "0" or task_data.get("outline_number") == "0"
+        is_summary = task_data.get("summary", False) or is_project_summary
+
         # Add basic fields
-        create_elem(task_elem, 'UID', task_data["uid"])
-        create_elem(task_elem, 'ID', task_data["id"])
+        # UID must be numeric for MS Project
+        create_elem(task_elem, 'UID', mapped_uid)
+        # ID must be a sequential integer for MS Project (not a UUID)
+        create_elem(task_elem, 'ID', task_index)
         create_elem(task_elem, 'Name', task_data["name"])
+
+        # Project summary task has minimal fields
+        if is_project_summary:
+            create_elem(task_elem, 'OutlineNumber', task_data["outline_number"])
+            create_elem(task_elem, 'OutlineLevel', task_data["outline_level"])
+            create_elem(task_elem, 'Summary', '1')
+            return task_elem
+
         create_elem(task_elem, 'Type', '1')
         create_elem(task_elem, 'IsNull', '0')
 
@@ -396,6 +435,7 @@ class MSProjectXMLProcessor:
         create_elem(task_elem, 'Priority', '500')
 
         # Start and Finish dates (CRITICAL for MS Project)
+        # These are required for MS Project to properly calculate schedule
         start_date = task_data.get("start_date")
         if start_date:
             create_elem(task_elem, 'Start', start_date)
@@ -405,7 +445,6 @@ class MSProjectXMLProcessor:
             create_elem(task_elem, 'Finish', finish_date)
 
         # Duration - only for non-summary tasks (MS Project calculates summary task durations)
-        is_summary = task_data.get("summary", False)
         if not is_summary:
             duration = task_data.get("duration", "PT8H0M0S")
             if task_data.get("milestone", False) and duration == "PT8H0M0S":
@@ -445,13 +484,16 @@ class MSProjectXMLProcessor:
             create_elem(ext_attr, 'FieldID', '188743731')
             create_elem(ext_attr, 'Value', task_data["value"])
 
-        # Predecessors
-        outline_to_uid = {t["outline_number"]: t["uid"] for t in all_tasks}
+        # Predecessors - use mapped UIDs for MS Project compatibility
+        outline_to_uid = {t["outline_number"]: str(t["uid"]) for t in all_tasks}
         for pred in task_data.get("predecessors", []):
             pred_outline = pred["outline_number"]
             if pred_outline in outline_to_uid:
+                original_pred_uid = outline_to_uid[pred_outline]
+                # Map the predecessor UID to numeric if needed
+                mapped_pred_uid = uid_mapping.get(original_pred_uid, original_pred_uid) if uid_mapping else original_pred_uid
                 link = create_elem(task_elem, 'PredecessorLink')
-                create_elem(link, 'PredecessorUID', outline_to_uid[pred_outline])
+                create_elem(link, 'PredecessorUID', mapped_pred_uid)
                 create_elem(link, 'Type', pred.get("type", 1))
                 create_elem(link, 'CrossProject', '0')
                 create_elem(link, 'LinkLag', pred.get("lag", 0))

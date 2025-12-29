@@ -177,6 +177,8 @@
   font-size: 1rem;
   text-align: center;
   transition: border-color 0.2s;
+  background-color: #fff;
+  color: #2c3e50;
 }
 
 .hours-input:focus {
@@ -248,6 +250,8 @@
   border-radius: 6px;
   font-size: 0.9rem;
   transition: border-color 0.2s;
+  background-color: #fff;
+  color: #2c3e50;
 }
 
 .date-input:focus,

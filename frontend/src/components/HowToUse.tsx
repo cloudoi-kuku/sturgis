@@ -153,6 +153,26 @@ export function HowToUse({ isOpen, onClose }: HowToUseProps) {
             </div>
           </section>
 
+          <section className="guide-section">
+            <h3>📊 Baseline Management</h3>
+            <div className="step">
+              <div className="step-icon">
+                <GitBranch size={20} />
+              </div>
+              <div className="step-content">
+                <h4>Set and Track Baselines</h4>
+                <p>Baselines allow you to save a snapshot of your schedule to compare against actual progress. This is essential for tracking schedule variance.</p>
+                <ul>
+                  <li><strong>Set Baseline:</strong> Click the <GitBranch size={14} style={{display: 'inline', verticalAlign: 'middle'}} /> icon next to the project name to open Baseline Manager. Select a baseline number (0-10) and click "Set" to capture the current schedule.</li>
+                  <li><strong>View Baselines:</strong> In the Gantt chart, use the "Show Baselines" toggle to display baseline bars below the current task bars. Grey bars show the original baseline schedule.</li>
+                  <li><strong>Compare Schedules:</strong> When baselines are visible, you can easily see if tasks have slipped (current bar is to the right of baseline) or are ahead of schedule.</li>
+                  <li><strong>Clear Baseline:</strong> Remove a baseline by clicking the trash icon in Baseline Manager.</li>
+                </ul>
+                <p className="tip">💡 <strong>Tip:</strong> MS Project supports 11 baselines (0-10). Baseline 0 is the primary baseline. Use additional baselines to track schedule changes over time.</p>
+              </div>
+            </div>
+          </section>
+
           <section className="guide-section tips-section">
             <h3>💡 Pro Tips</h3>
             <ul className="tips-list">
@@ -162,6 +182,8 @@ export function HowToUse({ isOpen, onClose }: HowToUseProps) {
               <li>The project duration is automatically calculated based on tasks and dependencies</li>
               <li>All AI processing happens locally - your data never leaves your machine</li>
               <li>Save your work by exporting to XML regularly</li>
+              <li>Set a baseline before starting your project to track schedule variance</li>
+              <li>Use the baseline toggle in the Gantt chart to compare current vs. planned schedules</li>
             </ul>
           </section>
 
