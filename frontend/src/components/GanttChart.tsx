@@ -42,6 +42,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [showWeekends, setShowWeekends] = useState<boolean>(true);
   const [isLoadingCriticalPath, setIsLoadingCriticalPath] = useState<boolean>(false);
+  const [showBaselines, setShowBaselines] = useState<boolean>(true);
+  const [selectedBaselineNumber, setSelectedBaselineNumber] = useState<number>(0);
 
   // Refs for synchronized scrolling
   const taskListRef = useRef<HTMLDivElement>(null);
@@ -581,7 +583,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               <Calendar size={16} />
               {showWeekends ? 'Hide' : 'Show'} Weekends
             </button>
-            
+
             <button
               className="control-button"
               onClick={scrollToToday}
@@ -590,6 +592,30 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               <SkipForward size={16} />
               Today
             </button>
+
+            <button
+              className={`control-button ${showBaselines ? 'active' : ''}`}
+              onClick={() => setShowBaselines(!showBaselines)}
+              title={showBaselines ? 'Hide Baselines' : 'Show Baselines'}
+            >
+              <GitBranch size={16} />
+              {showBaselines ? 'Hide' : 'Show'} Baselines
+            </button>
+
+            {showBaselines && (
+              <select
+                className="baseline-select"
+                value={selectedBaselineNumber}
+                onChange={(e) => setSelectedBaselineNumber(parseInt(e.target.value))}
+                title="Select Baseline"
+              >
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                  <option key={num} value={num}>
+                    Baseline {num}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
       </div>
@@ -857,15 +883,52 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             {taskPositions.map(({ task, startDay, duration, startDate }) => {
               const leftPx = (startDay / maxDay) * timelineConfig.width;
               const widthPx = task.milestone ? 20 : (duration / maxDay) * timelineConfig.width;
-              
+
               // Use actual percent complete from task data
               const progressPct = task.milestone ? 100 : (task.percent_complete || 0);
-              
+
               const isOverdue = !task.milestone && !task.summary && startDate < new Date() && progressPct < 100;
               const isUpcoming = startDate > addDays(new Date(), 7);
 
+              // Calculate baseline bar position if baseline exists
+              const baseline = task.baselines?.find(b => b.number === selectedBaselineNumber);
+              let baselineLeftPx = 0;
+              let baselineWidthPx = 0;
+              let hasBaseline = false;
+
+              if (showBaselines && baseline && baseline.start && !task.milestone) {
+                const baselineStartDate = parseISO(baseline.start);
+                const baselineStartDay = differenceInDays(baselineStartDate, parseISO(projectStartDate)) + TIMELINE_OFFSET_DAYS;
+
+                // Parse baseline duration
+                let baselineDuration = 1;
+                if (baseline.duration) {
+                  const match = baseline.duration.match(/PT(\d+)H/);
+                  if (match) {
+                    baselineDuration = parseInt(match[1]) / 8;
+                  }
+                }
+
+                baselineLeftPx = (baselineStartDay / maxDay) * timelineConfig.width;
+                baselineWidthPx = (baselineDuration / maxDay) * timelineConfig.width;
+                hasBaseline = true;
+              }
+
               return (
                 <div key={task.id} className="gantt-timeline-row">
+                  {/* Baseline bar (shown below the current bar) */}
+                  {hasBaseline && (
+                    <div
+                      className="gantt-bar baseline"
+                      style={{
+                        left: `${baselineLeftPx}px`,
+                        width: `${baselineWidthPx}px`,
+                      }}
+                      title={`Baseline ${selectedBaselineNumber}: ${baseline?.start ? formatDate(baseline.start) : 'N/A'}`}
+                    />
+                  )}
+
+                  {/* Current task bar */}
                   <div
                     className={`gantt-bar ${
                       task.milestone ? 'milestone' : ''
@@ -875,6 +938,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       isOverdue ? 'overdue' : ''
                     } ${
                       isUpcoming ? 'upcoming' : ''
+                    } ${
+                      hasBaseline ? 'has-baseline' : ''
                     }`}
                     style={{
                       left: `${leftPx}px`,
@@ -884,11 +949,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       e.stopPropagation();
                       onTaskEdit(task);
                     }}
-                    title={`${task.name}\nStart: ${formatDate(startDate.toISOString())}\nDuration: ${duration} days${!task.milestone ? `\nProgress: ${progressPct}%` : ''}`}
+                    title={`${task.name}\nStart: ${formatDate(startDate.toISOString())}\nDuration: ${duration} days${!task.milestone ? `\nProgress: ${progressPct}%` : ''}${hasBaseline ? `\nBaseline ${selectedBaselineNumber}: ${baseline?.start ? formatDate(baseline.start) : 'N/A'}` : ''}`}
                   >
                     {!task.milestone && !task.summary && (
-                      <div 
-                        className="gantt-bar-progress" 
+                      <div
+                        className="gantt-bar-progress"
                         style={{ width: `${progressPct}%` }}
                       />
                     )}

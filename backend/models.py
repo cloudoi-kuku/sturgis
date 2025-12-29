@@ -11,6 +11,23 @@ class Predecessor(BaseModel):
     lag_format: int = Field(default=7, description="Lag format: 7=days, 8=hours")
 
 
+class TaskBaseline(BaseModel):
+    """MS Project Baseline model - captures a snapshot of task schedule at a point in time.
+    MS Project supports up to 11 baselines (0-10) per task."""
+    number: int = Field(..., ge=0, le=10, description="Baseline number (0-10). 0 is the primary baseline.")
+    start: Optional[str] = Field(default=None, description="Baseline start date in ISO 8601 format")
+    finish: Optional[str] = Field(default=None, description="Baseline finish date in ISO 8601 format")
+    duration: Optional[str] = Field(default=None, description="Baseline duration in ISO 8601 duration format (e.g., PT40H0M0S)")
+    duration_format: Optional[int] = Field(default=7, description="Duration format: 7=days")
+    work: Optional[str] = Field(default=None, description="Baseline work in ISO 8601 duration format")
+    cost: Optional[float] = Field(default=None, description="Baseline cost")
+    bcws: Optional[float] = Field(default=None, description="Budgeted Cost of Work Scheduled")
+    bcwp: Optional[float] = Field(default=None, description="Budgeted Cost of Work Performed")
+    fixed_cost: Optional[float] = Field(default=None, description="Baseline fixed cost")
+    estimated_duration: Optional[bool] = Field(default=None, description="Whether duration is estimated")
+    interim: Optional[bool] = Field(default=False, description="Whether this is an interim baseline")
+
+
 class TaskBase(BaseModel):
     """Base task model with common fields"""
     name: str = Field(..., description="Task name")
@@ -46,6 +63,8 @@ class Task(TaskBase):
     start_date: Optional[str] = None
     finish_date: Optional[str] = None
     summary: bool = Field(default=False, description="Whether this is a summary task")
+    # MS Project Baselines (up to 11 baselines: 0-10)
+    baselines: List[TaskBaseline] = Field(default_factory=list, description="Task baselines for schedule tracking")
 
 
 class ProjectMetadata(BaseModel):
@@ -176,3 +195,28 @@ class CalendarExceptionCreate(BaseModel):
     name: str = Field(..., description="Name of the exception")
     is_working: bool = Field(default=False, description="True for working day override, False for holiday")
 
+
+# Baseline Management Models
+class SetBaselineRequest(BaseModel):
+    """Request to set a project baseline"""
+    baseline_number: int = Field(default=0, ge=0, le=10, description="Baseline number to set (0-10)")
+    task_ids: Optional[List[str]] = Field(default=None, description="Specific task IDs to baseline. If None, all tasks are baselined.")
+
+
+class ClearBaselineRequest(BaseModel):
+    """Request to clear a project baseline"""
+    baseline_number: int = Field(..., ge=0, le=10, description="Baseline number to clear (0-10)")
+    task_ids: Optional[List[str]] = Field(default=None, description="Specific task IDs to clear. If None, all tasks are cleared.")
+
+
+class BaselineInfo(BaseModel):
+    """Information about a project baseline"""
+    number: int = Field(..., description="Baseline number (0-10)")
+    set_date: Optional[str] = Field(default=None, description="Date when baseline was set")
+    task_count: int = Field(default=0, description="Number of tasks with this baseline")
+
+
+class ProjectBaselinesResponse(BaseModel):
+    """Response with all project baseline information"""
+    baselines: List[BaselineInfo] = Field(default_factory=list, description="List of baselines in the project")
+    total_tasks: int = Field(default=0, description="Total number of tasks in project")

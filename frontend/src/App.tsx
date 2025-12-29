@@ -6,6 +6,7 @@ import { ProjectMetadataEditor } from './components/ProjectMetadataEditor';
 import { ProjectManager } from './components/ProjectManager';
 import { AIChat } from './components/AIChat';
 import { CalendarManager } from './components/CalendarManager';
+import { BaselineManager } from './components/BaselineManager';
 import {
   uploadProject,
   getTasks,
@@ -24,7 +25,7 @@ import type {
   TaskCreate,
   TaskUpdate,
 } from './api/client';
-import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar } from 'lucide-react';
+import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch } from 'lucide-react';
 import { parseISO, addDays, differenceInDays } from 'date-fns';
 import './App.css';
 
@@ -37,6 +38,7 @@ function AppContent() {
   const [isProjectManagerOpen, setIsProjectManagerOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isBaselineManagerOpen, setIsBaselineManagerOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<any[]>([]);
   const queryClientInstance = useQueryClient();
@@ -393,6 +395,9 @@ function AppContent() {
             </p>
           </div>
           <div className="project-actions">
+            <button className="settings-button" onClick={() => setIsBaselineManagerOpen(true)} title="Baseline Manager">
+              <GitBranch size={18} />
+            </button>
             <button className="settings-button" onClick={() => setIsCalendarOpen(true)} title="Calendar Settings">
               <Calendar size={18} />
             </button>
@@ -513,6 +518,14 @@ function AppContent() {
         calendar={calendarData}
         onSave={async (calendar) => {
           await updateCalendarMutation.mutateAsync(calendar);
+        }}
+      />
+
+      <BaselineManager
+        isOpen={isBaselineManagerOpen}
+        onClose={() => setIsBaselineManagerOpen(false)}
+        onBaselineChanged={() => {
+          queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
         }}
       />
     </div>

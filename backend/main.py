@@ -27,7 +27,11 @@ from models import (
     ApplyOptimizationRequest,
     ProjectCalendar,
     CalendarException,
-    CalendarExceptionCreate
+    CalendarExceptionCreate,
+    SetBaselineRequest,
+    ClearBaselineRequest,
+    BaselineInfo,
+    ProjectBaselinesResponse
 )
 from xml_processor import MSProjectXMLProcessor
 from validator import ProjectValidator
@@ -1075,7 +1079,99 @@ async def remove_calendar_exception(exception_date: str):
         raise HTTPException(status_code=500, detail=f"Failed to remove exception: {str(e)}")
 
 
+# ============================================================================
+# BASELINE MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@app.get("/api/baselines", response_model=ProjectBaselinesResponse)
+async def get_baselines():
+    """
+    Get summary of all baselines set in the current project.
+    Returns list of baselines with their number, task count, and set date.
+    """
+    global current_project_id
+    if not current_project_id:
+        raise HTTPException(status_code=400, detail="No project loaded")
+
+    try:
+        baselines = db.get_project_baselines(current_project_id)
+        tasks = db.get_tasks(current_project_id)
+
+        baseline_infos = [
+            BaselineInfo(
+                number=b['number'],
+                set_date=b['set_date'],
+                task_count=b['task_count']
+            ) for b in baselines
+        ]
+
+        return ProjectBaselinesResponse(
+            baselines=baseline_infos,
+            total_tasks=len(tasks)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get baselines: {str(e)}")
+
+
+@app.post("/api/baselines/set")
+async def set_baseline(request: SetBaselineRequest):
+    """
+    Set a baseline for the current project.
+    Captures the current schedule (start, finish, duration) as the baseline.
+
+    MS Project supports baselines 0-10. Baseline 0 is the primary baseline.
+    """
+    global current_project_id
+    if not current_project_id:
+        raise HTTPException(status_code=400, detail="No project loaded")
+
+    try:
+        count = db.set_baseline(
+            current_project_id,
+            request.baseline_number,
+            request.task_ids
+        )
+
+        return {
+            "success": True,
+            "message": f"Baseline {request.baseline_number} set for {count} tasks",
+            "baseline_number": request.baseline_number,
+            "tasks_baselined": count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to set baseline: {str(e)}")
+
+
+@app.post("/api/baselines/clear")
+async def clear_baseline(request: ClearBaselineRequest):
+    """
+    Clear a baseline from the current project.
+
+    Args:
+        baseline_number: Baseline number to clear (0-10)
+        task_ids: Optional list of task IDs. If None, clears all tasks.
+    """
+    global current_project_id
+    if not current_project_id:
+        raise HTTPException(status_code=400, detail="No project loaded")
+
+    try:
+        count = db.clear_baseline(
+            current_project_id,
+            request.baseline_number,
+            request.task_ids
+        )
+
+        return {
+            "success": True,
+            "message": f"Baseline {request.baseline_number} cleared from {count} tasks",
+            "baseline_number": request.baseline_number,
+            "tasks_cleared": count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear baseline: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-

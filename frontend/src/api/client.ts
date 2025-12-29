@@ -17,6 +17,22 @@ export type Predecessor = {
   lag_format: number;
 }
 
+// MS Project Baseline - captures schedule snapshot
+export type TaskBaseline = {
+  number: number;  // 0-10 (MS Project supports 11 baselines)
+  start?: string;  // Baseline start date
+  finish?: string;  // Baseline finish date
+  duration?: string;  // Baseline duration (ISO 8601)
+  duration_format?: number;
+  work?: string;
+  cost?: number;
+  bcws?: number;  // Budgeted Cost of Work Scheduled
+  bcwp?: number;  // Budgeted Cost of Work Performed
+  fixed_cost?: number;
+  estimated_duration?: boolean;
+  interim?: boolean;
+}
+
 export type Task = {
   id: string;
   uid: string;
@@ -31,6 +47,8 @@ export type Task = {
   predecessors: Predecessor[];
   start_date?: string;
   finish_date?: string;
+  // MS Project Baselines (up to 11: 0-10)
+  baselines?: TaskBaseline[];
   // Critical Path Method fields (populated by /api/critical-path)
   early_start?: number;
   early_finish?: number;
@@ -167,17 +185,35 @@ export const getCriticalPath = async (): Promise<{
   return response.data;
 };
 
+// Project List Item Type
+export type ProjectListItem = {
+  id: string;
+  name: string;
+  task_count: number;
+  start_date: string;
+  is_active: boolean;
+}
+
 // Project Management Functions
 export const getAllProjects = async (): Promise<{
-  projects: Array<{
-    id: string;
-    name: string;
-    task_count: number;
-    start_date: string;
-    is_active: boolean;
-  }>;
+  projects: ProjectListItem[];
 }> => {
   const response = await apiClient.get('/api/projects');
+  return response.data;
+};
+
+// AI Project Generation
+export const generateProject = async (description: string, projectType: string): Promise<{
+  success: boolean;
+  message: string;
+  project_id?: string;
+  project_name?: string;
+  task_count?: number;
+}> => {
+  const response = await apiClient.post('/api/ai/generate-project', {
+    description,
+    project_type: projectType
+  });
   return response.data;
 };
 
@@ -242,3 +278,68 @@ export const removeCalendarException = async (exceptionDate: string): Promise<{
   return response.data;
 };
 
+// ============================================================================
+// BASELINE MANAGEMENT
+// ============================================================================
+
+export type BaselineInfo = {
+  number: number;
+  set_date: string;
+  task_count: number;
+};
+
+export type ProjectBaselinesResponse = {
+  baselines: BaselineInfo[];
+  total_tasks: number;
+};
+
+export type SetBaselineRequest = {
+  baseline_number: number;
+  task_ids?: string[];
+};
+
+export type ClearBaselineRequest = {
+  baseline_number: number;
+  task_ids?: string[];
+};
+
+export type SetBaselineResponse = {
+  success: boolean;
+  message: string;
+  baseline_number: number;
+  tasks_baselined: number;
+};
+
+export type ClearBaselineResponse = {
+  success: boolean;
+  message: string;
+  baseline_number: number;
+  tasks_cleared: number;
+};
+
+export const getBaselines = async (): Promise<ProjectBaselinesResponse> => {
+  const response = await apiClient.get('/api/baselines');
+  return response.data;
+};
+
+export const setBaseline = async (
+  baselineNumber: number,
+  taskIds?: string[]
+): Promise<SetBaselineResponse> => {
+  const response = await apiClient.post('/api/baselines/set', {
+    baseline_number: baselineNumber,
+    task_ids: taskIds
+  });
+  return response.data;
+};
+
+export const clearBaseline = async (
+  baselineNumber: number,
+  taskIds?: string[]
+): Promise<ClearBaselineResponse> => {
+  const response = await apiClient.post('/api/baselines/clear', {
+    baseline_number: baselineNumber,
+    task_ids: taskIds
+  });
+  return response.data;
+};

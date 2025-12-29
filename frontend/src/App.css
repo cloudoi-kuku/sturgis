@@ -835,6 +835,40 @@ body {
   transform: translate(-50%, -50%);
 }
 
+/* Baseline bar styles */
+.gantt-bar.baseline {
+  background: #95a5a6;
+  opacity: 0.5;
+  height: 10px;
+  top: 75%;
+  z-index: 0;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.gantt-bar.has-baseline {
+  top: 35%;
+}
+
+/* Baseline select dropdown */
+.baseline-select {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.baseline-select:hover {
+  border-color: #3498db;
+}
+
+.control-button.active {
+  background: #3498db;
+  color: white;
+}
+
 .gantt-dependencies {
   pointer-events: none;
 }

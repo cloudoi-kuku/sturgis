@@ -118,12 +118,39 @@ class DatabaseService:
                 )
             """)
 
+            # Task baselines table (MS Project supports up to 11 baselines: 0-10)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS task_baselines (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id TEXT NOT NULL,
+                    project_id TEXT NOT NULL,
+                    number INTEGER NOT NULL,
+                    start TEXT,
+                    finish TEXT,
+                    duration TEXT,
+                    duration_format INTEGER DEFAULT 7,
+                    work TEXT,
+                    cost REAL,
+                    bcws REAL,
+                    bcwp REAL,
+                    fixed_cost REAL,
+                    estimated_duration INTEGER DEFAULT 0,
+                    interim INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                    UNIQUE(task_id, number)
+                )
+            """)
+
             # Create indexes for better performance
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_outline ON tasks(project_id, outline_number)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_predecessors_task ON predecessors(task_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_predecessors_project ON predecessors(project_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_calendar_exceptions_project ON calendar_exceptions(project_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_task_baselines_task ON task_baselines(task_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_task_baselines_project ON task_baselines(project_id)")
 
             conn.commit()
     
@@ -324,6 +351,25 @@ class DatabaseService:
                     pred.get('type', 1), pred.get('lag', 0), pred.get('lag_format', 7)
                 ))
 
+            # Insert baselines
+            now = datetime.now().isoformat()
+            for baseline in task_data.get('baselines', []):
+                cursor.execute("""
+                    INSERT INTO task_baselines (
+                        task_id, project_id, number, start, finish, duration, duration_format,
+                        work, cost, bcws, bcwp, fixed_cost, estimated_duration, interim, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    task_id, project_id, baseline.get('number', 0),
+                    baseline.get('start'), baseline.get('finish'),
+                    baseline.get('duration'), baseline.get('duration_format', 7),
+                    baseline.get('work'), baseline.get('cost'),
+                    baseline.get('bcws'), baseline.get('bcwp'), baseline.get('fixed_cost'),
+                    1 if baseline.get('estimated_duration') else 0,
+                    1 if baseline.get('interim') else 0,
+                    now
+                ))
+
             # Update project timestamp
             cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
                          (datetime.now().isoformat(), project_id))
@@ -357,6 +403,23 @@ class DatabaseService:
                 """, (task['id'],))
 
                 task['predecessors'] = [dict(pred) for pred in cursor.fetchall()]
+
+                # Get baselines for this task
+                cursor.execute("""
+                    SELECT number, start, finish, duration, duration_format,
+                           work, cost, bcws, bcwp, fixed_cost, estimated_duration, interim
+                    FROM task_baselines
+                    WHERE task_id = ?
+                    ORDER BY number
+                """, (task['id'],))
+
+                task['baselines'] = []
+                for baseline_row in cursor.fetchall():
+                    baseline = dict(baseline_row)
+                    baseline['estimated_duration'] = bool(baseline['estimated_duration'])
+                    baseline['interim'] = bool(baseline['interim'])
+                    task['baselines'].append(baseline)
+
                 tasks.append(task)
 
             return tasks
@@ -381,6 +444,23 @@ class DatabaseService:
                 """, (task_id,))
 
                 task['predecessors'] = [dict(pred) for pred in cursor.fetchall()]
+
+                # Get baselines
+                cursor.execute("""
+                    SELECT number, start, finish, duration, duration_format,
+                           work, cost, bcws, bcwp, fixed_cost, estimated_duration, interim
+                    FROM task_baselines
+                    WHERE task_id = ?
+                    ORDER BY number
+                """, (task_id,))
+
+                task['baselines'] = []
+                for baseline_row in cursor.fetchall():
+                    baseline = dict(baseline_row)
+                    baseline['estimated_duration'] = bool(baseline['estimated_duration'])
+                    baseline['interim'] = bool(baseline['interim'])
+                    task['baselines'].append(baseline)
+
                 return task
 
         return None
@@ -514,6 +594,25 @@ class DatabaseService:
                     """, (
                         task_id, project_id, pred['outline_number'],
                         pred.get('type', 1), pred.get('lag', 0), pred.get('lag_format', 7)
+                    ))
+
+                # Insert baselines
+                now = datetime.now().isoformat()
+                for baseline in task_data.get('baselines', []):
+                    cursor.execute("""
+                        INSERT INTO task_baselines (
+                            task_id, project_id, number, start, finish, duration, duration_format,
+                            work, cost, bcws, bcwp, fixed_cost, estimated_duration, interim, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        task_id, project_id, baseline.get('number', 0),
+                        baseline.get('start'), baseline.get('finish'),
+                        baseline.get('duration'), baseline.get('duration_format', 7),
+                        baseline.get('work'), baseline.get('cost'),
+                        baseline.get('bcws'), baseline.get('bcwp'), baseline.get('fixed_cost'),
+                        1 if baseline.get('estimated_duration') else 0,
+                        1 if baseline.get('interim') else 0,
+                        now
                     ))
 
                 count += 1
@@ -655,3 +754,124 @@ class DatabaseService:
                 'is_working': bool(row['is_working'])
             } for row in cursor.fetchall()]
 
+    # ============================================================================
+    # BASELINE MANAGEMENT
+    # ============================================================================
+
+    def set_baseline(self, project_id: str, baseline_number: int, task_ids: Optional[List[str]] = None) -> int:
+        """Set a baseline for tasks in a project.
+
+        Args:
+            project_id: The project ID
+            baseline_number: Baseline number (0-10)
+            task_ids: Optional list of task IDs. If None, all tasks are baselined.
+
+        Returns:
+            Number of tasks baselined
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            now = datetime.now().isoformat()
+
+            # Get tasks to baseline
+            if task_ids:
+                placeholders = ','.join('?' * len(task_ids))
+                cursor.execute(f"""
+                    SELECT id, start_date, finish_date, duration
+                    FROM tasks
+                    WHERE project_id = ? AND id IN ({placeholders})
+                """, [project_id] + task_ids)
+            else:
+                cursor.execute("""
+                    SELECT id, start_date, finish_date, duration
+                    FROM tasks
+                    WHERE project_id = ?
+                """, (project_id,))
+
+            tasks = cursor.fetchall()
+            count = 0
+
+            for task in tasks:
+                task_id = task['id']
+
+                # Delete existing baseline for this task and number
+                cursor.execute("""
+                    DELETE FROM task_baselines
+                    WHERE task_id = ? AND number = ?
+                """, (task_id, baseline_number))
+
+                # Insert new baseline
+                cursor.execute("""
+                    INSERT INTO task_baselines (
+                        task_id, project_id, number, start, finish, duration,
+                        duration_format, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, 7, ?)
+                """, (
+                    task_id, project_id, baseline_number,
+                    task['start_date'], task['finish_date'], task['duration'],
+                    now
+                ))
+                count += 1
+
+            # Update project timestamp
+            cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
+                         (now, project_id))
+
+            return count
+
+    def clear_baseline(self, project_id: str, baseline_number: int, task_ids: Optional[List[str]] = None) -> int:
+        """Clear a baseline for tasks in a project.
+
+        Args:
+            project_id: The project ID
+            baseline_number: Baseline number (0-10)
+            task_ids: Optional list of task IDs. If None, all baselines are cleared.
+
+        Returns:
+            Number of baselines cleared
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            if task_ids:
+                placeholders = ','.join('?' * len(task_ids))
+                cursor.execute(f"""
+                    DELETE FROM task_baselines
+                    WHERE project_id = ? AND number = ? AND task_id IN ({placeholders})
+                """, [project_id, baseline_number] + task_ids)
+            else:
+                cursor.execute("""
+                    DELETE FROM task_baselines
+                    WHERE project_id = ? AND number = ?
+                """, (project_id, baseline_number))
+
+            count = cursor.rowcount
+
+            # Update project timestamp
+            cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
+                         (datetime.now().isoformat(), project_id))
+
+            return count
+
+    def get_project_baselines(self, project_id: str) -> List[Dict[str, Any]]:
+        """Get summary of all baselines in a project.
+
+        Returns:
+            List of baseline info with number, task count, and first set date
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT number, COUNT(*) as task_count, MIN(created_at) as set_date
+                FROM task_baselines
+                WHERE project_id = ?
+                GROUP BY number
+                ORDER BY number
+            """, (project_id,))
+
+            return [{
+                'number': row['number'],
+                'task_count': row['task_count'],
+                'set_date': row['set_date']
+            } for row in cursor.fetchall()]

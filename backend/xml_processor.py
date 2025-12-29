@@ -110,6 +110,13 @@ class MSProjectXMLProcessor:
                             "lag_format": lag_format
                         })
 
+            # Extract baselines (MS Project supports up to 11 baselines: 0-10)
+            baselines = []
+            for baseline_elem in task_elem.findall('msproj:Baseline', self.NS):
+                baseline = self._parse_baseline_element(baseline_elem)
+                if baseline:
+                    baselines.append(baseline)
+
             return {
                 "id": id_elem.text if id_elem is not None else "",
                 "uid": uid_elem.text if uid_elem is not None else "",
@@ -127,12 +134,51 @@ class MSProjectXMLProcessor:
                 "value": value,
                 "predecessors": predecessors,
                 "start_date": start_elem.text if start_elem is not None else None,
-                "finish_date": finish_elem.text if finish_elem is not None else None
+                "finish_date": finish_elem.text if finish_elem is not None else None,
+                "baselines": baselines
             }
         except Exception as e:
             print(f"Error parsing task: {e}")
             return None
-    
+
+    def _parse_baseline_element(self, baseline_elem: ET.Element) -> Optional[Dict[str, Any]]:
+        """Parse a single Baseline element from MS Project XML"""
+        try:
+            number_elem = baseline_elem.find('msproj:Number', self.NS)
+            start_elem = baseline_elem.find('msproj:Start', self.NS)
+            finish_elem = baseline_elem.find('msproj:Finish', self.NS)
+            duration_elem = baseline_elem.find('msproj:Duration', self.NS)
+            duration_format_elem = baseline_elem.find('msproj:DurationFormat', self.NS)
+            work_elem = baseline_elem.find('msproj:Work', self.NS)
+            cost_elem = baseline_elem.find('msproj:Cost', self.NS)
+            bcws_elem = baseline_elem.find('msproj:BCWS', self.NS)
+            bcwp_elem = baseline_elem.find('msproj:BCWP', self.NS)
+            fixed_cost_elem = baseline_elem.find('msproj:FixedCost', self.NS)
+            estimated_duration_elem = baseline_elem.find('msproj:EstimatedDuration', self.NS)
+            interim_elem = baseline_elem.find('msproj:Interim', self.NS)
+
+            # Number is required for a valid baseline
+            if number_elem is None:
+                return None
+
+            return {
+                "number": int(number_elem.text),
+                "start": start_elem.text if start_elem is not None else None,
+                "finish": finish_elem.text if finish_elem is not None else None,
+                "duration": duration_elem.text if duration_elem is not None else None,
+                "duration_format": int(duration_format_elem.text) if duration_format_elem is not None else 7,
+                "work": work_elem.text if work_elem is not None else None,
+                "cost": float(cost_elem.text) if cost_elem is not None else None,
+                "bcws": float(bcws_elem.text) if bcws_elem is not None else None,
+                "bcwp": float(bcwp_elem.text) if bcwp_elem is not None else None,
+                "fixed_cost": float(fixed_cost_elem.text) if fixed_cost_elem is not None else None,
+                "estimated_duration": estimated_duration_elem.text == "true" if estimated_duration_elem is not None else None,
+                "interim": interim_elem.text == "true" if interim_elem is not None else False
+            }
+        except Exception as e:
+            print(f"Error parsing baseline: {e}")
+            return None
+
     def _find_outline_by_uid(self, uid: str) -> Optional[str]:
         """Find outline number by UID"""
         if self.xml_root is None:
@@ -410,6 +456,42 @@ class MSProjectXMLProcessor:
                 create_elem(link, 'CrossProject', '0')
                 create_elem(link, 'LinkLag', pred.get("lag", 0))
                 create_elem(link, 'LagFormat', pred.get("lag_format", 7))
+
+        # Baselines (MS Project supports up to 11 baselines: 0-10)
+        for baseline in task_data.get("baselines", []):
+            baseline_elem = create_elem(task_elem, 'Baseline')
+            create_elem(baseline_elem, 'Number', baseline.get("number", 0))
+
+            if baseline.get("interim") is not None:
+                create_elem(baseline_elem, 'Interim', 'true' if baseline.get("interim") else 'false')
+
+            if baseline.get("start"):
+                create_elem(baseline_elem, 'Start', baseline["start"])
+
+            if baseline.get("finish"):
+                create_elem(baseline_elem, 'Finish', baseline["finish"])
+
+            if baseline.get("duration"):
+                create_elem(baseline_elem, 'Duration', baseline["duration"])
+                create_elem(baseline_elem, 'DurationFormat', baseline.get("duration_format", 7))
+
+            if baseline.get("estimated_duration") is not None:
+                create_elem(baseline_elem, 'EstimatedDuration', 'true' if baseline.get("estimated_duration") else 'false')
+
+            if baseline.get("work"):
+                create_elem(baseline_elem, 'Work', baseline["work"])
+
+            if baseline.get("cost") is not None:
+                create_elem(baseline_elem, 'Cost', baseline["cost"])
+
+            if baseline.get("bcws") is not None:
+                create_elem(baseline_elem, 'BCWS', baseline["bcws"])
+
+            if baseline.get("bcwp") is not None:
+                create_elem(baseline_elem, 'BCWP', baseline["bcwp"])
+
+            if baseline.get("fixed_cost") is not None:
+                create_elem(baseline_elem, 'FixedCost', baseline["fixed_cost"])
 
         return task_elem
 
