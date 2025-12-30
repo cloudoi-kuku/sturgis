@@ -8,6 +8,7 @@ import { AIChat } from './components/AIChat';
 import { CalendarManager } from './components/CalendarManager';
 import { BaselineManager } from './components/BaselineManager';
 import { HowToUse } from './components/HowToUse';
+import { ExportMenu } from './components/ExportMenu';
 import {
   uploadProject,
   getTasks,
@@ -26,7 +27,7 @@ import type {
   TaskCreate,
   TaskUpdate,
 } from './api/client';
-import { Upload, Plus, Download, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle } from 'lucide-react';
+import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle } from 'lucide-react';
 import { parseISO, addDays, differenceInDays } from 'date-fns';
 import './App.css';
 
@@ -369,10 +370,11 @@ function AppContent() {
             Validate
           </button>
 
-          <button className="action-button primary" onClick={handleExport} disabled={!metadata}>
-            <Download size={18} />
-            Export XML
-          </button>
+          <ExportMenu
+            tasks={tasks}
+            metadata={metadata}
+            onExportXML={handleExport}
+          />
 
           <button
             className="action-button ai-chat-button"

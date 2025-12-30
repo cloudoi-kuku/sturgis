@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Get API base URL from environment
+// In Docker: VITE_API_URL=/api (relative, uses nginx proxy)
+// In dev: VITE_API_URL=http://localhost:8000/api (full URL to backend)
+const envApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
+// Ensure the base URL ends with /api
+const API_BASE_URL = envApiUrl.endsWith('/api') ? envApiUrl : `${envApiUrl}/api`;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -123,53 +129,53 @@ export type ProjectCalendar = {
 export const uploadProject = async (file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-  
-  const response = await apiClient.post('/api/project/upload', formData, {
+
+  const response = await apiClient.post('/project/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
-  
+
   return response.data;
 };
 
 export const getProjectMetadata = async (): Promise<ProjectMetadata> => {
-  const response = await apiClient.get('/api/project/metadata');
+  const response = await apiClient.get('/project/metadata');
   return response.data;
 };
 
 export const updateProjectMetadata = async (metadata: ProjectMetadata) => {
-  const response = await apiClient.put('/api/project/metadata', metadata);
+  const response = await apiClient.put('/project/metadata', metadata);
   return response.data;
 };
 
 export const getTasks = async (): Promise<{ tasks: Task[] }> => {
-  const response = await apiClient.get('/api/tasks');
+  const response = await apiClient.get('/tasks');
   return response.data;
 };
 
 export const createTask = async (task: TaskCreate): Promise<{ success: boolean; task: Task }> => {
-  const response = await apiClient.post('/api/tasks', task);
+  const response = await apiClient.post('/tasks', task);
   return response.data;
 };
 
 export const updateTask = async (taskId: string, updates: TaskUpdate) => {
-  const response = await apiClient.put(`/api/tasks/${taskId}`, updates);
+  const response = await apiClient.put(`/tasks/${taskId}`, updates);
   return response.data;
 };
 
 export const deleteTask = async (taskId: string) => {
-  const response = await apiClient.delete(`/api/tasks/${taskId}`);
+  const response = await apiClient.delete(`/tasks/${taskId}`);
   return response.data;
 };
 
 export const validateProject = async (): Promise<ValidationResult> => {
-  const response = await apiClient.post('/api/validate');
+  const response = await apiClient.post('/validate');
   return response.data;
 };
 
 export const exportProject = async (): Promise<Blob> => {
-  const response = await apiClient.post('/api/export', null, {
+  const response = await apiClient.post('/export', null, {
     responseType: 'blob',
   });
   return response.data;
@@ -181,7 +187,7 @@ export const getCriticalPath = async (): Promise<{
   task_floats: Record<string, number>;
   critical_task_ids: string[];
 }> => {
-  const response = await apiClient.get('/api/critical-path');
+  const response = await apiClient.get('/critical-path');
   return response.data;
 };
 
@@ -198,7 +204,7 @@ export type ProjectListItem = {
 export const getAllProjects = async (): Promise<{
   projects: ProjectListItem[];
 }> => {
-  const response = await apiClient.get('/api/projects');
+  const response = await apiClient.get('/projects');
   return response.data;
 };
 
@@ -210,7 +216,7 @@ export const generateProject = async (description: string, projectType: string):
   project_name?: string;
   task_count?: number;
 }> => {
-  const response = await apiClient.post('/api/ai/generate-project', {
+  const response = await apiClient.post('/ai/generate-project', {
     description,
     project_type: projectType
   });
@@ -223,7 +229,7 @@ export const createNewProject = async (name: string = "New Project"): Promise<{
   project_id: string;
   project: any;
 }> => {
-  const response = await apiClient.post('/api/projects/new', null, {
+  const response = await apiClient.post('/projects/new', null, {
     params: { name }
   });
   return response.data;
@@ -235,7 +241,7 @@ export const switchProject = async (projectId: string): Promise<{
   project_id: string;
   project: any;
 }> => {
-  const response = await apiClient.post(`/api/projects/${projectId}/switch`);
+  const response = await apiClient.post(`/projects/${projectId}/switch`);
   return response.data;
 };
 
@@ -243,13 +249,13 @@ export const deleteProject = async (projectId: string): Promise<{
   success: boolean;
   message: string;
 }> => {
-  const response = await apiClient.delete(`/api/projects/${projectId}`);
+  const response = await apiClient.delete(`/projects/${projectId}`);
   return response.data;
 };
 
 // Calendar Management Functions
 export const getCalendar = async (): Promise<ProjectCalendar> => {
-  const response = await apiClient.get('/api/calendar');
+  const response = await apiClient.get('/calendar');
   return response.data;
 };
 
@@ -257,7 +263,7 @@ export const updateCalendar = async (calendar: ProjectCalendar): Promise<{
   success: boolean;
   message: string;
 }> => {
-  const response = await apiClient.put('/api/calendar', calendar);
+  const response = await apiClient.put('/calendar', calendar);
   return response.data;
 };
 
@@ -266,7 +272,7 @@ export const addCalendarException = async (exception: Omit<CalendarException, 'i
   message: string;
   id: number;
 }> => {
-  const response = await apiClient.post('/api/calendar/exceptions', exception);
+  const response = await apiClient.post('/calendar/exceptions', exception);
   return response.data;
 };
 
@@ -274,7 +280,7 @@ export const removeCalendarException = async (exceptionDate: string): Promise<{
   success: boolean;
   message: string;
 }> => {
-  const response = await apiClient.delete(`/api/calendar/exceptions/${exceptionDate}`);
+  const response = await apiClient.delete(`/calendar/exceptions/${exceptionDate}`);
   return response.data;
 };
 
@@ -318,7 +324,7 @@ export type ClearBaselineResponse = {
 };
 
 export const getBaselines = async (): Promise<ProjectBaselinesResponse> => {
-  const response = await apiClient.get('/api/baselines');
+  const response = await apiClient.get('/baselines');
   return response.data;
 };
 
@@ -326,7 +332,7 @@ export const setBaseline = async (
   baselineNumber: number,
   taskIds?: string[]
 ): Promise<SetBaselineResponse> => {
-  const response = await apiClient.post('/api/baselines/set', {
+  const response = await apiClient.post('/baselines/set', {
     baseline_number: baselineNumber,
     task_ids: taskIds
   });
@@ -337,7 +343,7 @@ export const clearBaseline = async (
   baselineNumber: number,
   taskIds?: string[]
 ): Promise<ClearBaselineResponse> => {
-  const response = await apiClient.post('/api/baselines/clear', {
+  const response = await apiClient.post('/baselines/clear', {
     baseline_number: baselineNumber,
     task_ids: taskIds
   });

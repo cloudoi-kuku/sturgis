@@ -3,7 +3,11 @@
  * Communicates with Ollama-powered backend
  */
 
-const API_BASE = 'http://localhost:8000/api';
+// Get API base URL from environment
+// In Docker: VITE_API_URL=/api (relative, uses nginx proxy)
+// In dev: VITE_API_URL=http://localhost:8000/api (full URL to backend)
+const envApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE = envApiUrl.endsWith('/api') ? envApiUrl : `${envApiUrl}/api`;
 
 export interface DurationEstimate {
   days: number;

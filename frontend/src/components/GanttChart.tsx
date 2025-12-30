@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useCallback } from 'react';
 import type { Task } from '../api/client';
 import { getCriticalPath } from '../api/client';
 import { format, parseISO, addDays, differenceInDays, startOfWeek, addWeeks, addMonths, startOfMonth, eachDayOfInterval, getDay } from 'date-fns';
-import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
+import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch, ChevronsDownUp, ChevronsUpDown, Filter } from 'lucide-react';
 
 interface GanttChartProps {
   tasks: Task[];
@@ -44,6 +44,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const [isLoadingCriticalPath, setIsLoadingCriticalPath] = useState<boolean>(false);
   const [showBaselines, setShowBaselines] = useState<boolean>(true);
   const [selectedBaselineNumber, setSelectedBaselineNumber] = useState<number>(0);
+  const [summaryFilter, setSummaryFilter] = useState<string>('all'); // 'all' or outline_number of summary task
 
   // Refs for synchronized scrolling
   const taskListRef = useRef<HTMLDivElement>(null);
@@ -122,7 +123,16 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     return rowMap;
   }, [sortedTasks]);
 
-  // Filter visible tasks based on expand/collapse state
+  // Get top-level summary tasks for the filter dropdown
+  const summaryTaskOptions = useMemo(() => {
+    return sortedTasks.filter(task =>
+      task.summary &&
+      task.outline_number !== '0' &&
+      !task.outline_number.includes('.') // Only top-level (e.g., "1", "2", "3")
+    );
+  }, [sortedTasks]);
+
+  // Filter visible tasks based on expand/collapse state and summary filter
   const visibleTasks = useMemo(() => {
     const visible: Task[] = [];
     const collapsedParents = new Set<string>();
@@ -133,6 +143,14 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       // Skip the main project task (outline "0") to avoid duplicates
       if (outline === '0') {
         return;
+      }
+
+      // Apply summary filter - show only tasks under selected summary
+      if (summaryFilter !== 'all') {
+        // Task must be the selected summary or a child of it
+        if (outline !== summaryFilter && !outline.startsWith(summaryFilter + '.')) {
+          return;
+        }
       }
 
       // Check if any parent is collapsed
@@ -155,7 +173,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     });
 
     return visible;
-  }, [sortedTasks, expandedTasks]);
+  }, [sortedTasks, expandedTasks, summaryFilter]);
 
   // Format predecessors for display (MS Project style)
   const formatPredecessors = useCallback((predecessors: Task['predecessors']): string => {
@@ -652,6 +670,23 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               <ChevronsDownUp size={16} />
               Collapse All
             </button>
+
+            <div className="summary-filter-control">
+              <Filter size={16} />
+              <select
+                className="summary-filter-select"
+                value={summaryFilter}
+                onChange={(e) => setSummaryFilter(e.target.value)}
+                title="Filter by Summary Task"
+              >
+                <option value="all">All Tasks</option>
+                {summaryTaskOptions.map(task => (
+                  <option key={task.id} value={task.outline_number}>
+                    {task.outline_number} - {task.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
