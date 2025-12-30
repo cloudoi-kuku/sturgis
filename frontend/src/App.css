@@ -864,6 +864,36 @@ body {
   border-color: #3498db;
 }
 
+/* Summary filter control */
+.summary-filter-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #666;
+}
+
+.summary-filter-control:hover {
+  border-color: #3498db;
+}
+
+.summary-filter-select {
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  cursor: pointer;
+  min-width: 150px;
+  max-width: 250px;
+}
+
+.summary-filter-select:focus {
+  outline: none;
+}
+
 .control-button.active {
   background: #3498db;
   color: white;
