@@ -14,7 +14,9 @@ where python >nul 2>&1
 if %errorlevel% neq 0 (
     echo ERROR: Python is not installed!
     echo Please install Python 3.8 or higher from: https://www.python.org/
-    pause
+    echo.
+    echo Press any key to exit...
+    pause >nul
     exit /b 1
 )
 
@@ -22,7 +24,9 @@ where node >nul 2>&1
 if %errorlevel% neq 0 (
     echo ERROR: Node.js is not installed!
     echo Please install Node.js from: https://nodejs.org/
-    pause
+    echo.
+    echo Press any key to exit...
+    pause >nul
     exit /b 1
 )
 
@@ -30,7 +34,9 @@ where npm >nul 2>&1
 if %errorlevel% neq 0 (
     echo ERROR: npm is not installed!
     echo Please install npm (usually comes with Node.js)
-    pause
+    echo.
+    echo Press any key to exit...
+    pause >nul
     exit /b 1
 )
 
@@ -132,5 +138,6 @@ timeout /t 3 /nobreak >nul
 start http://localhost:5173
 
 echo.
-echo Press any key to exit this script (servers will continue running)
+echo Press any key to close this window (servers will continue running in background)
+echo Or just close this window directly
 pause >nul

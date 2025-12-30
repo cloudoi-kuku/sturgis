@@ -30,6 +30,7 @@ import type {
 import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle } from 'lucide-react';
 import { parseISO, addDays, differenceInDays } from 'date-fns';
 import './App.css';
+import './components/GanttChartEnhancements.css';
 
 const queryClient = new QueryClient();
 

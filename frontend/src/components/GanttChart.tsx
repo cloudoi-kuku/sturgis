@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
-import type { Task } from '../api/client';
+import type { Task, CriticalPathResult } from '../api/client';
 import { getCriticalPath } from '../api/client';
 import { format, parseISO, addDays, differenceInDays, startOfWeek, addWeeks, addMonths, startOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch, ChevronsDownUp, ChevronsUpDown, Filter } from 'lucide-react';
@@ -42,6 +42,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [showWeekends, setShowWeekends] = useState<boolean>(true);
   const [isLoadingCriticalPath, setIsLoadingCriticalPath] = useState<boolean>(false);
+  const [showCriticalPath, setShowCriticalPath] = useState<boolean>(false);
+  const [criticalTaskIds, setCriticalTaskIds] = useState<Set<string>>(new Set());
+  const [criticalPathData, setCriticalPathData] = useState<CriticalPathResult | null>(null);
   const [showBaselines, setShowBaselines] = useState<boolean>(true);
   const [selectedBaselineNumber, setSelectedBaselineNumber] = useState<number>(0);
   const [summaryFilter, setSummaryFilter] = useState<string>('all'); // 'all' or outline_number of summary task
@@ -73,24 +76,58 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     return `${days} days`;
   };
 
-  // Handle critical path calculation and open in new tab
-  const handleOpenCriticalPath = async () => {
-    setIsLoadingCriticalPath(true);
-    try {
-      const result = await getCriticalPath();
-      // Store the result in sessionStorage so the new tab can access it
-      // Include projectStartDate so we can convert day numbers to actual dates
-      sessionStorage.setItem('criticalPathData', JSON.stringify({
-        ...result,
-        projectStartDate: projectStartDate
-      }));
-      // Open in a new tab
+  // Toggle critical path highlighting on the Gantt chart (MS Project style)
+  const handleToggleCriticalPath = async () => {
+    if (showCriticalPath) {
+      // Turn off critical path highlighting
+      setShowCriticalPath(false);
+      setCriticalTaskIds(new Set());
+      setCriticalPathData(null);
+    } else {
+      // Turn on critical path highlighting
+      setIsLoadingCriticalPath(true);
+      try {
+        const result = await getCriticalPath();
+        setCriticalPathData(result);
+        // Create a Set of critical task IDs for fast lookup
+        const criticalIds = new Set(result.critical_task_ids || []);
+        setCriticalTaskIds(criticalIds);
+        setShowCriticalPath(true);
+        // Also store in sessionStorage for the detailed view tab
+        sessionStorage.setItem('criticalPathData', JSON.stringify({
+          ...result,
+          projectStartDate: projectStartDate
+        }));
+      } catch (error) {
+        console.error('Failed to calculate critical path:', error);
+        alert('Failed to calculate critical path. Please try again.');
+      } finally {
+        setIsLoadingCriticalPath(false);
+      }
+    }
+  };
+
+  // Open critical path detailed analysis in a new tab
+  const handleOpenCriticalPathDetails = async () => {
+    // If we already have the data, just open the tab
+    if (criticalPathData) {
       window.open('/critical-path', '_blank');
-    } catch (error) {
-      console.error('Failed to calculate critical path:', error);
-      alert('Failed to calculate critical path. Please try again.');
-    } finally {
-      setIsLoadingCriticalPath(false);
+    } else {
+      // Fetch data first, then open
+      setIsLoadingCriticalPath(true);
+      try {
+        const result = await getCriticalPath();
+        sessionStorage.setItem('criticalPathData', JSON.stringify({
+          ...result,
+          projectStartDate: projectStartDate
+        }));
+        window.open('/critical-path', '_blank');
+      } catch (error) {
+        console.error('Failed to calculate critical path:', error);
+        alert('Failed to calculate critical path. Please try again.');
+      } finally {
+        setIsLoadingCriticalPath(false);
+      }
     }
   };
 
@@ -579,14 +616,23 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             <strong>{projectStats.milestones}</strong> Milestones
           </span>
           <button
-            className="critical-path-button"
-            onClick={handleOpenCriticalPath}
+            className={`critical-path-button ${showCriticalPath ? 'active' : ''}`}
+            onClick={handleToggleCriticalPath}
             disabled={isLoadingCriticalPath}
-            title="Analyze Critical Path"
+            title={showCriticalPath ? 'Hide Critical Path' : 'Show Critical Path'}
           >
             <GitBranch size={16} />
-            {isLoadingCriticalPath ? 'Calculating...' : 'Critical Path'}
+            {isLoadingCriticalPath ? 'Calculating...' : showCriticalPath ? 'Hide Critical Path' : 'Critical Path'}
           </button>
+          {showCriticalPath && (
+            <button
+              className="critical-path-details-button"
+              onClick={handleOpenCriticalPathDetails}
+              title="Open Critical Path Details in New Tab"
+            >
+              Details
+            </button>
+          )}
         </div>
 
         <div className="gantt-controls">
@@ -710,10 +756,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               // Get the permanent row number for this task
               const rowNumber = taskRowNumbers.get(task.outline_number) || index + 1;
 
+              const isCritical = showCriticalPath && criticalTaskIds.has(task.id);
+
               return (
                 <div
                   key={task.id}
-                  className={`gantt-task-row ${task.summary ? 'summary' : ''} ${task.milestone ? 'milestone-row' : ''}`}
+                  className={`gantt-task-row ${task.summary ? 'summary' : ''} ${task.milestone ? 'milestone-row' : ''} ${isCritical ? 'critical-path' : ''}`}
                   onClick={() => onTaskClick(task)}
                 >
                   <div className="gantt-task-number">
@@ -829,21 +877,36 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               zIndex: 5,
               overflow: 'visible'
             }}>
-              {/* Arrow marker definition - must be before usage */}
+              {/* Arrow marker definitions */}
               <defs>
+                {/* Normal arrow (gray) */}
                 <marker
                   id="arrowhead"
-                  markerWidth="12"
-                  markerHeight="10"
-                  refX="11"
-                  refY="5"
+                  markerWidth="8"
+                  markerHeight="6"
+                  refX="8"
+                  refY="3"
                   orient="auto"
-                  markerUnits="strokeWidth"
+                  markerUnits="userSpaceOnUse"
                 >
-                  <polygon 
-                    points="0,0 12,5 0,10" 
-                    className="dependency-arrow"
-                    fill="#2c3e50" 
+                  <polygon
+                    points="0,0 8,3 0,6"
+                    fill="#5a6c7d"
+                  />
+                </marker>
+                {/* Critical path arrow (red) */}
+                <marker
+                  id="arrowhead-critical"
+                  markerWidth="8"
+                  markerHeight="6"
+                  refX="8"
+                  refY="3"
+                  orient="auto"
+                  markerUnits="userSpaceOnUse"
+                >
+                  <polygon
+                    points="0,0 8,3 0,6"
+                    fill="#e74c3c"
                   />
                 </marker>
               </defs>
@@ -861,82 +924,89 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   const predTaskIndex = taskPositions.findIndex(p => p.task.outline_number === pred.outline_number);
                   if (predTaskIndex === -1) return null;
 
-                  // Enhanced MS Project style dependency routing
+                  // Check if this is a critical path dependency
+                  const isCriticalDep = showCriticalPath && criticalTaskIds.has(task.id) && criticalTaskIds.has(predTaskPos.task.id);
+
+                  // Calculate bar positions
                   const predEndX = ((predTaskPos.startDay + predTaskPos.duration) / maxDay) * timelineConfig.width;
                   const predY = (predTaskIndex * 48) + 24; // Center of predecessor row
 
                   const taskStartX = (startDay / maxDay) * timelineConfig.width;
                   const taskY = (taskIndex * 48) + 24; // Center of successor row
 
-                  // Enhanced routing parameters
-                  const minHorizontalGap = 16;
-                  const verticalPadding = 16;
-                  const arrowSize = 6;
+                  // Routing parameters
+                  const exitGap = 4;      // Gap when leaving predecessor bar
+                  const entryGap = 2;     // Small gap before arrow touches successor bar
+                  const minHorizontalGap = 20;
+                  const verticalPadding = 18;
 
-                  // Dependency type and styling
+                  // Start point: exit from predecessor bar end with small gap
+                  const startX = predEndX + exitGap;
+                  // End point: where arrow tip will touch successor bar
+                  const endX = taskStartX - entryGap;
+
+                  // Dependency type and lag
                   const lagDays = pred.lag || 0;
-                  
-                  // Calculate connection points based on dependency type
-                  let startX = predEndX;
-                  let endX = taskStartX - arrowSize;
-                  
-                  // Enhanced routing algorithm
+
+                  // Build path segments
                   let pathSegments: string[] = [];
-                  
-                  if (endX > startX + minHorizontalGap * 2) {
-                    // Simple case: successor is well to the right
-                    const midX = startX + (endX - startX) * 0.3; // Closer to predecessor for better visual
+
+                  if (endX > startX + minHorizontalGap) {
+                    // Simple case: successor bar is to the right with enough space
+                    const midX = startX + Math.min(20, (endX - startX) * 0.4);
                     pathSegments = [
-                      `M ${startX} ${predY}`,
-                      `H ${midX}`, // Horizontal to intermediate point
-                      `V ${taskY}`, // Vertical to successor level
-                      `H ${endX}`   // Horizontal to successor
+                      `M ${predEndX} ${predY}`,  // Start at bar end
+                      `H ${midX}`,                // Horizontal out
+                      `V ${taskY}`,               // Vertical to successor level
+                      `H ${endX}`                 // Horizontal to successor
                     ];
                   } else {
-                    // Complex case: route around tasks
-                    const routeX1 = startX + minHorizontalGap;
-                    const routeX2 = endX - minHorizontalGap;
-                    
-                    // Determine routing direction (above or below)
+                    // Complex case: need to route around
+                    const routeX1 = predEndX + exitGap + 8;
+                    const routeX2 = taskStartX - entryGap - 8;
+
+                    // Route above or below based on relative positions
                     const routeAbove = predY > taskY;
-                    const clearanceY = routeAbove 
+                    const clearanceY = routeAbove
                       ? Math.min(predY, taskY) - verticalPadding
                       : Math.max(predY, taskY) + verticalPadding;
-                    
+
                     pathSegments = [
-                      `M ${startX} ${predY}`,
-                      `H ${routeX1}`,           // Go right from predecessor
-                      `V ${clearanceY}`,        // Go to clearance level
-                      `H ${routeX2}`,           // Go horizontally to above successor
-                      `V ${taskY}`,             // Go down to successor level
-                      `H ${endX}`               // Go to successor start
+                      `M ${predEndX} ${predY}`,   // Start at bar end
+                      `H ${routeX1}`,              // Go right from predecessor
+                      `V ${clearanceY}`,           // Go to clearance level
+                      `H ${routeX2}`,              // Go horizontally
+                      `V ${taskY}`,                // Go to successor level
+                      `H ${endX}`                  // Go to successor start
                     ];
                   }
-                  
+
                   const pathD = pathSegments.join(' ');
-                  
-                  // Enhanced tooltip with more details
+
+                  // Tooltip
                   const depTypeLabel = pred.type === 1 ? 'FS' : pred.type === 2 ? 'SS' : pred.type === 3 ? 'FF' : 'SF';
                   const lagText = lagDays !== 0 ? ` ${lagDays > 0 ? '+' : ''}${lagDays}d` : '';
-                  const tooltipText = `${predTaskPos.task.name} → ${task.name}\\n${depTypeLabel}${lagText}`;
+                  const tooltipText = `${predTaskPos.task.name} → ${task.name}\n${depTypeLabel}${lagText}`;
 
                   return (
                     <g key={`${task.id}-${pred.outline_number}-${predIndex}`}>
-                      {/* Enhanced path with better styling */}
                       <path
                         d={pathD}
-                        markerEnd="url(#arrowhead)"
-                        className="dependency-line"
+                        fill="none"
+                        stroke={isCriticalDep ? "#e74c3c" : "#5a6c7d"}
+                        strokeWidth={isCriticalDep ? "2" : "1.5"}
+                        markerEnd={isCriticalDep ? "url(#arrowhead-critical)" : "url(#arrowhead)"}
+                        style={{ strokeLinejoin: 'round' }}
                       >
                         <title>{tooltipText}</title>
                       </path>
-                      
+
                       {/* Lag indicator if present */}
                       {lagDays !== 0 && (
                         <text
-                          x={(startX + endX) / 2}
-                          y={predY < taskY ? (predY + taskY) / 2 - 8 : (predY + taskY) / 2 + 16}
-                          fontSize="10"
+                          x={(predEndX + taskStartX) / 2}
+                          y={predY < taskY ? (predY + taskY) / 2 - 6 : (predY + taskY) / 2 + 14}
+                          fontSize="9"
                           fill="#7f8c8d"
                           textAnchor="middle"
                           className="lag-label"
@@ -960,6 +1030,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
               const isOverdue = !task.milestone && !task.summary && startDate < new Date() && progressPct < 100;
               const isUpcoming = startDate > addDays(new Date(), 7);
+              const isCriticalTask = showCriticalPath && criticalTaskIds.has(task.id);
 
               // Calculate baseline bar position if baseline exists
               const baseline = task.baselines?.find(b => b.number === selectedBaselineNumber);
@@ -1011,6 +1082,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       isUpcoming ? 'upcoming' : ''
                     } ${
                       hasBaseline ? 'has-baseline' : ''
+                    } ${
+                      isCriticalTask ? 'critical-path' : ''
                     }`}
                     style={{
                       left: `${leftPx}px`,

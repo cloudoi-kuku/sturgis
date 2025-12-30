@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Task, ProjectMetadata } from '../api/client';
+import { getCriticalPath } from '../api/client';
 import { format, parseISO, addDays } from 'date-fns';
 import './ExportMenu.css';
 
@@ -257,100 +258,54 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
     setIsOpen(false);
   };
 
-  // Export to PDF
-  const handleExportPDF = () => {
+  // Export to PDF - 11x17 Tabloid with Table and Gantt Chart combined (MS Project style)
+  // Multi-page support with critical path highlighting
+  const handleExportPDF = async () => {
     const taskDates = calculateTaskDates();
+
+    // Fetch critical path data
+    let criticalTaskIds = new Set<string>();
+    try {
+      const criticalPathResult = await getCriticalPath();
+      criticalTaskIds = new Set(criticalPathResult.critical_task_ids || []);
+    } catch (error) {
+      console.warn('Could not fetch critical path:', error);
+    }
+
+    // 11x17 inch = 279.4 x 431.8 mm, landscape orientation
     const doc = new jsPDF({
       orientation: 'landscape',
       unit: 'mm',
-      format: 'a4'
+      format: [279.4, 431.8]
     });
 
-    // Build outline to task number mapping (1-based index)
+    const pageWidth = 431.8;
+    const pageHeight = 279.4;
+    const margin = 12;
+    const headerHeight = 20;
+    const footerHeight = 16;
+    const rowHeight = 7;
+    const headerRowHeight = 8;
+
+    // Calculate pagination
+    const contentStartY = headerHeight + 2;
+    const contentEndY = pageHeight - footerHeight;
+    const availableHeight = contentEndY - contentStartY - headerRowHeight;
+    const tasksPerPage = Math.floor(availableHeight / rowHeight);
+    const totalPages = Math.ceil(tasks.length / tasksPerPage);
+
+    // Build outline to task number mapping
     const outlineToTaskNum = new Map<string, number>();
     tasks.forEach((task, index) => {
       outlineToTaskNum.set(task.outline_number, index + 1);
     });
 
-    // Helper to convert predecessor outline numbers to task numbers
     const getPredecessorTaskNums = (predecessors: typeof tasks[0]['predecessors']) => {
-      if (!predecessors || predecessors.length === 0) return '-';
+      if (!predecessors || predecessors.length === 0) return '';
       return predecessors
         .map(p => outlineToTaskNum.get(p.outline_number) || p.outline_number)
         .join(', ');
     };
-
-    // Title
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text(metadata?.name || 'Project Schedule', 14, 20);
-
-    // Project info
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Start Date: ${metadata?.start_date || 'N/A'}`, 14, 28);
-    doc.text(`Status Date: ${metadata?.status_date || 'N/A'}`, 14, 33);
-    doc.text(`Total Tasks: ${tasks.length}`, 100, 28);
-    doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, 100, 33);
-
-    // Task table
-    const tableData = tasks.map((task, index) => {
-      const dates = taskDates.get(task.outline_number);
-      const indent = '  '.repeat(Math.max(0, task.outline_level - 1));
-      return [
-        (index + 1).toString(),
-        indent + task.name,
-        `${parseDuration(task.duration)}d`,
-        dates ? format(dates.start, 'MM/dd/yy') : '-',
-        dates ? format(dates.finish, 'MM/dd/yy') : '-',
-        `${task.percent_complete}%`,
-        getPredecessorTaskNums(task.predecessors)
-      ];
-    });
-
-    autoTable(doc, {
-      startY: 40,
-      head: [['#', 'Task Name', 'Duration', 'Start', 'Finish', 'Progress', 'Predecessors']],
-      body: tableData,
-      styles: {
-        fontSize: 8,
-        cellPadding: 2,
-      },
-      headStyles: {
-        fillColor: [52, 152, 219],
-        textColor: 255,
-        fontStyle: 'bold',
-      },
-      columnStyles: {
-        0: { cellWidth: 12 },
-        1: { cellWidth: 75 },
-        2: { cellWidth: 18 },
-        3: { cellWidth: 22 },
-        4: { cellWidth: 22 },
-        5: { cellWidth: 18 },
-        6: { cellWidth: 25 },
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
-      didParseCell: (data) => {
-        const rowIndex = data.row.index;
-        if (rowIndex >= 0 && tasks[rowIndex]?.summary) {
-          data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fillColor = [232, 245, 253];
-        }
-        if (rowIndex >= 0 && tasks[rowIndex]?.milestone) {
-          data.cell.styles.fillColor = [255, 243, 224];
-        }
-      }
-    });
-
-    // Add Gantt Chart on new page
-    doc.addPage();
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0);
-    doc.text('Gantt Chart', 14, 15);
 
     // Calculate project timeline
     const allDates: Date[] = [];
@@ -358,112 +313,398 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
       allDates.push(dates.start, dates.finish);
     });
 
+    let projectStart = new Date();
+    let projectEnd = new Date();
+    let totalDays = 30;
+
     if (allDates.length > 0) {
-      const projectStart = new Date(Math.min(...allDates.map(d => d.getTime())));
-      const projectEnd = new Date(Math.max(...allDates.map(d => d.getTime())));
+      projectStart = new Date(Math.min(...allDates.map(d => d.getTime())));
+      projectEnd = new Date(Math.max(...allDates.map(d => d.getTime())));
+      totalDays = Math.ceil((projectEnd.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+    }
 
-      const chartStartX = 80;
-      const chartWidth = 200;
-      const chartStartY = 25;
-      const rowHeight = 5;
-      const totalDays = Math.ceil((projectEnd.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+    // Layout - removed % and Pred columns for bigger Gantt chart
+    const tableWidth = 150;
+    const ganttStartX = margin + tableWidth + 2;
+    const ganttWidth = pageWidth - ganttStartX - margin;
 
-      // Draw timeline header
+    // Column widths: #, Name, Dur, Start, Finish (removed % and Pred)
+    const colWidths = [10, 80, 18, 22, 20];
+    const colHeaders = ['#', 'Task Name', 'Dur', 'Start', 'Finish'];
+
+    // Colors
+    const headerBg: [number, number, number] = [41, 128, 185];
+    const criticalRed: [number, number, number] = [231, 76, 60]; // #e74c3c - matches critical path bars
+    const taskBlue: [number, number, number] = [52, 152, 219];
+    const summaryGray: [number, number, number] = [44, 62, 80];
+    const milestoneOrange: [number, number, number] = [243, 156, 18];
+
+    // Draw page header
+    const drawHeader = () => {
+      // Sturgis logo placeholder (top left)
+      doc.setDrawColor(200, 200, 200);
+      doc.setFillColor(250, 250, 250);
+      doc.roundedRect(margin, 4, 28, 10, 1, 1, 'FD');
+      doc.setFontSize(5);
+      doc.setTextColor(160, 160, 160);
+      doc.text('STURGIS LOGO', margin + 14, 10, { align: 'center' });
+
+      // Project title
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(44, 62, 80);
+      doc.text(metadata?.name || 'Project Schedule', pageWidth / 2, 9, { align: 'center' });
+
+      // Project info
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+      doc.text(
+        `Start: ${metadata?.start_date || 'N/A'}  |  Status: ${metadata?.status_date || 'N/A'}  |  Tasks: ${tasks.length}`,
+        pageWidth / 2, 14, { align: 'center' }
+      );
+    };
 
-      // Draw month markers
+    // Draw page footer
+    const drawFooter = (pageNum: number) => {
+      const footerY = pageHeight - 9;
+
+      // Date details (lower left)
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, margin, footerY);
+      doc.text(`Project Start: ${metadata?.start_date || 'N/A'}`, margin, footerY + 3);
+
+      // File name and page (center)
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(44, 62, 80);
+      doc.text(`${metadata?.name || 'Project'}`, pageWidth / 2, footerY, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6);
+      doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth / 2, footerY + 3, { align: 'center' });
+
+      // Client logo placeholder (lower right)
+      doc.setDrawColor(200, 200, 200);
+      doc.setFillColor(250, 250, 250);
+      doc.roundedRect(pageWidth - margin - 30, footerY - 4, 30, 10, 1, 1, 'FD');
+      doc.setFontSize(5);
+      doc.setTextColor(160, 160, 160);
+      doc.text('CLIENT LOGO', pageWidth - margin - 15, footerY + 2, { align: 'center' });
+    };
+
+    // Draw column headers
+    const drawColumnHeaders = (startY: number) => {
+      // Table header
+      doc.setFillColor(...headerBg);
+      doc.rect(margin, startY, tableWidth, headerRowHeight, 'F');
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+
+      let xPos = margin + 2;
+      colHeaders.forEach((header, i) => {
+        doc.text(header, xPos, startY + headerRowHeight - 2);
+        xPos += colWidths[i];
+      });
+
+      // Gantt header
+      doc.setFillColor(...headerBg);
+      doc.rect(ganttStartX, startY, ganttWidth, headerRowHeight, 'F');
+
+      // Timeline months
+      doc.setFontSize(6);
       const currentDate = new Date(projectStart);
       while (currentDate <= projectEnd) {
         const dayOffset = Math.ceil((currentDate.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24));
-        const xPos = chartStartX + (dayOffset / totalDays) * chartWidth;
+        const headerXPos = ganttStartX + (dayOffset / totalDays) * ganttWidth;
         if (currentDate.getDate() === 1 || currentDate.getTime() === projectStart.getTime()) {
-          doc.setDrawColor(200);
-          doc.line(xPos, chartStartY, xPos, chartStartY + tasks.length * rowHeight + 5);
-          doc.setTextColor(100);
-          doc.text(format(currentDate, 'MMM'), xPos + 1, chartStartY - 2);
+          doc.text(format(currentDate, 'MMM yy'), headerXPos + 1, startY + headerRowHeight - 2);
         }
-        currentDate.setDate(currentDate.getDate() + 7);
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        currentDate.setDate(1);
       }
 
-      // Draw tasks
-      tasks.forEach((task, index) => {
-        const y = chartStartY + index * rowHeight;
-        const dates = taskDates.get(task.outline_number);
+      return startY + headerRowHeight;
+    };
 
-        // Task name (truncated)
-        doc.setFontSize(6);
-        doc.setTextColor(0);
-        const taskName = task.name.length > 30 ? task.name.substring(0, 28) + '...' : task.name;
-        doc.text(`${index + 1}. ${taskName}`, 14, y + 3.5);
+    // Draw task row with critical path highlighting
+    const drawTaskRow = (task: typeof tasks[0], y: number, globalIndex: number) => {
+      const dates = taskDates.get(task.outline_number);
+      const isCritical = criticalTaskIds.has(task.id);
 
-        if (dates) {
-          const startOffset = (dates.start.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24);
-          const duration = (dates.finish.getTime() - dates.start.getTime()) / (1000 * 60 * 60 * 24);
-          const barX = chartStartX + (startOffset / totalDays) * chartWidth;
-          const barWidth = Math.max(1, (duration / totalDays) * chartWidth);
+      // Row background color
+      let rowBg: [number, number, number];
+      if (isCritical) {
+        rowBg = [255, 235, 235]; // Light red for critical
+      } else if (task.summary) {
+        rowBg = [240, 248, 255]; // Light blue for summary
+      } else if (globalIndex % 2 === 0) {
+        rowBg = [252, 252, 252];
+      } else {
+        rowBg = [255, 255, 255];
+      }
 
-          // Draw bar background
-          if (task.milestone) {
-            // Diamond for milestone
-            doc.setFillColor(231, 76, 60);
-            const mx = barX + barWidth / 2;
-            const my = y + 2;
-            doc.triangle(mx, my - 2, mx + 2, my, mx, my + 2, 'F');
-            doc.triangle(mx, my - 2, mx - 2, my, mx, my + 2, 'F');
-          } else if (task.summary) {
-            // Black bar for summary
-            doc.setFillColor(44, 62, 80);
-            doc.rect(barX, y + 1, barWidth, 3, 'F');
-          } else {
-            // Blue bar for regular task
-            doc.setFillColor(52, 152, 219);
-            doc.rect(barX, y + 0.5, barWidth, 4, 'F');
+      doc.setFillColor(...rowBg);
+      doc.rect(margin, y, tableWidth, rowHeight, 'F');
+      doc.rect(ganttStartX, y, ganttWidth, rowHeight, 'F');
 
-            // Progress fill
-            if (task.percent_complete > 0) {
-              doc.setFillColor(39, 174, 96);
-              doc.rect(barX, y + 0.5, barWidth * (task.percent_complete / 100), 4, 'F');
-            }
-          }
+      // Grid lines
+      doc.setDrawColor(230, 230, 230);
+      doc.setLineWidth(0.1);
+      doc.line(margin, y + rowHeight, margin + tableWidth, y + rowHeight);
+      doc.line(ganttStartX, y + rowHeight, ganttStartX + ganttWidth, y + rowHeight);
+
+      // Month grid lines in Gantt
+      doc.setDrawColor(240, 240, 240);
+      const gridDate = new Date(projectStart);
+      while (gridDate <= projectEnd) {
+        const dayOffset = Math.ceil((gridDate.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24));
+        const gridX = ganttStartX + (dayOffset / totalDays) * ganttWidth;
+        if (gridDate.getDate() === 1) {
+          doc.line(gridX, y, gridX, y + rowHeight);
         }
-      });
+        gridDate.setMonth(gridDate.getMonth() + 1);
+        gridDate.setDate(1);
+      }
 
-      // Legend
-      const legendY = chartStartY + tasks.length * rowHeight + 15;
-      doc.setFontSize(7);
-      doc.setTextColor(0);
-      doc.text('Legend:', 14, legendY);
+      // Table content - text color based on critical status
+      doc.setFontSize(6);
+      if (isCritical) {
+        doc.setTextColor(...criticalRed);
+      } else {
+        doc.setTextColor(40, 40, 40);
+      }
+      doc.setFont('helvetica', task.summary ? 'bold' : 'normal');
 
-      doc.setFillColor(52, 152, 219);
-      doc.rect(35, legendY - 2.5, 8, 3, 'F');
-      doc.text('Task', 45, legendY);
+      let xPos = margin + 2;
+      const textY = y + rowHeight - 2;
 
-      doc.setFillColor(39, 174, 96);
-      doc.rect(60, legendY - 2.5, 8, 3, 'F');
-      doc.text('Progress', 70, legendY);
+      // # column
+      doc.text((globalIndex + 1).toString(), xPos, textY);
+      xPos += colWidths[0];
 
-      doc.setFillColor(44, 62, 80);
-      doc.rect(95, legendY - 2.5, 8, 3, 'F');
-      doc.text('Summary', 105, legendY);
+      // Task name with indent
+      const indent = '  '.repeat(Math.max(0, task.outline_level - 1));
+      let taskName = indent + task.name;
+      if (taskName.length > 38) taskName = taskName.substring(0, 36) + '..';
+      doc.text(taskName, xPos, textY);
+      xPos += colWidths[1];
 
-      doc.setFillColor(231, 76, 60);
-      doc.rect(130, legendY - 2.5, 3, 3, 'F');
-      doc.text('Milestone', 135, legendY);
-    }
+      // Duration
+      doc.text(`${parseDuration(task.duration)}d`, xPos, textY);
+      xPos += colWidths[2];
 
-    // Footer on all pages
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(128);
-      doc.text(
-        `Page ${i} of ${pageCount}`,
-        doc.internal.pageSize.width / 2,
-        doc.internal.pageSize.height - 10,
-        { align: 'center' }
-      );
+      // Start
+      doc.text(dates ? format(dates.start, 'MM/dd/yy') : '-', xPos, textY);
+      xPos += colWidths[3];
+
+      // Finish
+      doc.text(dates ? format(dates.finish, 'MM/dd/yy') : '-', xPos, textY);
+
+      // Gantt bar
+      if (dates) {
+        const startOffset = (dates.start.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24);
+        const duration = (dates.finish.getTime() - dates.start.getTime()) / (1000 * 60 * 60 * 24);
+        const barX = ganttStartX + (startOffset / totalDays) * ganttWidth;
+        const barWidth = Math.max(2, (duration / totalDays) * ganttWidth);
+        const barHeight = rowHeight - 2;
+        const barY = y + 1;
+
+        doc.setFontSize(5);
+        const labelName = task.name.length > 28 ? task.name.substring(0, 26) + '..' : task.name;
+
+        // Choose color based on critical path
+        const barColor = isCritical ? criticalRed : (task.milestone ? milestoneOrange : (task.summary ? summaryGray : taskBlue));
+
+        if (task.milestone) {
+          // Diamond
+          doc.setFillColor(...barColor);
+          const mx = barX;
+          const my = barY + barHeight / 2;
+          doc.triangle(mx, my - 2, mx + 2, my, mx, my + 2, 'F');
+          doc.triangle(mx, my - 2, mx - 2, my, mx, my + 2, 'F');
+          doc.setTextColor(...barColor);
+          doc.setFont('helvetica', 'bold');
+          doc.text(labelName, mx + 3, textY);
+        } else if (task.summary) {
+          // Summary bar
+          doc.setFillColor(...barColor);
+          doc.rect(barX, barY + barHeight * 0.35, barWidth, barHeight * 0.3, 'F');
+          doc.triangle(barX, barY + barHeight * 0.35, barX, barY + barHeight * 0.65, barX - 1, barY + barHeight / 2, 'F');
+          doc.triangle(barX + barWidth, barY + barHeight * 0.35, barX + barWidth, barY + barHeight * 0.65, barX + barWidth + 1, barY + barHeight / 2, 'F');
+          doc.setTextColor(...barColor);
+          doc.setFont('helvetica', 'bold');
+          doc.text(labelName, barX + barWidth + 2, textY);
+        } else {
+          // Regular task bar
+          doc.setFillColor(...barColor);
+          doc.roundedRect(barX, barY, barWidth, barHeight, 0.5, 0.5, 'F');
+          doc.setTextColor(...barColor);
+          doc.setFont('helvetica', 'normal');
+          doc.text(labelName, barX + barWidth + 2, textY);
+        }
+      }
+    };
+
+    // Draw dependency lines between tasks
+    const drawDependencyLines = (dataStartY: number, startIdx: number, endIdx: number) => {
+      // Create task index map for quick lookup
+      const taskIndexMap = new Map<string, number>();
+      tasks.forEach((t, idx) => taskIndexMap.set(t.outline_number, idx));
+
+      for (let i = startIdx; i < endIdx; i++) {
+        const task = tasks[i];
+        if (!task.predecessors || task.predecessors.length === 0) continue;
+
+        const dates = taskDates.get(task.outline_number);
+        if (!dates) continue;
+
+        // Calculate task bar position
+        const taskRowY = dataStartY + (i - startIdx) * rowHeight;
+        const taskStartOffset = (dates.start.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24);
+        const taskBarX = ganttStartX + (taskStartOffset / totalDays) * ganttWidth;
+        const taskBarY = taskRowY + rowHeight / 2;
+
+        for (const pred of task.predecessors) {
+          const predIdx = taskIndexMap.get(pred.outline_number);
+          if (predIdx === undefined) continue;
+
+          // Check if predecessor is on this page
+          if (predIdx < startIdx || predIdx >= endIdx) continue;
+
+          const predTask = tasks[predIdx];
+          const predDates = taskDates.get(predTask.outline_number);
+          if (!predDates) continue;
+
+          // Calculate predecessor bar end position
+          const predRowY = dataStartY + (predIdx - startIdx) * rowHeight;
+          const predStartOffset = (predDates.start.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24);
+          const predDuration = (predDates.finish.getTime() - predDates.start.getTime()) / (1000 * 60 * 60 * 24);
+          const predBarEndX = ganttStartX + ((predStartOffset + predDuration) / totalDays) * ganttWidth;
+          const predBarY = predRowY + rowHeight / 2;
+
+          // Check if it's a critical path dependency
+          const isCriticalDep = criticalTaskIds.has(task.id) && criticalTaskIds.has(predTask.id);
+
+          // Set line color and width (thicker for critical path)
+          if (isCriticalDep) {
+            doc.setDrawColor(...criticalRed);
+            doc.setLineWidth(0.5);
+          } else {
+            doc.setDrawColor(90, 108, 125); // #5a6c7d
+            doc.setLineWidth(0.35);
+          }
+
+          // Routing parameters
+          const exitGap = 1.5;    // Gap when leaving predecessor bar (mm)
+          const entryGap = 0.5;   // Small gap before arrow touches successor bar
+          const minHorizontalGap = 6;
+          const verticalPadding = 4;
+
+          // Start and end points
+          const startX = predBarEndX;
+          const endX = taskBarX - entryGap;
+
+          // Draw path with right-angle routing
+          if (endX > startX + minHorizontalGap) {
+            // Simple case: successor bar is to the right with enough space
+            const midX = startX + Math.min(4, (endX - startX) * 0.4);
+
+            // Draw: from pred bar end -> horizontal -> vertical -> horizontal to task
+            doc.line(predBarEndX, predBarY, midX, predBarY);  // Horizontal from pred
+            doc.line(midX, predBarY, midX, taskBarY);          // Vertical
+            doc.line(midX, taskBarY, endX, taskBarY);          // Horizontal to task
+          } else {
+            // Complex case: route around
+            const routeX1 = predBarEndX + exitGap + 2;
+            const routeX2 = taskBarX - entryGap - 2;
+
+            // Route above or below based on relative positions
+            const routeAbove = predBarY > taskBarY;
+            const clearanceY = routeAbove
+              ? Math.min(predBarY, taskBarY) - verticalPadding
+              : Math.max(predBarY, taskBarY) + verticalPadding;
+
+            doc.line(predBarEndX, predBarY, routeX1, predBarY);    // Right from pred
+            doc.line(routeX1, predBarY, routeX1, clearanceY);       // To clearance level
+            doc.line(routeX1, clearanceY, routeX2, clearanceY);     // Horizontal
+            doc.line(routeX2, clearanceY, routeX2, taskBarY);       // To successor level
+            doc.line(routeX2, taskBarY, endX, taskBarY);            // To successor
+          }
+
+          // Draw arrow at the end (pointing right, touching the bar)
+          // Slightly larger arrow for critical path
+          const arrowWidth = isCriticalDep ? 1.5 : 1.2;
+          const arrowHeight = isCriticalDep ? 1.0 : 0.8;
+          doc.setFillColor(isCriticalDep ? criticalRed[0] : 90, isCriticalDep ? criticalRed[1] : 108, isCriticalDep ? criticalRed[2] : 125);
+          doc.triangle(
+            taskBarX, taskBarY,                           // Arrow tip at bar
+            taskBarX - arrowWidth, taskBarY - arrowHeight,  // Top left
+            taskBarX - arrowWidth, taskBarY + arrowHeight,  // Bottom left
+            'F'
+          );
+        }
+      }
+    };
+
+    // Generate pages
+    for (let page = 0; page < totalPages; page++) {
+      if (page > 0) doc.addPage();
+
+      drawHeader();
+      const dataStartY = drawColumnHeaders(contentStartY);
+
+      const startIdx = page * tasksPerPage;
+      const endIdx = Math.min(startIdx + tasksPerPage, tasks.length);
+
+      for (let i = startIdx; i < endIdx; i++) {
+        const rowY = dataStartY + (i - startIdx) * rowHeight;
+        drawTaskRow(tasks[i], rowY, i);
+      }
+
+      // Draw dependency lines after task bars
+      drawDependencyLines(dataStartY, startIdx, endIdx);
+
+      // Borders
+      const tableEndY = dataStartY + (endIdx - startIdx) * rowHeight;
+      doc.setDrawColor(...headerBg);
+      doc.setLineWidth(0.3);
+      doc.rect(margin, contentStartY, tableWidth, tableEndY - contentStartY);
+      doc.rect(ganttStartX, contentStartY, ganttWidth, tableEndY - contentStartY);
+
+      // Legend on last page
+      if (page === totalPages - 1) {
+        const legendY = Math.min(tableEndY + 6, contentEndY - 3);
+        doc.setFontSize(6);
+        doc.setTextColor(80, 80, 80);
+
+        let legendX = margin;
+
+        doc.setFillColor(...taskBlue);
+        doc.roundedRect(legendX, legendY - 2, 8, 3, 0.5, 0.5, 'F');
+        doc.text('Task', legendX + 10, legendY);
+        legendX += 28;
+
+        doc.setFillColor(...criticalRed);
+        doc.roundedRect(legendX, legendY - 2, 8, 3, 0.5, 0.5, 'F');
+        doc.text('Critical Path', legendX + 10, legendY);
+        legendX += 38;
+
+        doc.setFillColor(...summaryGray);
+        doc.rect(legendX, legendY - 1.5, 8, 2, 'F');
+        doc.text('Summary', legendX + 10, legendY);
+        legendX += 32;
+
+        doc.setFillColor(...milestoneOrange);
+        const mx = legendX + 2;
+        doc.triangle(mx, legendY - 3, mx + 2, legendY - 0.5, mx, legendY + 2, 'F');
+        doc.triangle(mx, legendY - 3, mx - 2, legendY - 0.5, mx, legendY + 2, 'F');
+        doc.text('Milestone', legendX + 5, legendY);
+      }
+
+      drawFooter(page + 1);
     }
 
     doc.save(`${metadata?.name || 'project'}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);

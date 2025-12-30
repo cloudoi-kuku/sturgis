@@ -35,6 +35,27 @@
   cursor: not-allowed;
 }
 
+/* Critical Path Details Button */
+.critical-path-details-button {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  margin-left: 0.5rem;
+  border: 1px solid #e74c3c;
+  border-radius: 4px;
+  background: white;
+  color: #e74c3c;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.critical-path-details-button:hover {
+  background: #fdf2f2;
+  border-color: #c0392b;
+}
+
 /* Critical Path Task Highlighting */
 .gantt-task-row.critical-path {
   background: rgba(231, 76, 60, 0.1);
