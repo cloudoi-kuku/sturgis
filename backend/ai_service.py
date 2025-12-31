@@ -42,7 +42,9 @@ class LocalAIService:
 
     async def _generate_azure(self, prompt: str, system: str = "") -> str:
         """Call Azure OpenAI API"""
-        url = f"{self.azure_endpoint}/openai/deployments/{self.azure_deployment}/chat/completions?api-version={self.azure_api_version}"
+        # Remove trailing slash from endpoint to avoid double slashes
+        endpoint = self.azure_endpoint.rstrip('/')
+        url = f"{endpoint}/openai/deployments/{self.azure_deployment}/chat/completions?api-version={self.azure_api_version}"
 
         messages = []
         if system:
