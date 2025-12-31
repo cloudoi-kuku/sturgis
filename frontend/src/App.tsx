@@ -9,6 +9,7 @@ import { CalendarManager } from './components/CalendarManager';
 import { BaselineManager } from './components/BaselineManager';
 import { HowToUse } from './components/HowToUse';
 import { ExportMenu } from './components/ExportMenu';
+import { DropboxSettings, uploadToDropbox, isDropboxConnected } from './components/DropboxSettings';
 import { Button } from './components/ui/button';
 import {
   uploadProject,
@@ -28,10 +29,12 @@ import type {
   TaskCreate,
   TaskUpdate,
 } from './api/client';
-import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle } from 'lucide-react';
-import { parseISO, addDays, differenceInDays } from 'date-fns';
+import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle, Save, Cloud } from 'lucide-react';
+import { parseISO, addDays, differenceInDays, format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './App.css';
 import './components/GanttChartEnhancements.css';
 import './ui-overrides.css';
@@ -47,6 +50,8 @@ function AppContent() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isBaselineManagerOpen, setIsBaselineManagerOpen] = useState(false);
   const [isHowToUseOpen, setIsHowToUseOpen] = useState(false);
+  const [isDropboxSettingsOpen, setIsDropboxSettingsOpen] = useState(false);
+  const [isSavingToDropbox, setIsSavingToDropbox] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<any[]>([]);
   const queryClientInstance = useQueryClient();
@@ -269,6 +274,198 @@ function AppContent() {
     }
   };
 
+  // Save to Dropbox (XML + PDF)
+  const handleSaveToDropbox = async () => {
+    if (!metadata) {
+      alert('No project loaded');
+      return;
+    }
+
+    if (!isDropboxConnected()) {
+      const connect = confirm('Dropbox is not connected. Would you like to configure Dropbox settings?');
+      if (connect) {
+        setIsDropboxSettingsOpen(true);
+      }
+      return;
+    }
+
+    setIsSavingToDropbox(true);
+
+    try {
+      // Generate date prefix
+      const datePrefix = format(new Date(), 'yyyy-MM-dd');
+      const projectName = metadata.name || 'project';
+      const baseFileName = `${datePrefix}_${projectName}`;
+
+      // 1. Export XML
+      let xmlBlob: Blob;
+      try {
+        xmlBlob = await exportProject();
+      } catch (error) {
+        throw new Error('Failed to generate XML file');
+      }
+
+      // 2. Generate PDF (simplified version for Dropbox save)
+      const pdfBlob = await generateProjectPDF();
+
+      // 3. Upload XML to Dropbox
+      const xmlResult = await uploadToDropbox(
+        `${baseFileName}.xml`,
+        xmlBlob,
+        'application/xml'
+      );
+
+      if (!xmlResult.success) {
+        throw new Error(`XML upload failed: ${xmlResult.error}`);
+      }
+
+      // 4. Upload PDF to Dropbox
+      const pdfResult = await uploadToDropbox(
+        `${baseFileName}.pdf`,
+        pdfBlob,
+        'application/pdf'
+      );
+
+      if (!pdfResult.success) {
+        throw new Error(`PDF upload failed: ${pdfResult.error}`);
+      }
+
+      alert(`Successfully saved to Dropbox!\n\n• ${baseFileName}.xml\n• ${baseFileName}.pdf`);
+    } catch (error) {
+      console.error('Save to Dropbox error:', error);
+      alert(`Error saving to Dropbox: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSavingToDropbox(false);
+    }
+  };
+
+  // Generate a simplified PDF for Dropbox save
+  const generateProjectPDF = async (): Promise<Blob> => {
+    // Create PDF - 11x17 Tabloid Landscape
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: [279.4, 431.8]
+    });
+
+    const pageWidth = 431.8;
+    const margin = 15;
+
+    // Header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 20, 25);
+    doc.text(metadata?.name || 'Project Schedule', pageWidth / 2, 20, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text(
+      `Start: ${metadata?.start_date || 'N/A'} | Status: ${metadata?.status_date || 'N/A'} | Tasks: ${tasks.length} | Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`,
+      pageWidth / 2, 28, { align: 'center' }
+    );
+
+    // Parse duration helper
+    const parseDuration = (duration: string): number => {
+      const match = duration.match(/PT(\d+)H/);
+      if (match) return parseInt(match[1]) / 8;
+      return 0;
+    };
+
+    // Calculate task dates
+    const taskMap = new Map(tasks.map(t => [t.outline_number, t]));
+    const taskDates = new Map<string, { start: Date; finish: Date }>();
+    const startDate = metadata?.start_date ? parseISO(metadata.start_date) : new Date();
+
+    const calculateDate = (task: Task): { start: Date; finish: Date } => {
+      if (taskDates.has(task.outline_number)) {
+        return taskDates.get(task.outline_number)!;
+      }
+
+      let taskStart = startDate;
+
+      if (task.predecessors && task.predecessors.length > 0) {
+        for (const pred of task.predecessors) {
+          const predTask = taskMap.get(pred.outline_number);
+          if (predTask) {
+            const predDates = calculateDate(predTask);
+            const lagDays = (pred.lag || 0) / 480;
+            const predEnd = addDays(predDates.finish, lagDays);
+            if (predEnd > taskStart) {
+              taskStart = predEnd;
+            }
+          }
+        }
+      }
+
+      const duration = parseDuration(task.duration);
+      const taskFinish = addDays(taskStart, duration);
+
+      const dates = { start: taskStart, finish: taskFinish };
+      taskDates.set(task.outline_number, dates);
+      return dates;
+    };
+
+    tasks.forEach(task => calculateDate(task));
+
+    // Table data
+    const tableData = tasks.map((task, index) => {
+      const dates = taskDates.get(task.outline_number);
+      return [
+        (index + 1).toString(),
+        task.outline_number,
+        task.name,
+        `${parseDuration(task.duration)} days`,
+        dates ? format(dates.start, 'MM/dd/yy') : '-',
+        dates ? format(dates.finish, 'MM/dd/yy') : '-',
+        `${task.percent_complete}%`
+      ];
+    });
+
+    // Generate table
+    autoTable(doc, {
+      startY: 35,
+      head: [['#', 'WBS', 'Task Name', 'Duration', 'Start', 'Finish', '%']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [15, 20, 25],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 8
+      },
+      bodyStyles: {
+        fontSize: 7,
+        textColor: [50, 50, 50]
+      },
+      columnStyles: {
+        0: { cellWidth: 12 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 80 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 25 },
+        6: { cellWidth: 15 }
+      },
+      margin: { left: margin, right: margin },
+      didDrawPage: (data) => {
+        // Footer on each page
+        const pageCount = doc.getNumberOfPages();
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(
+          `Page ${data.pageNumber} of ${pageCount}`,
+          pageWidth / 2,
+          279.4 - 10,
+          { align: 'center' }
+        );
+      }
+    });
+
+    // Return as Blob
+    return doc.output('blob');
+  };
+
   const tasks = tasksData?.tasks || [];
 
   // Calculate project duration
@@ -345,20 +542,19 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Modern Dark Header */}
-      <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-lg">
-        <div className="px-5 py-3">
-          <div className="flex items-center justify-between">
-            {/* Logo & Title */}
-            <div className="flex items-center gap-4">
-              <img src="/sturgis-logo.png" alt="Sturgis Logo" className="h-10 w-auto object-contain filter brightness-110 hover:brightness-125 transition-all" />
-              <div className="h-7 w-px bg-slate-600"></div>
-              <span className="text-base font-semibold text-white tracking-tight">
-                Sturgis Project
-              </span>
-            </div>
-            
-            {/* Navigation Actions */}
-            <nav className="flex items-center gap-1.5">
+      <header style={{ padding: '16px 24px' }} className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-lg">
+        <div className="flex items-center justify-between">
+          {/* Logo & Title */}
+          <div className="flex items-center gap-5">
+            <img src="/sturgis-logo.png" alt="Sturgis Logo" className="h-10 w-auto object-contain" style={{ filter: 'brightness(1.1)' }} />
+            <div className="h-8 w-px bg-slate-600"></div>
+            <span className="text-base font-semibold text-white tracking-tight">
+              Sturgis Project
+            </span>
+          </div>
+          
+          {/* Navigation Actions */}
+          <nav className="flex items-center gap-2">
               <button
                 onClick={() => setIsProjectManagerOpen(true)}
                 title="Manage Projects"
@@ -417,54 +613,75 @@ function AppContent() {
               </button>
             </nav>
           </div>
-        </div>
       </header>
 
       {/* Project Info Bar */}
       {metadata && (
-        <div className="bg-white border-b border-slate-200 shadow-sm relative z-10">
-          <div className="px-5 py-3">
-            <div className="flex items-center justify-between gap-6">
-              {/* Project Title & Info */}
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-bold text-slate-900 tracking-tight">{metadata.name}</h2>
-                <p className="text-sm text-slate-500 mt-1 font-medium flex items-center flex-wrap gap-x-2">
-                  <span>Start: <span className="text-slate-700 font-mono text-xs">{metadata.start_date}</span></span>
-                  <span className="text-slate-300">|</span>
-                  <span>Status: <span className="text-slate-700 font-mono text-xs">{metadata.status_date}</span></span>
-                  {projectDuration && (
-                    <>
-                      <span className="text-slate-300">|</span>
-                      <span>Duration: <span className="text-slate-900 font-semibold">{projectDuration.days} days</span></span>
-                      <span className="text-slate-400 text-xs">(End: {projectDuration.endDate})</span>
-                    </>
-                  )}
-                </p>
-              </div>
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={() => setIsBaselineManagerOpen(true)}
-                  title="Baseline Manager"
-                  className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
-                >
-                  <GitBranch className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setIsCalendarOpen(true)}
-                  title="Calendar Settings"
-                  className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
-                >
-                  <Calendar className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setIsMetadataOpen(true)}
-                  title="Project Settings"
-                  className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
-                >
-                  <Settings className="h-4 w-4" />
-                </button>
-              </div>
+        <div style={{ padding: '16px 24px' }} className="bg-white border-b border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between gap-8">
+            {/* Project Title & Info */}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold text-slate-900 tracking-tight">{metadata.name}</h2>
+              <p className="text-sm text-slate-500 mt-1.5 font-medium flex items-center flex-wrap gap-x-3">
+                <span>Start: <span className="text-slate-700 font-mono text-xs">{metadata.start_date}</span></span>
+                <span className="text-slate-300">|</span>
+                <span>Status: <span className="text-slate-700 font-mono text-xs">{metadata.status_date}</span></span>
+                {projectDuration && (
+                  <>
+                    <span className="text-slate-300">|</span>
+                    <span>Duration: <span className="text-slate-900 font-semibold">{projectDuration.days} days</span></span>
+                    <span className="text-slate-400 text-xs">(End: {projectDuration.endDate})</span>
+                  </>
+                )}
+              </p>
+            </div>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => setIsBaselineManagerOpen(true)}
+                title="Baseline Manager"
+                style={{ padding: '10px' }}
+                className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
+              >
+                <GitBranch className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setIsCalendarOpen(true)}
+                title="Calendar Settings"
+                style={{ padding: '10px' }}
+                className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
+              >
+                <Calendar className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleSaveToDropbox}
+                disabled={isSavingToDropbox}
+                title="Save to Dropbox"
+                style={{ padding: '10px' }}
+                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-blue-200 hover:border-blue-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingToDropbox ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+              </button>
+              <button
+                onClick={() => setIsDropboxSettingsOpen(true)}
+                title="Dropbox Settings"
+                style={{ padding: '10px' }}
+                className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
+              >
+                <Cloud className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setIsMetadataOpen(true)}
+                title="Project Settings"
+                style={{ padding: '10px' }}
+                className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
@@ -630,6 +847,11 @@ function AppContent() {
       <HowToUse
         isOpen={isHowToUseOpen}
         onClose={() => setIsHowToUseOpen(false)}
+      />
+
+      <DropboxSettings
+        isOpen={isDropboxSettingsOpen}
+        onClose={() => setIsDropboxSettingsOpen(false)}
       />
     </div>
   );

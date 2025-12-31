@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, FileSpreadsheet, FileText, FileJson, FileType, ChevronDown, X, FileOutput } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, FileJson, FileType, ChevronDown, X, FileOutput, ImagePlus, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -16,7 +16,35 @@ interface ExportMenuProps {
 
 export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExportXML }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasClientLogo, setHasClientLogo] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if client logo exists on mount
+  useEffect(() => {
+    setHasClientLogo(!!localStorage.getItem('clientLogo'));
+  }, []);
+
+  // Handle client logo upload
+  const handleClientLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      localStorage.setItem('clientLogo', base64);
+      setHasClientLogo(true);
+      alert('Client logo uploaded successfully! It will appear in PDF exports.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Remove client logo
+  const handleRemoveClientLogo = () => {
+    localStorage.removeItem('clientLogo');
+    setHasClientLogo(false);
+  };
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -258,10 +286,40 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
     setIsOpen(false);
   };
 
+  // Helper function to load image as base64
+  const loadImageAsBase64 = (src: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        } else {
+          reject(new Error('Could not get canvas context'));
+        }
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = src;
+    });
+  };
+
   // Export to PDF - 11x17 Tabloid with Table and Gantt Chart combined (MS Project style)
   // Multi-page support with critical path highlighting
   const handleExportPDF = async () => {
     const taskDates = calculateTaskDates();
+
+    // Load Sturgis logo (black version for white PDF background)
+    let sturgisLogoBase64: string | null = null;
+    try {
+      sturgisLogoBase64 = await loadImageAsBase64('/sturgis-logo-black.png');
+    } catch (error) {
+      console.warn('Could not load Sturgis logo:', error);
+    }
 
     // Fetch critical path data
     let criticalTaskIds = new Set<string>();
@@ -324,16 +382,16 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
     }
 
     // Layout - removed % and Pred columns for bigger Gantt chart
-    const tableWidth = 150;
+    const tableWidth = 138;
     const ganttStartX = margin + tableWidth + 2;
     const ganttWidth = pageWidth - ganttStartX - margin;
 
-    // Column widths: #, Name, Dur, Start, Finish (removed % and Pred)
-    const colWidths = [10, 80, 18, 22, 20];
-    const colHeaders = ['#', 'Task Name', 'Dur', 'Start', 'Finish'];
+    // Column widths: #, Name, Duration, Start, Finish (removed % and Pred)
+    const colWidths = [10, 55, 25, 24, 24];
+    const colHeaders = ['#', 'Task Name', 'Duration', 'Start', 'Finish'];
 
-    // Colors
-    const headerBg: [number, number, number] = [41, 128, 185];
+    // Colors - matching app's dark header theme (#0f1419)
+    const headerBg: [number, number, number] = [15, 20, 25];
     const criticalRed: [number, number, number] = [231, 76, 60]; // #e74c3c - matches critical path bars
     const taskBlue: [number, number, number] = [52, 152, 219];
     const summaryGray: [number, number, number] = [44, 62, 80];
@@ -341,13 +399,30 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
 
     // Draw page header
     const drawHeader = () => {
-      // Sturgis logo placeholder (top left)
-      doc.setDrawColor(200, 200, 200);
-      doc.setFillColor(250, 250, 250);
-      doc.roundedRect(margin, 4, 28, 10, 1, 1, 'FD');
-      doc.setFontSize(5);
-      doc.setTextColor(160, 160, 160);
-      doc.text('STURGIS LOGO', margin + 14, 10, { align: 'center' });
+      // Sturgis logo (top left) - black logo on white background
+      const logoX = margin;
+      const logoY = 3;
+      const logoHeight = 10;
+      const logoWidth = logoHeight * 4.5; // Aspect ratio of Sturgis logo
+
+      // Add logo image if loaded
+      if (sturgisLogoBase64) {
+        try {
+          doc.addImage(sturgisLogoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        } catch (e) {
+          // Fallback text if image fails
+          doc.setFontSize(9);
+          doc.setTextColor(30, 41, 59);
+          doc.setFont('helvetica', 'bold');
+          doc.text('STURGIS CONSTRUCTION', logoX, logoY + 7);
+        }
+      } else {
+        // Fallback text if no logo
+        doc.setFontSize(9);
+        doc.setTextColor(30, 41, 59);
+        doc.setFont('helvetica', 'bold');
+        doc.text('STURGIS CONSTRUCTION', logoX, logoY + 7);
+      }
 
       // Project title
       doc.setFontSize(11);
@@ -373,25 +448,48 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
       doc.setFontSize(6);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(120, 120, 120);
-      doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, margin, footerY);
-      doc.text(`Project Start: ${metadata?.start_date || 'N/A'}`, margin, footerY + 3);
+      doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, margin, footerY - 1);
+      doc.text(`Project Start: ${metadata?.start_date || 'N/A'}`, margin, footerY + 2.5);
 
       // File name and page (center)
       doc.setFontSize(7);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(44, 62, 80);
-      doc.text(`${metadata?.name || 'Project'}`, pageWidth / 2, footerY, { align: 'center' });
+      doc.text(`${metadata?.name || 'Project'}`, pageWidth / 2, footerY - 1, { align: 'center' });
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(6);
-      doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth / 2, footerY + 3, { align: 'center' });
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth / 2, footerY + 2.5, { align: 'center' });
 
       // Client logo placeholder (lower right)
-      doc.setDrawColor(200, 200, 200);
-      doc.setFillColor(250, 250, 250);
-      doc.roundedRect(pageWidth - margin - 30, footerY - 4, 30, 10, 1, 1, 'FD');
-      doc.setFontSize(5);
-      doc.setTextColor(160, 160, 160);
-      doc.text('CLIENT LOGO', pageWidth - margin - 15, footerY + 2, { align: 'center' });
+      const clientLogoWidth = 35;
+      const clientLogoHeight = 10;
+      const clientLogoX = pageWidth - margin - clientLogoWidth;
+      const clientLogoY = footerY - 5;
+
+      // Check if client logo is stored in localStorage
+      const clientLogoBase64 = localStorage.getItem('clientLogo');
+      if (clientLogoBase64) {
+        try {
+          doc.addImage(clientLogoBase64, 'PNG', clientLogoX, clientLogoY, clientLogoWidth, clientLogoHeight);
+        } catch (e) {
+          // Draw placeholder if image fails
+          doc.setDrawColor(200, 200, 200);
+          doc.setFillColor(250, 250, 250);
+          doc.roundedRect(clientLogoX, clientLogoY, clientLogoWidth, clientLogoHeight, 1, 1, 'FD');
+          doc.setFontSize(5);
+          doc.setTextColor(160, 160, 160);
+          doc.text('CLIENT LOGO', clientLogoX + clientLogoWidth / 2, clientLogoY + clientLogoHeight / 2 + 1, { align: 'center' });
+        }
+      } else {
+        // Draw placeholder box
+        doc.setDrawColor(200, 200, 200);
+        doc.setFillColor(250, 250, 250);
+        doc.roundedRect(clientLogoX, clientLogoY, clientLogoWidth, clientLogoHeight, 1, 1, 'FD');
+        doc.setFontSize(5);
+        doc.setTextColor(160, 160, 160);
+        doc.text('CLIENT LOGO', clientLogoX + clientLogoWidth / 2, clientLogoY + clientLogoHeight / 2 + 1, { align: 'center' });
+      }
     };
 
     // Draw column headers
@@ -488,12 +586,13 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
       // Task name with indent
       const indent = '  '.repeat(Math.max(0, task.outline_level - 1));
       let taskName = indent + task.name;
-      if (taskName.length > 38) taskName = taskName.substring(0, 36) + '..';
+      if (taskName.length > 28) taskName = taskName.substring(0, 26) + '..';
       doc.text(taskName, xPos, textY);
       xPos += colWidths[1];
 
       // Duration
-      doc.text(`${parseDuration(task.duration)}d`, xPos, textY);
+      const durationDays = parseDuration(task.duration);
+      doc.text(`${durationDays} day${durationDays !== 1 ? 's' : ''}`, xPos, textY);
       xPos += colWidths[2];
 
       // Start
@@ -786,6 +885,40 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
                 <span className="export-option-desc">Human-readable project summary</span>
               </div>
             </button>
+          </div>
+
+          {/* Client Logo Section */}
+          <div className="export-dropdown-divider"></div>
+          <div className="export-dropdown-section">
+            <span className="export-section-title">PDF Client Logo</span>
+            <div className="client-logo-actions">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleClientLogoUpload}
+                style={{ display: 'none' }}
+              />
+              <button
+                className="export-option client-logo-btn"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <ImagePlus size={18} />
+                <span>{hasClientLogo ? 'Change Logo' : 'Upload Logo'}</span>
+              </button>
+              {hasClientLogo && (
+                <button
+                  className="export-option client-logo-btn remove"
+                  onClick={handleRemoveClientLogo}
+                >
+                  <Trash2 size={18} />
+                  <span>Remove</span>
+                </button>
+              )}
+            </div>
+            <span className="export-option-desc" style={{ padding: '0 12px 8px', display: 'block' }}>
+              {hasClientLogo ? '✓ Logo will appear in PDF footer' : 'Add client logo to PDF exports'}
+            </span>
           </div>
         </div>
       )}

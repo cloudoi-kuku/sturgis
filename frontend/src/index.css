@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+@layer components {
+  .logo-black {
+    filter: brightness(0) saturate(100%);
+  }
+  
+  .logo-white {
+    filter: brightness(0) saturate(100%) invert(1);
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

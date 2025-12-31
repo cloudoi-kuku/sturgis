@@ -846,6 +846,427 @@
   }
 }
 
+/* =====================================================
+   GANTT VIEW - Critical Path Table + Timeline
+   ===================================================== */
+
+.gantt-view {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--cp-border);
+  overflow: hidden;
+}
+
+.gantt-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #fef2f2 0%, #fff 100%);
+  border-bottom: 1px solid var(--cp-border);
+}
+
+.gantt-view-title h2 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--cp-text-primary);
+}
+
+.gantt-view-title p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--cp-text-secondary);
+}
+
+.gantt-view-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.zoom-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 8px;
+  background: white;
+  color: var(--cp-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.zoom-btn:hover {
+  border-color: var(--cp-primary);
+  color: var(--cp-primary);
+}
+
+.zoom-btn.active {
+  background: var(--cp-primary);
+  border-color: var(--cp-primary);
+  color: white;
+}
+
+/* Gantt Container */
+.cp-gantt-container {
+  display: flex;
+  height: calc(100vh - 380px);
+  min-height: 400px;
+  overflow: hidden;
+}
+
+/* Task Table */
+.cp-gantt-table {
+  width: 520px;
+  min-width: 520px;
+  border-right: 2px solid var(--cp-border);
+  display: flex;
+  flex-direction: column;
+  background: white;
+}
+
+.cp-gantt-table-header {
+  display: flex;
+  background: linear-gradient(135deg, var(--cp-bg-dark) 0%, #1a2332 100%);
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.cp-header-cell {
+  padding: 0.875rem 0.625rem;
+  display: flex;
+  align-items: center;
+}
+
+.cp-gantt-table-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.cp-task-row {
+  display: flex;
+  border-bottom: 1px solid #f1f5f9;
+  height: 40px;
+  transition: background 0.15s ease;
+}
+
+.cp-task-row:hover {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.06) 0%, rgba(239, 68, 68, 0.02) 100%);
+}
+
+.cp-task-row:nth-child(even) {
+  background: #fafbfc;
+}
+
+.cp-task-row:nth-child(even):hover {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.04) 100%);
+}
+
+.cp-task-row.milestone {
+  background: rgba(243, 156, 18, 0.06);
+}
+
+.cp-cell {
+  padding: 0 0.625rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--cp-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-cell-num {
+  width: 35px;
+  min-width: 35px;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--cp-text-secondary);
+}
+
+.cp-cell-wbs {
+  width: 60px;
+  min-width: 60px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--cp-primary);
+}
+
+.cp-cell-name {
+  flex: 1;
+  min-width: 150px;
+  font-weight: 500;
+  gap: 0.375rem;
+}
+
+.cp-cell-name .milestone-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.cp-cell-dur {
+  width: 70px;
+  min-width: 70px;
+  color: var(--cp-text-secondary);
+}
+
+.cp-cell-start,
+.cp-cell-finish {
+  width: 90px;
+  min-width: 90px;
+  font-size: 0.6875rem;
+}
+
+.cp-cell-float {
+  width: 55px;
+  min-width: 55px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--cp-warning);
+  justify-content: center;
+}
+
+/* Gantt Timeline */
+.cp-gantt-timeline {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fafbfc;
+}
+
+.cp-timeline-header {
+  display: flex;
+  background: linear-gradient(135deg, var(--cp-bg-dark) 0%, #1a2332 100%);
+  color: white;
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.cp-timeline-header::-webkit-scrollbar {
+  display: none;
+}
+
+.cp-timeline-header-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.cp-timeline-header-unit.weekend {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cp-timeline-header-unit .day-name {
+  font-size: 0.5625rem;
+  opacity: 0.7;
+  margin-top: 0.125rem;
+}
+
+.cp-timeline-body {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.cp-timeline-content {
+  position: relative;
+  min-height: 100%;
+}
+
+/* Grid Lines */
+.cp-grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-right: 1px solid #e2e8f0;
+  pointer-events: none;
+}
+
+.cp-grid-line.weekend {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* Bar Row */
+.cp-bar-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+/* Gantt Bar */
+.cp-gantt-bar {
+  position: absolute;
+  height: 24px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cp-gantt-bar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.cp-bar-progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+  border-radius: 4px 0 0 4px;
+}
+
+.cp-bar-label {
+  position: relative;
+  z-index: 1;
+  padding: 0 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Label positioned outside/after the bar for readability */
+.cp-bar-label-outside {
+  position: absolute;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--cp-text-primary);
+  white-space: nowrap;
+  pointer-events: none;
+  line-height: 40px;
+  top: 0;
+}
+
+/* Milestone Marker */
+.cp-milestone-marker {
+  position: absolute;
+  transform: translateX(-50%);
+  color: #f59e0b;
+  filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.4));
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cp-milestone-marker:hover {
+  transform: translateX(-50%) scale(1.2);
+  filter: drop-shadow(0 4px 8px rgba(245, 158, 11, 0.5));
+}
+
+/* Legend */
+.cp-legend {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid var(--cp-border);
+  justify-content: center;
+}
+
+.cp-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--cp-text-secondary);
+  font-weight: 500;
+}
+
+.cp-legend-bar {
+  width: 24px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.cp-legend-bar.critical {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.cp-legend-bar.progress {
+  background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+}
+
+.cp-legend-milestone {
+  color: #f59e0b;
+}
+
+.cp-legend-dependency {
+  flex-shrink: 0;
+}
+
+/* Dependency Lines - Solid Red */
+.cp-dependency-lines {
+  z-index: 5;
+}
+
+.cp-dependency-line {
+  transition: all 0.2s ease;
+}
+
+.cp-dependency-line:hover {
+  stroke: #b91c1c;
+  stroke-width: 3;
+  filter: drop-shadow(0 2px 4px rgba(220, 38, 38, 0.4));
+}
+
+/* Export Controls */
+.gantt-export-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--cp-border);
+  margin: 0 0.5rem;
+}
+
+.export-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  border-color: #10b981 !important;
+  color: white !important;
+}
+
+.export-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.export-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.export-btn.active {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .page-header {

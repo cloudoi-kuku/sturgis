@@ -184,6 +184,72 @@
 .export-option:nth-child(5):hover svg { background: rgba(245, 158, 11, 0.15); }
 .export-option:nth-child(6):hover svg { background: rgba(139, 92, 246, 0.15); }
 
+/* Client Logo Section */
+.export-dropdown-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+  margin: 0.5rem 1rem;
+}
+
+.export-dropdown-section {
+  padding: 0.5rem 0;
+}
+
+.export-section-title {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 1rem 0.5rem;
+}
+
+.client-logo-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0 0.5rem;
+}
+
+.client-logo-btn {
+  flex: 1;
+  justify-content: center;
+  padding: 0.625rem 0.75rem !important;
+  gap: 0.5rem !important;
+}
+
+.client-logo-btn span {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.client-logo-btn svg {
+  padding: 0 !important;
+  background: transparent !important;
+  color: #64748b;
+}
+
+.client-logo-btn:hover svg {
+  color: #10b981;
+  background: transparent !important;
+  transform: none;
+}
+
+.client-logo-btn.remove {
+  flex: 0.6;
+  border-color: #fecaca !important;
+  background: #fef2f2 !important;
+}
+
+.client-logo-btn.remove:hover {
+  background: #fee2e2 !important;
+  border-color: #f87171 !important;
+}
+
+.client-logo-btn.remove svg {
+  color: #ef4444 !important;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .export-dropdown {
@@ -203,5 +269,17 @@
 
   .export-option-desc {
     font-size: 0.625rem;
+  }
+
+  .client-logo-actions {
+    flex-direction: column;
+  }
+
+  .client-logo-btn {
+    flex: 1;
+  }
+
+  .client-logo-btn.remove {
+    flex: 1;
   }
 }
