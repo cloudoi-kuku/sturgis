@@ -1,0 +1,368 @@
+/* =====================================================
+   CLOUD STORAGE SETTINGS MODAL
+   ===================================================== */
+
+.cloud-settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.cloud-settings-modal {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 520px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: cloudModalSlideIn 0.3s ease;
+}
+
+@keyframes cloudModalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cloud-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+  color: white;
+}
+
+.cloud-settings-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.cloud-close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.cloud-close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Tabs */
+.cloud-tabs {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.cloud-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: none;
+  background: transparent;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.cloud-tab:hover {
+  color: #334155;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.cloud-tab.active {
+  color: #0f1419;
+  background: white;
+}
+
+.cloud-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #0f1419;
+}
+
+.tab-connected {
+  color: #22c55e;
+  margin-left: 0.25rem;
+}
+
+/* Content */
+.cloud-settings-content {
+  padding: 1.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.cloud-section {
+  margin-bottom: 1.5rem;
+}
+
+.cloud-section:last-child {
+  margin-bottom: 0;
+}
+
+.cloud-section h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.section-description {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.section-description a {
+  color: #0061fe;
+  text-decoration: none;
+}
+
+.section-description a:hover {
+  text-decoration: underline;
+}
+
+.cloud-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.cloud-input:focus {
+  border-color: #0f1419;
+  box-shadow: 0 0 0 3px rgba(15, 20, 25, 0.1);
+}
+
+.cloud-folder-input {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+}
+
+.cloud-folder-input svg {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.cloud-folder-input .cloud-input {
+  border: none;
+  padding: 0.75rem 0;
+}
+
+.cloud-folder-input .cloud-input:focus {
+  box-shadow: none;
+}
+
+/* Connection Status */
+.cloud-connected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #86efac;
+  border-radius: 10px;
+}
+
+.cloud-connected.onedrive {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #93c5fd;
+}
+
+.cloud-account-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.success-icon {
+  color: #22c55e;
+}
+
+.cloud-connected.onedrive .success-icon {
+  color: #3b82f6;
+}
+
+.account-name {
+  font-weight: 600;
+  color: #166534;
+  font-size: 0.875rem;
+}
+
+.cloud-connected.onedrive .account-name {
+  color: #1e40af;
+}
+
+.account-email {
+  font-size: 0.75rem;
+  color: #4ade80;
+}
+
+.cloud-connected.onedrive .account-email {
+  color: #60a5fa;
+}
+
+.cloud-disconnect-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #dc2626;
+  background: white;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cloud-disconnect-btn:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
+.cloud-disconnected {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: #92400e;
+}
+
+.warning-icon {
+  color: #f59e0b;
+}
+
+/* Connect Buttons */
+.cloud-connect-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 1rem;
+}
+
+.cloud-connect-btn.dropbox {
+  background: linear-gradient(135deg, #0061fe 0%, #0052d4 100%);
+}
+
+.cloud-connect-btn.dropbox:hover:not(:disabled) {
+  box-shadow: 0 8px 20px rgba(0, 97, 254, 0.3);
+  transform: translateY(-2px);
+}
+
+.cloud-connect-btn.onedrive {
+  background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
+}
+
+.cloud-connect-btn.onedrive:hover:not(:disabled) {
+  box-shadow: 0 8px 20px rgba(0, 120, 212, 0.3);
+  transform: translateY(-2px);
+}
+
+.cloud-connect-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Footer */
+.cloud-settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.cloud-cancel-btn {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cloud-cancel-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.cloud-save-btn {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cloud-save-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 20, 25, 0.3);
+}

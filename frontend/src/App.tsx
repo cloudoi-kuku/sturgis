@@ -9,7 +9,7 @@ import { CalendarManager } from './components/CalendarManager';
 import { BaselineManager } from './components/BaselineManager';
 import { HowToUse } from './components/HowToUse';
 import { ExportMenu } from './components/ExportMenu';
-import { DropboxSettings, uploadToDropbox, isDropboxConnected } from './components/DropboxSettings';
+import { CloudStorageSettings, uploadToDropbox, uploadToOneDrive, isDropboxConnected, isOneDriveConnected, isAnyCloudConnected } from './components/CloudStorageSettings';
 import { Button } from './components/ui/button';
 import {
   uploadProject,
@@ -274,15 +274,18 @@ function AppContent() {
     }
   };
 
-  // Save to Dropbox (XML + PDF)
-  const handleSaveToDropbox = async () => {
+  // Save to Cloud Storage (Dropbox and/or OneDrive)
+  const handleSaveToCloud = async () => {
     if (!metadata) {
       alert('No project loaded');
       return;
     }
 
-    if (!isDropboxConnected()) {
-      const connect = confirm('Dropbox is not connected. Would you like to configure Dropbox settings?');
+    const dropboxConnected = isDropboxConnected();
+    const oneDriveConnected = isOneDriveConnected();
+
+    if (!dropboxConnected && !oneDriveConnected) {
+      const connect = confirm('No cloud storage connected. Would you like to configure cloud storage settings?');
       if (connect) {
         setIsDropboxSettingsOpen(true);
       }
@@ -305,35 +308,49 @@ function AppContent() {
         throw new Error('Failed to generate XML file');
       }
 
-      // 2. Generate PDF (simplified version for Dropbox save)
+      // 2. Generate PDF
       const pdfBlob = await generateProjectPDF();
 
-      // 3. Upload XML to Dropbox
-      const xmlResult = await uploadToDropbox(
-        `${baseFileName}.xml`,
-        xmlBlob,
-        'application/xml'
-      );
+      const results: string[] = [];
+      const errors: string[] = [];
 
-      if (!xmlResult.success) {
-        throw new Error(`XML upload failed: ${xmlResult.error}`);
+      // 3. Upload to Dropbox if connected
+      if (dropboxConnected) {
+        const xmlResult = await uploadToDropbox(`${baseFileName}.xml`, xmlBlob, 'application/xml');
+        const pdfResult = await uploadToDropbox(`${baseFileName}.pdf`, pdfBlob, 'application/pdf');
+
+        if (xmlResult.success && pdfResult.success) {
+          results.push('Dropbox: XML + PDF saved');
+        } else {
+          if (!xmlResult.success) errors.push(`Dropbox XML: ${xmlResult.error}`);
+          if (!pdfResult.success) errors.push(`Dropbox PDF: ${pdfResult.error}`);
+        }
       }
 
-      // 4. Upload PDF to Dropbox
-      const pdfResult = await uploadToDropbox(
-        `${baseFileName}.pdf`,
-        pdfBlob,
-        'application/pdf'
-      );
+      // 4. Upload to OneDrive if connected
+      if (oneDriveConnected) {
+        const xmlResult = await uploadToOneDrive(`${baseFileName}.xml`, xmlBlob, 'application/xml');
+        const pdfResult = await uploadToOneDrive(`${baseFileName}.pdf`, pdfBlob, 'application/pdf');
 
-      if (!pdfResult.success) {
-        throw new Error(`PDF upload failed: ${pdfResult.error}`);
+        if (xmlResult.success && pdfResult.success) {
+          results.push('OneDrive: XML + PDF saved');
+        } else {
+          if (!xmlResult.success) errors.push(`OneDrive XML: ${xmlResult.error}`);
+          if (!pdfResult.success) errors.push(`OneDrive PDF: ${pdfResult.error}`);
+        }
       }
 
-      alert(`Successfully saved to Dropbox!\n\n• ${baseFileName}.xml\n• ${baseFileName}.pdf`);
+      // Show results
+      if (results.length > 0 && errors.length === 0) {
+        alert(`Successfully saved to cloud!\n\n${results.join('\n')}\n\nFiles: ${baseFileName}.xml, ${baseFileName}.pdf`);
+      } else if (results.length > 0 && errors.length > 0) {
+        alert(`Partially saved:\n\n✓ ${results.join('\n✓ ')}\n\n✗ Errors:\n${errors.join('\n')}`);
+      } else {
+        throw new Error(errors.join('\n'));
+      }
     } catch (error) {
-      console.error('Save to Dropbox error:', error);
-      alert(`Error saving to Dropbox: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Save to cloud error:', error);
+      alert(`Error saving to cloud: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSavingToDropbox(false);
     }
@@ -654,9 +671,9 @@ function AppContent() {
                 <Calendar className="h-4 w-4" />
               </button>
               <button
-                onClick={handleSaveToDropbox}
+                onClick={handleSaveToCloud}
                 disabled={isSavingToDropbox}
-                title="Save to Dropbox"
+                title="Save to Cloud"
                 style={{ padding: '10px' }}
                 className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-blue-200 hover:border-blue-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -668,7 +685,7 @@ function AppContent() {
               </button>
               <button
                 onClick={() => setIsDropboxSettingsOpen(true)}
-                title="Dropbox Settings"
+                title="Cloud Storage Settings"
                 style={{ padding: '10px' }}
                 className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
               >
@@ -849,7 +866,7 @@ function AppContent() {
         onClose={() => setIsHowToUseOpen(false)}
       />
 
-      <DropboxSettings
+      <CloudStorageSettings
         isOpen={isDropboxSettingsOpen}
         onClose={() => setIsDropboxSettingsOpen(false)}
       />

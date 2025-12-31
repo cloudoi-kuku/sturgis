@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.tsx'
 import { CriticalPathPageWrapper } from './pages/CriticalPathPageWrapper.tsx'
 import { DropboxCallback } from './components/DropboxCallback.tsx'
+import { OneDriveCallback } from './components/OneDriveCallback.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -13,6 +14,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/" element={<App />} />
         <Route path="/critical-path" element={<CriticalPathPageWrapper />} />
         <Route path="/dropbox-callback" element={<DropboxCallback />} />
+        <Route path="/onedrive-callback" element={<OneDriveCallback />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
