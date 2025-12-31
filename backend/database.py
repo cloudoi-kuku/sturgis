@@ -143,6 +143,20 @@ class DatabaseService:
                 )
             """)
 
+            # Users table for authentication
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id TEXT PRIMARY KEY,
+                    email TEXT NOT NULL UNIQUE,
+                    name TEXT NOT NULL,
+                    company TEXT,
+                    password_hash TEXT NOT NULL,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+
             # Create indexes for better performance
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_outline ON tasks(project_id, outline_number)")
@@ -151,6 +165,7 @@ class DatabaseService:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_calendar_exceptions_project ON calendar_exceptions(project_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_task_baselines_task ON task_baselines(task_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_task_baselines_project ON task_baselines(project_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
 
             conn.commit()
     
@@ -875,3 +890,48 @@ class DatabaseService:
                 'task_count': row['task_count'],
                 'set_date': row['set_date']
             } for row in cursor.fetchall()]
+
+    # ==================== USER MANAGEMENT ====================
+
+    def create_user(self, email: str, name: str, password_hash: str, company: Optional[str] = None) -> str:
+        """Create a new user and return their ID"""
+        user_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO users (id, email, name, company, password_hash, is_active, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+            """, (user_id, email.lower(), name, company, password_hash, now, now))
+
+        return user_id
+
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get a user by email address"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE email = ? AND is_active = 1", (email.lower(),))
+            row = cursor.fetchone()
+
+            if row:
+                return dict(row)
+        return None
+
+    def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get a user by ID"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE id = ? AND is_active = 1", (user_id,))
+            row = cursor.fetchone()
+
+            if row:
+                return dict(row)
+        return None
+
+    def email_exists(self, email: str) -> bool:
+        """Check if an email is already registered"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM users WHERE email = ?", (email.lower(),))
+            return cursor.fetchone() is not None

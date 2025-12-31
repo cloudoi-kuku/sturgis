@@ -38,8 +38,12 @@ from validator import ProjectValidator
 from ai_service import ai_service
 from ai_command_handler import ai_command_handler
 from database import DatabaseService
+from auth import router as auth_router
 
 app = FastAPI(title="MS Project Configuration API", version="1.0.0")
+
+# Include authentication router
+app.include_router(auth_router)
 
 # CORS middleware for frontend communication
 app.add_middleware(
@@ -59,6 +63,13 @@ app.add_middleware(
 # Storage configuration
 STORAGE_DIR = Path("project_data")
 STORAGE_DIR.mkdir(exist_ok=True)
+
+
+# Health check endpoint
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint for container orchestration"""
+    return {"status": "healthy", "service": "sturgis-project"}
 
 # Initialize database service
 db = DatabaseService()
@@ -164,7 +175,13 @@ async def health_check():
 
 @app.get("/")
 async def root():
-    """Health check endpoint"""
+    """Root endpoint - serve frontend in production, API info in development"""
+    # In production, serve the frontend
+    static_index = Path("static/index.html")
+    if static_index.exists():
+        from fastapi.responses import FileResponse
+        return FileResponse(static_index)
+    # In development, return API info
     return {"status": "ok", "message": "MS Project Configuration API"}
 
 
@@ -1170,6 +1187,39 @@ async def clear_baseline(request: ClearBaselineRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to clear baseline: {str(e)}")
+
+
+# ==================== STATIC FILE SERVING (Production) ====================
+# Serve frontend static files in production
+
+STATIC_DIR = Path("static")
+
+if STATIC_DIR.exists():
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    # Serve static assets (JS, CSS, images)
+    app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
+
+    # Serve other static files from root
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Serve frontend for all non-API routes (SPA fallback)"""
+        # Skip API routes
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not found")
+
+        # Try to serve the exact file
+        file_path = STATIC_DIR / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+
+        # Fallback to index.html for SPA routing
+        index_path = STATIC_DIR / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path)
+
+        raise HTTPException(status_code=404, detail="Not found")
 
 
 if __name__ == "__main__":

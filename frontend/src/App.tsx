@@ -9,7 +9,7 @@ import { CalendarManager } from './components/CalendarManager';
 import { BaselineManager } from './components/BaselineManager';
 import { HowToUse } from './components/HowToUse';
 import { ExportMenu } from './components/ExportMenu';
-import { CloudStorageSettings, uploadToDropbox, uploadToOneDrive, isDropboxConnected, isOneDriveConnected, isAnyCloudConnected } from './components/CloudStorageSettings';
+import { CloudStorageSettings, uploadToDropbox, uploadToOneDrive, isDropboxConnected, isOneDriveConnected } from './components/CloudStorageSettings';
 import { Button } from './components/ui/button';
 import {
   uploadProject,
@@ -29,7 +29,8 @@ import type {
   TaskCreate,
   TaskUpdate,
 } from './api/client';
-import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle, Save, Cloud } from 'lucide-react';
+import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle, Save, Cloud, LogOut, User, ChevronDown } from 'lucide-react';
+import { useAuth } from './context/AuthContext';
 import { parseISO, addDays, differenceInDays, format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
@@ -42,6 +43,7 @@ import './ui-overrides.css';
 const queryClient = new QueryClient();
 
 function AppContent() {
+  const { user, logout } = useAuth();
   const [selectedTask, setSelectedTask] = useState<Task | undefined>();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isMetadataOpen, setIsMetadataOpen] = useState(false);
@@ -52,6 +54,7 @@ function AppContent() {
   const [isHowToUseOpen, setIsHowToUseOpen] = useState(false);
   const [isDropboxSettingsOpen, setIsDropboxSettingsOpen] = useState(false);
   const [isSavingToDropbox, setIsSavingToDropbox] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<any[]>([]);
   const queryClientInstance = useQueryClient();
@@ -628,6 +631,47 @@ function AppContent() {
                 <HelpCircle className="h-4 w-4" />
                 Help
               </button>
+
+              {/* User Menu */}
+              <div className="relative ml-2 pl-2 border-l border-slate-600">
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="max-w-[120px] truncate">{user?.name || 'User'}</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isUserMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-xl border border-slate-200 z-50 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-slate-100">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{user?.name}</p>
+                        <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                      </div>
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            logout();
+                            window.location.href = '/';
+                          }}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sign out
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </nav>
           </div>
       </header>

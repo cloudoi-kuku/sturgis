@@ -1,0 +1,44 @@
+# Multi-environment deployment workflow
+
+name: Deploy to Multiple Environments
+
+on:
+  push:
+    branches:
+      - main        # Production deployment
+      - develop     # Staging deployment
+      - feature/*   # Preview deployments
+
+jobs:
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to Production
+        run: |
+          echo "Deploying to production..."
+          # Production deployment commands
+          
+  deploy-staging:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to Staging
+        run: |
+          echo "Deploying to staging..."
+          # Staging deployment commands
+
+  deploy-preview:
+    if: startsWith(github.ref, 'refs/heads/feature/')
+    runs-on: ubuntu-latest
+    environment: preview
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy Preview
+        run: |
+          echo "Deploying preview..."
+          # Preview deployment commands

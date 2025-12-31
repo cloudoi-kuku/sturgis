@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, FolderOpen, Trash2, Check } from 'lucide-react';
+import { X, Plus, FolderOpen, Trash2, Check, Briefcase, Calendar, ListTodo } from 'lucide-react';
 import { getAllProjects, createNewProject, switchProject, deleteProject } from '../api/client';
 import type { ProjectListItem } from '../api/client';
 import './ProjectManager.css';
@@ -99,9 +99,12 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="project-manager-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Project Manager</h2>
+          <h2>
+            <Briefcase size={20} />
+            Project Manager
+          </h2>
           <button className="modal-close" onClick={onClose}>
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
@@ -113,7 +116,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
               onClick={() => setShowNewProjectInput(!showNewProjectInput)}
               disabled={loading}
             >
-              <Plus size={18} />
+              <Plus size={16} />
               New Project
             </button>
           </div>
@@ -129,7 +132,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                 autoFocus
               />
               <button className="action-button primary" onClick={handleCreateProject}>
-                <Check size={18} />
+                <Check size={16} />
                 Create
               </button>
               <button className="action-button" onClick={() => {
@@ -162,7 +165,15 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                     {project.is_active && <span className="active-badge">Active</span>}
                   </div>
                   <div className="project-meta">
-                    {project.task_count} tasks • {project.start_date}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <ListTodo size={12} />
+                      {project.task_count} tasks
+                    </span>
+                    <span style={{ margin: '0 0.5rem', color: '#cbd5e1' }}>•</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Calendar size={12} />
+                      {project.start_date}
+                    </span>
                   </div>
                 </div>
                 <div className="project-actions">
@@ -173,7 +184,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                       disabled={loading}
                       title="Switch to this project"
                     >
-                      <FolderOpen size={16} />
+                      <FolderOpen size={14} />
                       Open
                     </button>
                   )}
@@ -184,7 +195,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                       disabled={loading}
                       title="Delete this project"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   )}
                 </div>
@@ -196,4 +207,3 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
     </div>
   );
 };
-

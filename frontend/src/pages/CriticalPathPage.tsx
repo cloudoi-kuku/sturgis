@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Task } from '../api/client';
 import { Printer, FileText, Table as TableIcon, BarChart3, Network, ArrowLeft, Diamond, ZoomIn, ZoomOut, Download, Image } from 'lucide-react';
-import { parseISO, addDays, format, differenceInDays, startOfMonth, addMonths, eachDayOfInterval, getDay } from 'date-fns';
+import { parseISO, addDays, format, startOfMonth, addMonths, eachDayOfInterval, getDay } from 'date-fns';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import './CriticalPathPage.css';
@@ -51,12 +51,6 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
   const formatDuration = (duration: string): string => {
     const days = parseDuration(duration);
     return `${days} day${days !== 1 ? 's' : ''}`;
-  };
-
-  // Format day number to readable format (Day 1, Day 2, etc.)
-  const formatDayNumber = (dayNum: number | undefined): string => {
-    if (dayNum === undefined || dayNum === null) return 'N/A';
-    return `Day ${Math.round(dayNum * 10) / 10}`;
   };
 
   // Convert day number to actual calendar date
@@ -336,8 +330,6 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
       const ganttHeader = ganttContainer.querySelector('.gantt-view-header') as HTMLElement;
       const ganttLegend = ganttContainer.querySelector('.cp-legend') as HTMLElement;
       const tableHeader = ganttContainer.querySelector('.cp-gantt-table-header') as HTMLElement;
-      const timelineHeader = ganttContainer.querySelector('.cp-timeline-header') as HTMLElement;
-
       // Store original styles
       const originalTableBodyStyle = tableBody?.style.cssText || '';
       const originalTimelineBodyStyle = timelineBody?.style.cssText || '';

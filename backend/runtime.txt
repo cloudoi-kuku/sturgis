@@ -1,0 +1,12 @@
+# Azure App Service deployment configuration
+
+# Requirements for Azure App Service Python deployment
+python-3.11.0
+
+# Startup command (will be set in Azure portal)
+# gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app
+
+# App settings to configure in Azure:
+# WEBSITES_PORT=8000
+# SCM_DO_BUILD_DURING_DEPLOYMENT=true
+# ENABLE_ORYX_BUILD=true

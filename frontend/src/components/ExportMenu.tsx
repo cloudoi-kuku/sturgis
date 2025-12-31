@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Download, FileSpreadsheet, FileText, FileJson, FileType, ChevronDown, X, FileOutput, ImagePlus, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 import type { Task, ProjectMetadata } from '../api/client';
 import { getCriticalPath } from '../api/client';
 import { format, parseISO, addDays } from 'date-fns';
@@ -357,13 +357,6 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
     tasks.forEach((task, index) => {
       outlineToTaskNum.set(task.outline_number, index + 1);
     });
-
-    const getPredecessorTaskNums = (predecessors: typeof tasks[0]['predecessors']) => {
-      if (!predecessors || predecessors.length === 0) return '';
-      return predecessors
-        .map(p => outlineToTaskNum.get(p.outline_number) || p.outline_number)
-        .join(', ');
-    };
 
     // Calculate project timeline
     const allDates: Date[] = [];

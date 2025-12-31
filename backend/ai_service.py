@@ -1,5 +1,5 @@
 """
-AI Service using local Llama 3.2 via Ollama
+AI Service using Azure OpenAI
 Provides task duration estimation, dependency detection, and categorization
 """
 
@@ -11,32 +11,91 @@ from models import Task
 
 
 class LocalAIService:
-    """Local LLM service using Ollama"""
+    """AI service using Azure OpenAI (GPT-4o-mini for cost efficiency)"""
 
-    def __init__(self, base_url: str = None):
-        # Use environment variable if available, otherwise default to localhost
-        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        self.model = "llama3.2:3b"  # Fast, lightweight model
+    def __init__(self):
+        # Azure OpenAI configuration
+        self.azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+        self.azure_api_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+        self.azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
+        self.azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
+
+        # Fallback to Ollama if Azure not configured
+        self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        self.ollama_model = "llama3.2:3b"
+
         self.chat_history: List[Dict[str, str]] = []  # Store conversation history
-    
+
+        # Determine which service to use
+        self.use_azure = bool(self.azure_endpoint and self.azure_api_key)
+        if self.use_azure:
+            print(f"AI Service: Using Azure OpenAI ({self.azure_deployment})")
+        else:
+            print("AI Service: Azure OpenAI not configured, falling back to Ollama")
+
     async def _generate(self, prompt: str, system: str = "") -> str:
-        """Call Ollama API"""
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{self.base_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "system": system,
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.3,  # Lower = more consistent
+        """Generate response using Azure OpenAI or Ollama fallback"""
+        if self.use_azure:
+            return await self._generate_azure(prompt, system)
+        else:
+            return await self._generate_ollama(prompt, system)
+
+    async def _generate_azure(self, prompt: str, system: str = "") -> str:
+        """Call Azure OpenAI API"""
+        url = f"{self.azure_endpoint}/openai/deployments/{self.azure_deployment}/chat/completions?api-version={self.azure_api_version}"
+
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                response = await client.post(
+                    url,
+                    headers={
+                        "Content-Type": "application/json",
+                        "api-key": self.azure_api_key,
+                    },
+                    json={
+                        "messages": messages,
+                        "temperature": 0.3,
                         "top_p": 0.9,
+                        "max_tokens": 2000,
                     }
-                }
-            )
-            result = response.json()
-            return result.get("response", "")
+                )
+                response.raise_for_status()
+                result = response.json()
+                return result["choices"][0]["message"]["content"]
+            except httpx.HTTPStatusError as e:
+                print(f"Azure OpenAI API error: {e.response.status_code} - {e.response.text}")
+                return ""
+            except Exception as e:
+                print(f"Azure OpenAI error: {e}")
+                return ""
+
+    async def _generate_ollama(self, prompt: str, system: str = "") -> str:
+        """Call Ollama API (fallback)"""
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.post(
+                    f"{self.ollama_base_url}/api/generate",
+                    json={
+                        "model": self.ollama_model,
+                        "prompt": prompt,
+                        "system": system,
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.3,
+                            "top_p": 0.9,
+                        }
+                    }
+                )
+                result = response.json()
+                return result.get("response", "")
+            except Exception as e:
+                print(f"Ollama error: {e}")
+                return ""
     
     async def estimate_duration(self, task_name: str, task_type: str = "", project_context: Optional[Dict] = None) -> Dict:
         """
@@ -721,11 +780,16 @@ Respond ONLY with JSON: {"category": "<type>", "confidence": <0-100>}"""
         return {"category": "development", "confidence": 50}
     
     async def health_check(self) -> bool:
-        """Check if Ollama is running"""
+        """Check if AI service is available"""
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(f"{self.base_url}/api/tags")
-                return response.status_code == 200
+            if self.use_azure:
+                # For Azure, just return True if configured
+                return bool(self.azure_endpoint and self.azure_api_key)
+            else:
+                # For Ollama, check if server is running
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    response = await client.get(f"{self.ollama_base_url}/api/tags")
+                    return response.status_code == 200
         except:
             return False
 
@@ -865,7 +929,7 @@ Conversation history is maintained, so you can reference previous messages.
             return response.strip()
         except Exception as e:
             print(f"Chat error: {e}")
-            return "I'm having trouble connecting to the AI service. Please make sure Ollama is running."
+            return "I'm having trouble connecting to the AI service. Please try again later."
 
     def clear_chat_history(self):
         """Clear conversation history"""

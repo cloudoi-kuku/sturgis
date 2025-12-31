@@ -15,6 +15,80 @@ export const apiClient = axios.create({
   },
 });
 
+// Add auth token to requests
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Handle 401 responses (token expired)
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      // Redirect to login if not already there
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// ==================== AUTH API ====================
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  name: string;
+  company?: string;
+};
+
+export type AuthResponse = {
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+};
+
+export type RegisterRequest = {
+  name: string;
+  email: string;
+  password: string;
+  company?: string;
+};
+
+export type LoginRequest = {
+  email: string;
+  password: string;
+};
+
+export const authApi = {
+  register: async (data: RegisterRequest): Promise<AuthResponse> => {
+    const response = await apiClient.post<AuthResponse>('/auth/register', data);
+    return response.data;
+  },
+
+  login: async (data: LoginRequest): Promise<AuthResponse> => {
+    const response = await apiClient.post<AuthResponse>('/auth/login', data);
+    return response.data;
+  },
+
+  getMe: async (): Promise<AuthUser> => {
+    const response = await apiClient.get<AuthUser>('/auth/me');
+    return response.data;
+  },
+
+  verifyToken: async (): Promise<{ valid: boolean; user: AuthUser }> => {
+    const response = await apiClient.post<{ valid: boolean; user: AuthUser }>('/auth/verify');
+    return response.data;
+  },
+};
+
 // Types
 export type Predecessor = {
   outline_number: string;
