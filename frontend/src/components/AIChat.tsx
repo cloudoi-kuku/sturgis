@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, X, Trash2, Loader } from 'lucide-react';
 import './AIChat.css';
 import '../ui-overrides.css';
+import { apiClient } from '../api/client';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -51,18 +52,12 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: input,
-          project_id: projectId  // Send the specific project ID
-        })
+      const response = await apiClient.post('/ai/chat', {
+        message: input,
+        project_id: projectId  // Send the specific project ID
       });
 
-      if (!response.ok) throw new Error('Chat request failed');
-
-      const data = await response.json();
+      const data = response.data;
 
       // Check if the response is a project generation request
       let responseContent = data.response;
@@ -75,18 +70,14 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
           responseContent = parsedResponse.message;
 
           // Trigger project generation via the API
-          const genResponse = await fetch('http://localhost:8000/api/ai/generate-project', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              description: input,
-              project_type: 'commercial', // Will be detected by backend
-              project_id: projectId  // Populate this specific project if it's empty
-            })
+          const genResponse = await apiClient.post('/ai/generate-project', {
+            description: input,
+            project_type: 'commercial', // Will be detected by backend
+            project_id: projectId  // Populate this specific project if it's empty
           });
 
-          if (genResponse.ok) {
-            const genData = await genResponse.json();
+          if (genResponse.status === 200) {
+            const genData = genResponse.data;
             responseContent = `✅ Successfully generated project "${genData.project_name}" with ${genData.task_count} tasks!\n\n${parsedResponse.message}`;
 
             // Refresh the page to show the new project
@@ -131,7 +122,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
 
   const clearHistory = async () => {
     try {
-      await fetch('http://localhost:8000/api/ai/chat/clear', { method: 'POST' });
+      await apiClient.post('/ai/chat/clear');
       setMessages([{
         role: 'assistant',
         content: "Chat history cleared. How can I help you?",
