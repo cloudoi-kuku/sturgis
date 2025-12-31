@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { ProjectMetadata } from '../api/client';
-import { X } from 'lucide-react';
+import { X, Settings } from 'lucide-react';
+import './ProjectMetadataEditor.css';
 
 interface ProjectMetadataEditorProps {
   metadata: ProjectMetadata | undefined;
@@ -39,28 +40,32 @@ export const ProjectMetadataEditor: React.FC<ProjectMetadataEditorProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Project Settings</h2>
-          <button className="close-button" onClick={onClose}>
+    <div className="project-settings-overlay" onClick={onClose}>
+      <div className="project-settings-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="project-settings-header">
+          <h2>
+            <Settings size={20} />
+            Project Settings
+          </h2>
+          <button className="project-settings-close" onClick={onClose}>
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="task-form">
-          <div className="form-group">
-            <label>Project Name *</label>
+        <form onSubmit={handleSubmit} className="project-settings-form">
+          <div className="project-settings-group">
+            <label>Project Name</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Enter project name"
               required
             />
           </div>
 
-          <div className="form-group">
-            <label>Start Date *</label>
+          <div className="project-settings-group">
+            <label>Start Date</label>
             <input
               type="datetime-local"
               value={formData.start_date ? formData.start_date.slice(0, 16) : ''}
@@ -72,11 +77,11 @@ export const ProjectMetadataEditor: React.FC<ProjectMetadataEditorProps> = ({
               }}
               required
             />
-            <small className="form-hint">Project start date and time</small>
+            <small className="project-settings-hint">Project start date and time</small>
           </div>
 
-          <div className="form-group">
-            <label>Status Date *</label>
+          <div className="project-settings-group">
+            <label>Status Date</label>
             <input
               type="datetime-local"
               value={formData.status_date ? formData.status_date.slice(0, 16) : ''}
@@ -88,14 +93,14 @@ export const ProjectMetadataEditor: React.FC<ProjectMetadataEditorProps> = ({
               }}
               required
             />
-            <small className="form-hint">Current project status date</small>
+            <small className="project-settings-hint">Current project status date (for progress tracking)</small>
           </div>
 
-          <div className="modal-footer">
-            <button type="button" className="cancel-button" onClick={onClose}>
+          <div className="project-settings-footer">
+            <button type="button" className="project-settings-cancel" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="save-button">
+            <button type="submit" className="project-settings-save">
               Save Changes
             </button>
           </div>
@@ -104,4 +109,3 @@ export const ProjectMetadataEditor: React.FC<ProjectMetadataEditorProps> = ({
     </div>
   );
 };
-
