@@ -9,6 +9,7 @@ import { CalendarManager } from './components/CalendarManager';
 import { BaselineManager } from './components/BaselineManager';
 import { HowToUse } from './components/HowToUse';
 import { ExportMenu } from './components/ExportMenu';
+import { Button } from './components/ui/button';
 import {
   uploadProject,
   getTasks,
@@ -29,8 +30,11 @@ import type {
 } from './api/client';
 import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle } from 'lucide-react';
 import { parseISO, addDays, differenceInDays } from 'date-fns';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
 import './App.css';
 import './components/GanttChartEnhancements.css';
+import './ui-overrides.css';
 
 const queryClient = new QueryClient();
 
@@ -339,135 +343,205 @@ function AppContent() {
   }, [tasks, metadata]);
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="header-left">
-          <img src="/sturgis-logo.png" alt="Sturgis Logo" className="app-logo" />
-          <h1>Project Configuration Tool</h1>
-        </div>
-        <div className="header-actions">
-          <button
-            className="action-button"
-            onClick={() => setIsProjectManagerOpen(true)}
-            title="Manage Projects"
-          >
-            <FolderOpen size={18} />
-            Projects
-          </button>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Modern Dark Header */}
+      <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-lg">
+        <div className="px-5 py-3">
+          <div className="flex items-center justify-between">
+            {/* Logo & Title */}
+            <div className="flex items-center gap-4">
+              <img src="/sturgis-logo.png" alt="Sturgis Logo" className="h-10 w-auto object-contain filter brightness-110 hover:brightness-125 transition-all" />
+              <div className="h-7 w-px bg-slate-600"></div>
+              <span className="text-base font-semibold text-white tracking-tight">
+                Sturgis Project
+              </span>
+            </div>
+            
+            {/* Navigation Actions */}
+            <nav className="flex items-center gap-1.5">
+              <button
+                onClick={() => setIsProjectManagerOpen(true)}
+                title="Manage Projects"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              >
+                <FolderOpen className="h-4 w-4" />
+                Projects
+              </button>
 
-          <label className="upload-button">
-            <Upload size={18} />
-            Upload XML
-            <input type="file" accept=".xml" onChange={handleFileUpload} hidden />
-          </label>
+              <label className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-all cursor-pointer">
+                <Upload className="h-4 w-4" />
+                Upload XML
+                <input type="file" accept=".xml" onChange={handleFileUpload} hidden />
+              </label>
 
-          <button className="action-button" onClick={handleCreateTask} disabled={!metadata}>
-            <Plus size={18} />
-            New Task
-          </button>
+              <button
+                onClick={handleCreateTask}
+                disabled={!metadata}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Plus className="h-4 w-4" />
+                New Task
+              </button>
 
-          <button className="action-button" onClick={handleValidate} disabled={!metadata}>
-            <CheckCircle size={18} />
-            Validate
-          </button>
+              <button
+                onClick={handleValidate}
+                disabled={!metadata}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Validate
+              </button>
 
-          <ExportMenu
-            tasks={tasks}
-            metadata={metadata}
-            onExportXML={handleExport}
-          />
+              <ExportMenu
+                tasks={tasks}
+                metadata={metadata}
+                onExportXML={handleExport}
+              />
 
-          <button
-            className="action-button ai-chat-button"
-            onClick={() => setIsChatOpen(true)}
-            title="AI Assistant"
-          >
-            <MessageCircle size={18} />
-            AI Chat
-          </button>
+              <button
+                onClick={() => setIsChatOpen(true)}
+                title="AI Assistant"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-all shadow-md"
+              >
+                <MessageCircle className="h-4 w-4" />
+                AI Chat
+              </button>
 
-          <button
-            className="action-button"
-            onClick={() => setIsHowToUseOpen(true)}
-            title="How to Use"
-          >
-            <HelpCircle size={18} />
-            Help
-          </button>
+              <button
+                onClick={() => setIsHowToUseOpen(true)}
+                title="How to Use"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              >
+                <HelpCircle className="h-4 w-4" />
+                Help
+              </button>
+            </nav>
+          </div>
         </div>
       </header>
 
+      {/* Project Info Bar */}
       {metadata && (
-        <div className="project-info">
-          <div className="project-metadata">
-            <h2>{metadata.name}</h2>
-            <p>
-              Start: {metadata.start_date} | Status: {metadata.status_date}
-              {projectDuration && (
-                <> | Duration: <strong>{projectDuration.days} days</strong> (End: {projectDuration.endDate})</>
-              )}
-            </p>
-          </div>
-          <div className="project-actions">
-            <button className="settings-button" onClick={() => setIsBaselineManagerOpen(true)} title="Baseline Manager">
-              <GitBranch size={18} />
-            </button>
-            <button className="settings-button" onClick={() => setIsCalendarOpen(true)} title="Calendar Settings">
-              <Calendar size={18} />
-            </button>
-            <button className="settings-button" onClick={() => setIsMetadataOpen(true)} title="Project Settings">
-              <Settings size={18} />
-            </button>
+        <div className="bg-white border-b border-slate-200 shadow-sm relative z-10">
+          <div className="px-5 py-3">
+            <div className="flex items-center justify-between gap-6">
+              {/* Project Title & Info */}
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-bold text-slate-900 tracking-tight">{metadata.name}</h2>
+                <p className="text-sm text-slate-500 mt-1 font-medium flex items-center flex-wrap gap-x-2">
+                  <span>Start: <span className="text-slate-700 font-mono text-xs">{metadata.start_date}</span></span>
+                  <span className="text-slate-300">|</span>
+                  <span>Status: <span className="text-slate-700 font-mono text-xs">{metadata.status_date}</span></span>
+                  {projectDuration && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <span>Duration: <span className="text-slate-900 font-semibold">{projectDuration.days} days</span></span>
+                      <span className="text-slate-400 text-xs">(End: {projectDuration.endDate})</span>
+                    </>
+                  )}
+                </p>
+              </div>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => setIsBaselineManagerOpen(true)}
+                  title="Baseline Manager"
+                  className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
+                >
+                  <GitBranch className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setIsCalendarOpen(true)}
+                  title="Calendar Settings"
+                  className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
+                >
+                  <Calendar className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setIsMetadataOpen(true)}
+                  title="Project Settings"
+                  className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {(validationErrors.length > 0 || validationWarnings.length > 0) && (
-        <div className="validation-panel">
-          {validationErrors.length > 0 && (
-            <>
-              <div className="validation-header">
-                <AlertCircle size={18} />
-                <h3>Validation Errors ({validationErrors.length})</h3>
-              </div>
-              <ul className="validation-errors">
-                {validationErrors.map((error, index) => (
-                  <li key={index}>
-                    <strong>{error.field}:</strong> {error.message}
-                    {error.task_id && <span className="task-id"> (Task: {error.task_id})</span>}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+        <div className="container mx-auto px-6 py-4">
+          <div className="space-y-4">
+            {validationErrors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Validation Errors ({validationErrors.length})</AlertTitle>
+                <AlertDescription>
+                  <ul className="mt-2 space-y-1">
+                    {validationErrors.map((error, index) => (
+                      <li key={index}>
+                        <strong>{error.field}:</strong> {error.message}
+                        {error.task_id && <span className="text-muted-foreground"> (Task: {error.task_id})</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {validationWarnings.length > 0 && (
-            <>
-              <div className="validation-header validation-warning-header">
-                <AlertCircle size={18} />
-                <h3>Validation Warnings ({validationWarnings.length})</h3>
-              </div>
-              <ul className="validation-warnings">
-                {validationWarnings.map((warning, index) => (
-                  <li key={index}>
-                    <strong>{warning.field}:</strong> {warning.message}
-                    {warning.task_id && <span className="task-id"> (Task: {warning.task_id})</span>}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+            {validationWarnings.length > 0 && (
+              <Alert variant="warning">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Validation Warnings ({validationWarnings.length})</AlertTitle>
+                <AlertDescription>
+                  <ul className="mt-2 space-y-1">
+                    {validationWarnings.map((warning, index) => (
+                      <li key={index}>
+                        <strong>{warning.field}:</strong> {warning.message}
+                        {warning.task_id && <span className="text-muted-foreground"> (Task: {warning.task_id})</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
         </div>
       )}
 
-      <main className="app-main">
-        {tasksLoading && <div className="loading">Loading tasks...</div>}
+      <main className="flex-1 bg-slate-50">
+        {tasksLoading && (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading tasks...</p>
+            </div>
+          </div>
+        )}
 
         {!metadata && !tasksLoading && (
-          <div className="empty-state">
-            <Upload size={48} />
-            <h2>No Project Loaded</h2>
-            <p>Upload an MS Project XML file to get started</p>
+          <div className="flex items-center justify-center h-64">
+            <Card className="max-w-md mx-auto">
+              <CardHeader className="text-center">
+                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+                  <Upload className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <CardTitle>No Project Loaded</CardTitle>
+                <CardDescription>
+                  Upload an MS Project XML file to get started
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-center">
+                <Button asChild className="w-full">
+                  <label className="cursor-pointer">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload XML File
+                    <input type="file" accept=".xml" onChange={handleFileUpload} hidden />
+                  </label>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -481,14 +555,24 @@ function AppContent() {
         )}
 
         {metadata && tasks.length === 0 && !tasksLoading && (
-          <div className="empty-state">
-            <Plus size={48} />
-            <h2>No Tasks</h2>
-            <p>Create your first task to get started</p>
-            <button className="action-button primary" onClick={handleCreateTask}>
-              <Plus size={18} />
-              Create Task
-            </button>
+          <div className="flex items-center justify-center h-64">
+            <Card className="max-w-md mx-auto">
+              <CardHeader className="text-center">
+                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+                  <Plus className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <CardTitle>No Tasks</CardTitle>
+                <CardDescription>
+                  Create your first task to get started
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-center">
+                <Button onClick={handleCreateTask} className="w-full">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Task
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         )}
       </main>

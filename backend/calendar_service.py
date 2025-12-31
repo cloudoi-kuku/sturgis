@@ -1,5 +1,5 @@
 """
-Calendar Service for Project Configuration Tool
+Calendar Service for Sturgis Project
 Provides calendar-aware date calculations for scheduling
 """
 from datetime import datetime, timedelta

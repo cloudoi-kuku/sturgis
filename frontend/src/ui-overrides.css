@@ -1,0 +1,36 @@
+/* =====================================================
+   UI OVERRIDES - Minimal targeted fixes
+   ===================================================== */
+
+/* Ensure Plus Jakarta Sans is used */
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Fix header title size */
+header h1 {
+  font-size: 1.125rem !important;
+}
+
+/* Dialog improvements */
+[data-radix-dialog-content] {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Scrollbar styling */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

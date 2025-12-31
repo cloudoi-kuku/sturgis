@@ -1,5 +1,5 @@
 """
-SQLite database service for Project Configuration Tool
+SQLite database service for Sturgis Project
 Handles multi-project persistence with proper isolation
 """
 import sqlite3

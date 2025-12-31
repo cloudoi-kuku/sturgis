@@ -1,4 +1,4 @@
-# Deployment Guide - Project Configuration Tool
+# Deployment Guide - Sturgis Project
 
 ## Production Deployment Options
 

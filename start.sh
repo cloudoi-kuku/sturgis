@@ -1,9 +1,9 @@
 #!/bin/bash
-# Quick start script for Project Configuration Tool (Linux/Mac)
+# Quick start script for Sturgis Project (Linux/Mac)
 
 set -e
 
-echo "🚀 Project Configuration Tool - Docker Setup"
+echo "🚀 Sturgis Project - Docker Setup"
 echo "================================================"
 echo ""
 
@@ -74,7 +74,7 @@ fi
 
 echo ""
 echo "================================================"
-echo "✅ Project Configuration Tool is running!"
+echo "✅ Sturgis Project is running!"
 echo "================================================"
 echo ""
 echo "🌐 Access the application at:"

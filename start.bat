@@ -1,8 +1,8 @@
 @echo off
-REM Quick start script for Project Configuration Tool (Windows)
+REM Quick start script for Sturgis Project (Windows)
 
 echo ========================================
-echo Project Configuration Tool - Docker Setup
+echo Sturgis Project - Docker Setup
 echo ========================================
 echo.
 
@@ -80,7 +80,7 @@ if %errorlevel% equ 0 (
 
 echo.
 echo ========================================
-echo Project Configuration Tool is running!
+echo Sturgis Project is running!
 echo ========================================
 echo.
 echo Access the application at:

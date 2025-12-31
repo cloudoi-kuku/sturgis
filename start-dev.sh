@@ -1,10 +1,10 @@
 #!/bin/bash
-# Development startup script for Project Configuration Tool (Mac/Linux)
+# Development startup script for Sturgis Project (Mac/Linux)
 # Starts backend and frontend natively without Docker
 
 set -e
 
-echo "🚀 Project Configuration Tool - Development Mode"
+echo "🚀 Sturgis Project - Development Mode"
 echo "================================================"
 echo ""
 

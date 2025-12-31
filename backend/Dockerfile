@@ -1,4 +1,4 @@
-# Backend Dockerfile for Project Configuration Tool
+# Backend Dockerfile for Sturgis Project
 FROM python:3.11-slim
 
 # Set working directory

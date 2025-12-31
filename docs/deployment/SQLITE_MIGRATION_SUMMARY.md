@@ -2,7 +2,7 @@
 
 ## What Was Done
 
-Successfully migrated the Project Configuration Tool from JSON file-based storage to SQLite database for proper multi-project support and data persistence.
+Successfully migrated the Sturgis Project from JSON file-based storage to SQLite database for proper multi-project support and data persistence.
 
 ## Changes Made
 

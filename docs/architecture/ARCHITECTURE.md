@@ -1,8 +1,8 @@
-# Architecture Documentation - Project Configuration Tool
+# Architecture Documentation - Sturgis Project
 
 ## System Overview
 
-The Project Configuration Tool is a modern web-based application that allows users to visually edit Microsoft Project XML files through an interactive Gantt chart interface.
+The Sturgis Project is a modern web-based application that allows users to visually edit Microsoft Project XML files through an interactive Gantt chart interface.
 
 ## Architecture Diagram
 

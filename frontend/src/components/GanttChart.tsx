@@ -741,13 +741,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         {/* Task List */}
         <div className="gantt-task-list">
           <div className="gantt-header">
-            <div className="gantt-header-cell">#</div>
-            <div className="gantt-header-cell">WBS Code</div>
-            <div className="gantt-header-cell">Task Name</div>
-            <div className="gantt-header-cell">Start Date</div>
-            <div className="gantt-header-cell">Duration</div>
-            <div className="gantt-header-cell">Finish Date</div>
-            <div className="gantt-header-cell">Predecessors</div>
+            <div className="gantt-header-cell" title="Row Number">#</div>
+            <div className="gantt-header-cell" title="Work Breakdown Structure">WBS</div>
+            <div className="gantt-header-cell" title="Task Name">Task Name</div>
+            <div className="gantt-header-cell" title="Start Date">Start</div>
+            <div className="gantt-header-cell" title="Duration in Days">Duration</div>
+            <div className="gantt-header-cell" title="Finish Date">Finish</div>
+            <div className="gantt-header-cell" title="Predecessor Tasks">Predecessors</div>
           </div>
           <div className="gantt-tasks" ref={taskListRef} onScroll={handleTaskListScroll}>
             {visibleTasks.map((task, index) => {
@@ -768,7 +768,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     {rowNumber}
                   </div>
                   <div className="gantt-task-wbs">{task.outline_number}</div>
-                  <div className="gantt-task-name" style={{ paddingLeft: getTaskIndent(task.outline_level) }}>
+                  <div className="gantt-task-name" style={{ paddingLeft: getTaskIndent(task.outline_level) }} title={task.name}>
                     {task.summary ? (
                       <button
                         className="expand-button"
@@ -872,7 +872,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               top: 0,
               left: 0,
               width: `${timelineConfig.width}px`,
-              height: `${visibleTasks.length * 48}px`,
+              height: `${visibleTasks.length * 44}px`,
               pointerEvents: 'none',
               zIndex: 5,
               overflow: 'visible'
@@ -929,10 +929,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
                   // Calculate bar positions
                   const predEndX = ((predTaskPos.startDay + predTaskPos.duration) / maxDay) * timelineConfig.width;
-                  const predY = (predTaskIndex * 48) + 24; // Center of predecessor row
+                  const predY = (predTaskIndex * 44) + 22; // Center of predecessor row
 
                   const taskStartX = (startDay / maxDay) * timelineConfig.width;
-                  const taskY = (taskIndex * 48) + 24; // Center of successor row
+                  const taskY = (taskIndex * 44) + 22; // Center of successor row
 
                   // Routing parameters
                   const exitGap = 4;      // Gap when leaving predecessor bar

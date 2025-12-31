@@ -1,4 +1,4 @@
-# Project Configuration Tool - Web Edition
+# Sturgis Project - Web Edition
 
 A modern web-based tool for configuring and managing Microsoft Project XML files with an interactive Gantt chart visualization.
 

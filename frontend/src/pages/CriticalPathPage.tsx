@@ -4,6 +4,7 @@ import type { Task } from '../api/client';
 import { Printer, FileText, Table as TableIcon, BarChart3, Network, ArrowLeft } from 'lucide-react';
 import { parseISO, addDays, format } from 'date-fns';
 import './CriticalPathPage.css';
+import '../ui-overrides.css';
 
 interface CriticalPathPageProps {
   criticalTasks: Task[];

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, X, Trash2, Loader } from 'lucide-react';
 import './AIChat.css';
+import '../ui-overrides.css';
 
 interface Message {
   role: 'user' | 'assistant';

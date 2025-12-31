@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Task, TaskCreate, TaskUpdate, Predecessor } from '../api/client';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, X } from 'lucide-react';
 import { AITaskHelper } from './AITaskHelper';
 
 interface TaskEditorProps {
@@ -17,14 +17,14 @@ const durationToDays = (duration: string): number => {
   const match = duration.match(/PT(\d+)H/);
   if (match) {
     const hours = parseInt(match[1]);
-    return hours / 8; // Assuming 8-hour workday
+    return hours / 8;
   }
   return 1;
 };
 
 // Helper function to convert days to ISO 8601 duration
 const daysToDuration = (days: number): string => {
-  const hours = days * 8; // Assuming 8-hour workday
+  const hours = days * 8;
   return `PT${hours}H0M0S`;
 };
 
@@ -48,7 +48,6 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
 
   const [durationDays, setDurationDays] = useState<number>(1);
 
-  // Check if this task is a summary task (has children)
   const isSummaryTask = (outlineNumber: string): boolean => {
     return existingTasks.some(t =>
       t.outline_number.startsWith(outlineNumber + '.') &&
@@ -113,9 +112,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
 
   const handleDelete = () => {
     if (!task || !onDelete) return;
-
     const confirmMessage = `Are you sure you want to delete task "${task.name}" (${task.outline_number})?\n\nThis action cannot be undone.`;
-
     if (window.confirm(confirmMessage)) {
       onDelete(task.id);
       onClose();
@@ -124,264 +121,378 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
 
   if (!isOpen) return null;
 
+  // Styles - using inline styles for better control
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: 500,
+    color: '#334155',
+    marginBottom: '12px'
+  };
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    height: '48px',
+    padding: '0 16px',
+    fontSize: '14px',
+    color: '#0f172a',
+    backgroundColor: '#fff',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    outline: 'none'
+  };
+  const inputDisabledStyle: React.CSSProperties = {
+    ...inputStyle,
+    color: '#64748b',
+    backgroundColor: '#f1f5f9',
+    cursor: 'not-allowed'
+  };
+  const helperStyle: React.CSSProperties = {
+    fontSize: '12px',
+    color: '#64748b',
+    marginTop: '8px'
+  };
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{task ? 'Edit Task' : 'Create Task'}</h2>
-          <button className="close-button" onClick={onClose}>
-            <X size={20} />
-          </button>
+    <>
+      {/* Overlay */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 999
+        }}
+      />
+      {/* Modal */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 'calc(100% - 40px)',
+          maxWidth: '720px',
+          maxHeight: '85vh',
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          zIndex: 1000,
+          border: '4px solid red'
+        }}
+      >
+        {/* Close Button */}
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            right: '16px',
+            top: '16px',
+            padding: '8px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            color: '#64748b',
+            zIndex: 10
+          }}
+        >
+          <X size={20} />
+        </button>
+
+        {/* Header */}
+        <div style={{ padding: '24px 32px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#0f172a', margin: 0 }}>
+            {task ? 'Edit Task' : 'Create New Task'}
+          </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="task-form">
-          {isCurrentTaskSummary && (
-            <div className="summary-task-notice">
-              <strong>⚠️ Summary Task:</strong> This task has child tasks. Duration and dates are automatically calculated from children. Predecessors should be added to child tasks.
-            </div>
-          )}
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          {/* Scrollable Content */}
+          <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '28px', overflowY: 'auto', flex: 1 }}>
+            {/* Summary Task Warning */}
+            {isCurrentTaskSummary && (
+              <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '16px' }}>
+                <p style={{ fontSize: '14px', color: '#92400e', margin: 0 }}>
+                  <strong>⚠️ Summary Task:</strong> Duration and dates are auto-calculated from child tasks.
+                </p>
+              </div>
+            )}
 
-          <div className="form-group">
-            <label>Task Name *</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-          </div>
-
-          {/* AI Task Helper - Smart Duration & Category Suggestions */}
-          {!isCurrentTaskSummary && !formData.milestone && (
-            <AITaskHelper
-              taskName={formData.name}
-              onDurationSuggest={(days) => {
-                setDurationDays(days);
-                setFormData({ ...formData, duration: daysToDuration(days) });
-              }}
-            />
-          )}
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Outline Number *</label>
+            {/* Task Name */}
+            <div>
+              <label htmlFor="taskName" style={labelStyle}>
+                Task Name <span style={{ color: '#ef4444' }}>*</span>
+              </label>
               <input
+                id="taskName"
                 type="text"
-                value={formData.outline_number}
-                onChange={(e) => setFormData({ ...formData, outline_number: e.target.value })}
-                placeholder="e.g., 1.2.3"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                disabled={!!task}
+                placeholder="Enter task name"
+                style={inputStyle}
               />
-              <small className="field-hint">Cannot be changed after creation</small>
             </div>
 
-            <div className="form-group">
-              <label>Duration (days)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.5"
-                value={durationDays}
-                onChange={(e) => {
-                  const days = parseFloat(e.target.value) || 0;
+            {/* AI Helper */}
+            {!isCurrentTaskSummary && !formData.milestone && (
+              <AITaskHelper
+                taskName={formData.name}
+                onDurationSuggest={(days) => {
                   setDurationDays(days);
                   setFormData({ ...formData, duration: daysToDuration(days) });
                 }}
-                placeholder="1"
-                disabled={formData.milestone || isCurrentTaskSummary}
               />
-              <small className="field-hint">
-                {isCurrentTaskSummary
-                  ? 'Auto-calculated from child tasks'
-                  : '1 day = 8 hours. Use 0.5 for half day, 5 for a week, etc.'}
-              </small>
-            </div>
-          </div>
+            )}
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>Custom Value</label>
-              <input
-                type="text"
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Percent Complete (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="1"
-                value={formData.percent_complete || 0}
-                onChange={(e) => {
-                  const pct = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
-                  setFormData({ ...formData, percent_complete: pct });
-                }}
-                placeholder="0"
-              />
-              <small className="field-hint">0 = Not started, 100 = Complete</small>
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group checkbox-group">
-              <label>
+            {/* Row: Outline Number & Duration */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+              <div>
+                <label htmlFor="outlineNumber" style={labelStyle}>
+                  Outline Number <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <input
-                  type="checkbox"
-                  checked={formData.milestone}
-                  disabled={isCurrentTaskSummary}
-                  onChange={(e) => {
-                    const isMilestone = e.target.checked;
-                    if (isMilestone) {
-                      setDurationDays(0);
-                      setFormData({ ...formData, milestone: isMilestone, duration: 'PT0H0M0S' });
-                    } else {
-                      setDurationDays(1);
-                      setFormData({ ...formData, milestone: isMilestone, duration: 'PT8H0M0S' });
-                    }
-                  }}
+                  id="outlineNumber"
+                  type="text"
+                  value={formData.outline_number}
+                  onChange={(e) => setFormData({ ...formData, outline_number: e.target.value })}
+                  placeholder="e.g., 1.2.3"
+                  required
+                  disabled={!!task}
+                  style={task ? inputDisabledStyle : inputStyle}
                 />
+                <p style={helperStyle}>Cannot be changed after creation</p>
+              </div>
+
+              <div>
+                <label htmlFor="duration" style={labelStyle}>Duration (days)</label>
+                <input
+                  id="duration"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={durationDays}
+                  onChange={(e) => {
+                    const days = parseFloat(e.target.value) || 0;
+                    setDurationDays(days);
+                    setFormData({ ...formData, duration: daysToDuration(days) });
+                  }}
+                  placeholder="1"
+                  disabled={formData.milestone || isCurrentTaskSummary}
+                  style={(formData.milestone || isCurrentTaskSummary) ? inputDisabledStyle : inputStyle}
+                />
+                <p style={helperStyle}>
+                  {isCurrentTaskSummary ? 'Auto-calculated' : '1 day = 8 hours'}
+                </p>
+              </div>
+            </div>
+
+            {/* Row: Custom Value & Percent Complete */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+              <div>
+                <label htmlFor="customValue" style={labelStyle}>Custom Value</label>
+                <input
+                  id="customValue"
+                  type="text"
+                  value={formData.value}
+                  onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                  placeholder="Optional"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="percentComplete" style={labelStyle}>Percent Complete (%)</label>
+                <input
+                  id="percentComplete"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.percent_complete || 0}
+                  onChange={(e) => {
+                    const pct = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                    setFormData({ ...formData, percent_complete: pct });
+                  }}
+                  placeholder="0"
+                  style={inputStyle}
+                />
+                <p style={helperStyle}>0 = Not started, 100 = Complete</p>
+              </div>
+            </div>
+
+            {/* Milestone Checkbox */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <input
+                id="milestone"
+                type="checkbox"
+                checked={formData.milestone}
+                disabled={isCurrentTaskSummary}
+                onChange={(e) => {
+                  const isMilestone = e.target.checked;
+                  if (isMilestone) {
+                    setDurationDays(0);
+                    setFormData({ ...formData, milestone: isMilestone, duration: 'PT0H0M0S' });
+                  } else {
+                    setDurationDays(1);
+                    setFormData({ ...formData, milestone: isMilestone, duration: 'PT8H0M0S' });
+                  }
+                }}
+                style={{ width: '18px', height: '18px' }}
+              />
+              <label htmlFor="milestone" style={{ fontSize: '14px', fontWeight: 500, color: '#334155', cursor: 'pointer' }}>
                 Milestone (zero duration)
               </label>
             </div>
-          </div>
 
-          {!isCurrentTaskSummary && (
-            <div className="form-group">
-              <div className="predecessors-header">
-                <label>Predecessors</label>
-                <button type="button" className="add-button" onClick={addPredecessor}>
-                  <Plus size={16} /> Add Predecessor
-                </button>
-              </div>
-
-              {formData.predecessors?.map((pred, index) => (
-                <div key={index} className="predecessor-row">
-                  <select
-                    value={pred.outline_number}
-                    onChange={(e) => updatePredecessor(index, 'outline_number', e.target.value)}
-                  >
-                    <option value="">Select task...</option>
-                    {existingTasks.map((t) => (
-                      <option key={t.id} value={t.outline_number}>
-                        {t.outline_number} - {t.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    value={pred.type}
-                    onChange={(e) => updatePredecessor(index, 'type', parseInt(e.target.value))}
-                  >
-                    <option value={1}>Finish-to-Start (FS) - Default</option>
-                    <option value={0}>Finish-to-Finish (FF)</option>
-                    <option value={2}>Start-to-Finish (SF)</option>
-                    <option value={3}>Start-to-Start (SS)</option>
-                  </select>
-
-                  <div className="lag-input-group">
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={(() => {
-                        // Convert lag to days based on lag_format for display
-                        const lagFormat = pred.lag_format || 7;
-                        const lagValue = pred.lag || 0;
-                        switch (lagFormat) {
-                          case 3: // Minutes
-                            return lagValue / 480;
-                          case 4: // Elapsed minutes
-                            return lagValue / 1440;
-                          case 5: // Hours
-                            return lagValue / 8;
-                          case 6: // Elapsed hours
-                            return lagValue / 24;
-                          case 7: // Days
-                            return lagValue;
-                          case 8: // Elapsed days
-                            return lagValue;
-                          case 9: // Weeks
-                            return lagValue * 5;
-                          case 10: // Elapsed weeks
-                            return lagValue * 7;
-                          case 11: // Months
-                            return lagValue * 20;
-                          case 12: // Elapsed months
-                            return lagValue * 30;
-                          default:
-                            return lagValue / 480;
-                        }
-                      })()}
-                      onChange={(e) => {
-                        // Convert days back to the original lag_format
-                        const days = parseFloat(e.target.value) || 0;
-                        const lagFormat = pred.lag_format || 7;
-                        let lagValue = 0;
-
-                        switch (lagFormat) {
-                          case 3: lagValue = days * 480; break;
-                          case 4: lagValue = days * 1440; break;
-                          case 5: lagValue = days * 8; break;
-                          case 6: lagValue = days * 24; break;
-                          case 7: lagValue = days; break;
-                          case 8: lagValue = days; break;
-                          case 9: lagValue = days / 5; break;
-                          case 10: lagValue = days / 7; break;
-                          case 11: lagValue = days / 20; break;
-                          case 12: lagValue = days / 30; break;
-                          default: lagValue = days * 480; break;
-                        }
-
-                        updatePredecessor(index, 'lag', lagValue);
-                      }}
-                      placeholder="0"
-                      className="lag-input"
-                    />
-                    <span className="lag-unit">days</span>
-                  </div>
-
+            {/* Predecessors Section */}
+            {!isCurrentTaskSummary && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ ...labelStyle, marginBottom: 0 }}>Predecessors</span>
                   <button
                     type="button"
-                    className="remove-button"
-                    onClick={() => removePredecessor(index)}
+                    onClick={addPredecessor}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 500, color: '#4f46e5', backgroundColor: 'transparent', border: '1px solid #c7d2fe', borderRadius: '8px', cursor: 'pointer' }}
                   >
-                    <Trash2 size={16} />
+                    <Plus size={16} />
+                    Add Predecessor
                   </button>
                 </div>
-              ))}
-            </div>
-          )}
 
-          <div className="modal-footer">
-            <div className="modal-footer-left">
+                {formData.predecessors?.map((pred, index) => (
+                  <div key={index} style={{ padding: '24px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Task</label>
+                        <select
+                          value={pred.outline_number}
+                          onChange={(e) => updatePredecessor(index, 'outline_number', e.target.value)}
+                          style={{ ...inputStyle, height: '48px' }}
+                        >
+                          <option value="">Select...</option>
+                          {existingTasks.map((t) => (
+                            <option key={t.id} value={t.outline_number}>
+                              {t.outline_number} - {t.name.slice(0, 25)}{t.name.length > 25 ? '...' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Type</label>
+                        <select
+                          value={pred.type}
+                          onChange={(e) => updatePredecessor(index, 'type', parseInt(e.target.value))}
+                          style={{ ...inputStyle, height: '48px' }}
+                        >
+                          <option value={1}>Finish-to-Start (FS)</option>
+                          <option value={0}>Finish-to-Finish (FF)</option>
+                          <option value={2}>Start-to-Finish (SF)</option>
+                          <option value={3}>Start-to-Start (SS)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Lag (days)</label>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={(() => {
+                              const lagFormat = pred.lag_format || 7;
+                              const lagValue = pred.lag || 0;
+                              switch (lagFormat) {
+                                case 3: return lagValue / 480;
+                                case 4: return lagValue / 1440;
+                                case 5: return lagValue / 8;
+                                case 6: return lagValue / 24;
+                                case 7: return lagValue;
+                                case 8: return lagValue;
+                                case 9: return lagValue * 5;
+                                case 10: return lagValue * 7;
+                                case 11: return lagValue * 20;
+                                case 12: return lagValue * 30;
+                                default: return lagValue / 480;
+                              }
+                            })()}
+                            onChange={(e) => {
+                              const days = parseFloat(e.target.value) || 0;
+                              const lagFormat = pred.lag_format || 7;
+                              let lagValue;
+                              switch (lagFormat) {
+                                case 3: lagValue = days * 480; break;
+                                case 4: lagValue = days * 1440; break;
+                                case 5: lagValue = days * 8; break;
+                                case 6: lagValue = days * 24; break;
+                                case 7: lagValue = days; break;
+                                case 8: lagValue = days; break;
+                                case 9: lagValue = days / 5; break;
+                                case 10: lagValue = days / 7; break;
+                                case 11: lagValue = days / 20; break;
+                                case 12: lagValue = days / 30; break;
+                                default: lagValue = days * 480; break;
+                              }
+                              updatePredecessor(index, 'lag', Math.round(lagValue * 100) / 100);
+                            }}
+                            placeholder="0"
+                            style={{ ...inputStyle, height: '48px', flex: 1 }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removePredecessor(index)}
+                            style={{ height: '48px', width: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', backgroundColor: 'transparent', border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer' }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Footer - Fixed at Bottom */}
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 32px', backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+            <div>
               {task && onDelete && (
                 <button
                   type="button"
-                  className="delete-button"
                   onClick={handleDelete}
-                  title="Delete this task"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '14px', fontWeight: 500, color: '#dc2626', backgroundColor: 'transparent', border: '1px solid #fecaca', borderRadius: '8px', cursor: 'pointer' }}
                 >
-                  <Trash2 size={16} />
+                  <Trash2 className="h-4 w-4" />
                   Delete Task
                 </button>
               )}
             </div>
-            <div className="modal-footer-right">
-              <button type="button" className="cancel-button" onClick={onClose}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{ padding: '12px 24px', fontSize: '14px', fontWeight: 500, color: '#334155', backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer' }}
+              >
                 Cancel
               </button>
-              <button type="submit" className="save-button">
-                {task ? 'Update' : 'Create'} Task
+              <button
+                type="submit"
+                style={{ padding: '12px 32px', fontSize: '14px', fontWeight: 500, color: '#fff', backgroundColor: '#4f46e5', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+              >
+                {task ? 'Save Changes' : 'Create Task'}
               </button>
             </div>
           </div>
         </form>
       </div>
-    </div>
+    </>
   );
 };
-

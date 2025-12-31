@@ -1,11 +1,11 @@
-# Makefile for Project Configuration Tool
+# Makefile for Sturgis Project
 # Simplifies Docker commands for development and deployment
 
 .PHONY: help build up down restart logs clean test backup restore
 
 # Default target
 help:
-	@echo "Project Configuration Tool - Docker Commands"
+	@echo "Sturgis Project - Docker Commands"
 	@echo ""
 	@echo "Development:"
 	@echo "  make build          - Build Docker images"

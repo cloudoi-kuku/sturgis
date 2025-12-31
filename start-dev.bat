@@ -1,11 +1,11 @@
 @echo off
-REM Development startup script for Project Configuration Tool (Windows)
+REM Development startup script for Sturgis Project (Windows)
 REM Starts backend and frontend natively without Docker
 
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo Project Configuration Tool - Development Mode
+echo Sturgis Project - Development Mode
 echo ========================================
 echo.
 

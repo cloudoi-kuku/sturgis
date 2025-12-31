@@ -1,6 +1,6 @@
 # 🚀 Docker Deployment Checklist
 
-Use this checklist to ensure successful deployment of the Project Configuration Tool.
+Use this checklist to ensure successful deployment of the Sturgis Project.
 
 ---
 
