@@ -4,6 +4,7 @@ Handles multi-project persistence with proper isolation
 """
 import sqlite3
 import json
+import os
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -11,10 +12,17 @@ import uuid
 from contextlib import contextmanager
 
 
+# Get data directory from environment variable (for persistent storage in Azure)
+DATA_DIR = os.getenv("DATA_PATH", "project_data")
+
+
 class DatabaseService:
     """SQLite database service for project management"""
-    
-    def __init__(self, db_path: str = "project_data/projects.db"):
+
+    def __init__(self, db_path: str = None):
+        # Use provided path or default to DATA_DIR/projects.db
+        if db_path is None:
+            db_path = os.path.join(DATA_DIR, "projects.db")
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.init_database()
