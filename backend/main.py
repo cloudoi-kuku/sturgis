@@ -65,11 +65,19 @@ atexit.register(shutdown_azure_storage)
 async def lifespan(app: FastAPI):
     """Application lifespan handler for startup/shutdown events"""
     # Startup: Azure storage already initialized above
+    # Load saved project on startup (must be done here, not with @app.on_event which is deprecated with lifespan)
+    load_project_on_startup()
     print("Application startup complete")
     yield
     # Shutdown: Perform final backup
     print("Application shutting down...")
     shutdown_azure_storage()
+
+
+def load_project_on_startup():
+    """Load saved project on server startup - called from lifespan handler"""
+    # load_project_from_db is defined later but this function is called at runtime
+    load_project_from_db()
 
 
 app = FastAPI(
@@ -233,11 +241,8 @@ def load_project_from_db(project_id: Optional[str] = None):
     return False
 
 
-# Load project on startup
-@app.on_event("startup")
-async def startup_event():
-    """Load saved project on server startup"""
-    load_project_from_db()
+# NOTE: Project loading moved to lifespan handler (load_project_on_startup)
+# @app.on_event is deprecated when using lifespan
 
 
 # Health check endpoint
@@ -703,12 +708,158 @@ async def categorize_task(request: TaskCategorizationRequest):
         raise HTTPException(status_code=500, detail=f"Task categorization failed: {str(e)}")
 
 
+# ============================================================================
+# AI CHAT HELPER FUNCTIONS
+# ============================================================================
+
+async def _handle_suggestion_request(message: str, project: Dict, project_id: str) -> Dict:
+    """Handle requests for project suggestions/analysis via chat"""
+    tasks = project.get("tasks", [])
+    suggestions = []
+
+    message_lower = message.lower()
+
+    # Determine what type of suggestions to provide
+    check_sequence = any(w in message_lower for w in ['sequence', 'order', 'reorder'])
+    check_deps = any(w in message_lower for w in ['dependency', 'dependencies', 'predecessor'])
+    check_all = not check_sequence and not check_deps  # Default to all if not specific
+
+    work_tasks = [t for t in tasks if not t.get("summary") and not t.get("milestone")]
+
+    # Check for sequence issues
+    if check_all or check_sequence:
+        for i, task in enumerate(work_tasks):
+            if i == 0:
+                continue
+            category = ai_project_editor._detect_construction_category(task["name"])
+            order = ai_project_editor.construction_sequence.get(category, 99)
+
+            prev_task = work_tasks[i-1]
+            prev_category = ai_project_editor._detect_construction_category(prev_task["name"])
+            prev_order = ai_project_editor.construction_sequence.get(prev_category, 99)
+
+            # Skip general category
+            if category == 'general' or prev_category == 'general':
+                continue
+
+            if order < prev_order - 1:
+                suggestions.append({
+                    "type": "sequence",
+                    "issue": f"'{prev_task['name']}' ({prev_category}) appears before '{task['name']}' ({category})",
+                    "command": f"move task {prev_task['outline_number']} after {task['outline_number']}",
+                    "reason": f"{category} work typically comes before {prev_category}"
+                })
+
+    # Check for missing dependencies
+    if check_all or check_deps:
+        for task in work_tasks:
+            has_predecessors = len(task.get("predecessors", [])) > 0
+            category = ai_project_editor._detect_construction_category(task["name"])
+            order = ai_project_editor.construction_sequence.get(category, 99)
+
+            if not has_predecessors and order > 3 and category != 'general':
+                suggestions.append({
+                    "type": "dependency",
+                    "issue": f"'{task['name']}' has no predecessors but is not an early-phase task",
+                    "command": f"Consider adding a predecessor to task {task['outline_number']}",
+                    "reason": f"{category} tasks typically depend on earlier work"
+                })
+
+    # Format response
+    if not suggestions:
+        response = "✅ **Project looks good!** No obvious sequence or dependency issues found.\n\n"
+        response += "You can ask me to:\n"
+        response += "• Move tasks: `move task 1.2 after 1.3`\n"
+        response += "• Insert tasks: `insert task 'Site Prep' after 1.1`\n"
+        response += "• Delete tasks: `delete task 1.4`\n"
+        response += "• Merge tasks: `merge tasks 1.2 and 1.3`"
+    else:
+        response = f"📋 **Found {len(suggestions)} potential improvement(s):**\n\n"
+        for i, s in enumerate(suggestions[:10], 1):  # Limit to 10
+            response += f"**{i}. {s['type'].title()} Issue**\n"
+            response += f"   {s['issue']}\n"
+            response += f"   💡 Command: `{s['command']}`\n\n"
+
+        if len(suggestions) > 10:
+            response += f"_...and {len(suggestions) - 10} more issues_\n\n"
+
+        response += "To apply a fix, just type the command (e.g., `move task 1.2 after 1.3`)"
+
+    return {
+        "response": response,
+        "command_executed": False,
+        "suggestions": suggestions[:10]
+    }
+
+
+async def _handle_editor_command(command: Dict, project: Dict, project_id: str, request_project_id: Optional[str]) -> Dict:
+    """Handle project editor commands (move, insert, delete, etc.) via chat"""
+    global current_project
+
+    result = ai_project_editor.execute_command(command, project)
+
+    if result["success"]:
+        # Update project with changes
+        updated_project = result["project"]
+
+        # Save to database
+        if request_project_id:
+            for task in updated_project.get("tasks", []):
+                db.update_task(task["id"], task)
+        else:
+            # Update current project in memory
+            current_project = updated_project
+            save_project_to_db()
+
+        # Format response
+        response = f"✅ {result['message']}\n\n"
+
+        if result["changes"]:
+            response += "**Changes made:**\n"
+            for change in result["changes"][:5]:
+                change_type = change.get("type", "update")
+                if change_type == "move":
+                    response += f"• Moved '{change.get('task_name', 'task')}': {change.get('old_outline')} → {change.get('new_outline')}\n"
+                elif change_type == "insert":
+                    response += f"• Inserted '{change.get('task_name')}' at {change.get('outline_number')}\n"
+                elif change_type == "delete":
+                    response += f"• Deleted '{change.get('task_name')}' ({change.get('outline_number')})\n"
+                elif change_type == "merge":
+                    response += f"• Merged into '{change.get('merged_name')}'\n"
+                elif change_type == "split":
+                    response += f"• Split '{change.get('original_task')}' into {change.get('num_parts')} parts\n"
+                elif change_type == "reorder":
+                    response += f"• Reordered '{change.get('task_name')}': {change.get('old_outline')} → {change.get('new_outline')}\n"
+                else:
+                    response += f"• {change}\n"
+
+            if len(result["changes"]) > 5:
+                response += f"• _...and {len(result['changes']) - 5} more changes_\n"
+
+        return {
+            "response": response.strip(),
+            "command_executed": True,
+            "changes": result["changes"]
+        }
+    else:
+        return {
+            "response": f"❌ {result['message']}\n\nTry commands like:\n• `move task 1.2 after 1.3`\n• `move task 1.2 under 2`\n• `delete task 1.4`",
+            "command_executed": False,
+            "error": result["message"]
+        }
+
+
 @app.post("/api/ai/chat")
 async def chat_with_ai(request: ChatRequest):
     """
     Conversational AI chat for construction project assistance with command execution
     Can answer questions AND modify tasks/project based on natural language commands
     Returns AI response as text, plus any modifications made
+
+    Supports:
+    - Basic commands: set duration, set lag, set start date, etc.
+    - Project editing: move task, insert task, delete task, merge tasks, etc.
+    - Suggestions: "suggest improvements", "what's out of sequence?", etc.
 
     If project_id is provided, uses that specific project.
     Otherwise, uses the currently active project.
@@ -734,7 +885,21 @@ async def chat_with_ai(request: ChatRequest):
                 }
                 target_project_id = request.project_id
 
-        # First, check if the message contains a command
+        message_lower = request.message.lower().strip()
+
+        # Check for suggestion requests
+        if target_project and any(phrase in message_lower for phrase in [
+            'suggest', 'improvement', 'what should', 'out of sequence',
+            'analyze', 'review', 'check for issues', 'find problems'
+        ]):
+            return await _handle_suggestion_request(request.message, target_project, target_project_id)
+
+        # Check for project editor commands (move, insert, delete, merge, split, etc.)
+        editor_command = ai_project_editor.parse_command(request.message)
+        if editor_command and target_project:
+            return await _handle_editor_command(editor_command, target_project, target_project_id, request.project_id)
+
+        # Check for basic commands (duration, lag, start date, etc.)
         command = ai_command_handler.parse_command(request.message)
 
         if command and target_project:
@@ -1461,16 +1626,23 @@ async def get_ai_suggestions(request: AISuggestionRequest):
                     prev_category = ai_project_editor._detect_construction_category(prev_task["name"])
                     prev_order = ai_project_editor.construction_sequence.get(prev_category, 99)
 
+                    # Skip if either task is 'general' (unknown category) - we can't reliably sequence them
+                    if category == 'general' or prev_category == 'general':
+                        continue
+
+                    # If current task should come BEFORE previous task in construction sequence
                     if order < prev_order - 1:  # Significantly out of order
                         suggestion_id += 1
+                        # Suggest moving the PREVIOUS task later (after current), not current earlier
+                        # Because the current task is correctly positioned, it's the previous that's wrong
                         suggestions.append(AISuggestion(
                             id=f"seq_{suggestion_id}",
                             type="sequence",
                             priority="high",
-                            title=f"Reorder '{task['name'][:30]}...'",
-                            description=f"Task '{task['name']}' ({category}) appears to be out of construction sequence. It should come before '{prev_task['name']}' ({prev_category}).",
-                            command=f"move task {task['outline_number']} before {prev_task['outline_number']}",
-                            affected_tasks=[task["outline_number"], prev_task["outline_number"]],
+                            title=f"Reorder '{prev_task['name'][:30]}...'",
+                            description=f"Task '{prev_task['name']}' ({prev_category}) appears to be out of construction sequence. It should come after '{task['name']}' ({category}).",
+                            command=f"move task {prev_task['outline_number']} after {task['outline_number']}",
+                            affected_tasks=[prev_task["outline_number"], task["outline_number"]],
                             estimated_improvement="Better construction sequence flow"
                         ))
 
