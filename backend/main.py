@@ -47,10 +47,36 @@ from validator import ProjectValidator
 from ai_service import ai_service
 from ai_command_handler import ai_command_handler
 from ai_project_editor import ai_project_editor, project_template_learner
-from database import DatabaseService
+from database import DatabaseService, DATA_DIR
 from auth import router as auth_router
+from azure_storage import init_azure_storage, shutdown_azure_storage, get_azure_storage
+from contextlib import asynccontextmanager
+import atexit
 
-app = FastAPI(title="MS Project Configuration API", version="1.0.0")
+# Initialize Azure Storage BEFORE creating the database service
+# This ensures the database is restored from blob storage on startup
+_azure_storage = init_azure_storage(os.path.join(DATA_DIR, "projects.db"))
+
+# Register shutdown handler for final backup
+atexit.register(shutdown_azure_storage)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler for startup/shutdown events"""
+    # Startup: Azure storage already initialized above
+    print("Application startup complete")
+    yield
+    # Shutdown: Perform final backup
+    print("Application shutting down...")
+    shutdown_azure_storage()
+
+
+app = FastAPI(
+    title="MS Project Configuration API",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 # Include authentication router
 app.include_router(auth_router)
@@ -80,6 +106,49 @@ STORAGE_DIR.mkdir(exist_ok=True)
 async def health_check():
     """Health check endpoint for container orchestration"""
     return {"status": "healthy", "service": "sturgis-project"}
+
+
+# Azure Storage status and backup endpoints
+@app.get("/api/storage/status")
+async def get_storage_status():
+    """Get Azure Storage service status"""
+    storage = get_azure_storage()
+    return storage.get_status()
+
+
+@app.post("/api/storage/backup")
+async def trigger_backup():
+    """Manually trigger a backup to Azure Blob Storage"""
+    storage = get_azure_storage()
+    if not storage.enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Azure Storage is not enabled. Set AZURE_STORAGE_CONNECTION_STRING environment variable."
+        )
+
+    success = storage.backup_to_azure(force=True)
+    if success:
+        return {"success": True, "message": "Database backed up to Azure Blob Storage"}
+    else:
+        raise HTTPException(status_code=500, detail="Backup failed")
+
+
+@app.post("/api/storage/restore")
+async def trigger_restore():
+    """Manually trigger a restore from Azure Blob Storage"""
+    storage = get_azure_storage()
+    if not storage.enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Azure Storage is not enabled. Set AZURE_STORAGE_CONNECTION_STRING environment variable."
+        )
+
+    success = storage.restore_from_azure()
+    if success:
+        return {"success": True, "message": "Database restored from Azure Blob Storage. Restart the application to reload data."}
+    else:
+        raise HTTPException(status_code=404, detail="No backup found in Azure Blob Storage")
+
 
 # Initialize database service
 db = DatabaseService()

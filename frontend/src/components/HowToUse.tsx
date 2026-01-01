@@ -87,6 +87,27 @@ export function HowToUse({ isOpen, onClose }: HowToUseProps) {
           </section>
 
           <section className="guide-section">
+            <h3>🔒 Task Constraints</h3>
+            <div className="step">
+              <div className="step-icon">
+                <Settings size={20} />
+              </div>
+              <div className="step-content">
+                <h4>Setting Task Constraints</h4>
+                <p>In the task editor, use the <strong>"Task Constraint"</strong> section to control when tasks can start or finish. These constraints are fully compatible with MS Project.</p>
+                <ul>
+                  <li><strong>As Soon As Possible (ASAP):</strong> Default - schedule task as early as possible</li>
+                  <li><strong>As Late As Possible (ALAP):</strong> Schedule task as late as possible without delaying successors</li>
+                  <li><strong>Must Start/Finish On:</strong> Task must start or finish exactly on the specified date</li>
+                  <li><strong>Start/Finish No Earlier Than:</strong> Task cannot start or finish before the specified date</li>
+                  <li><strong>Start/Finish No Later Than:</strong> Task must start or finish by the specified date</li>
+                </ul>
+                <p className="tip">💡 <strong>Tip:</strong> Use constraints to enforce external deadlines, permit requirements, or material delivery dates.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="guide-section">
             <h3>🤖 AI-Powered Features</h3>
             
             <div className="step">
