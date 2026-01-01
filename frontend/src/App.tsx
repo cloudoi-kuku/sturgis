@@ -5,7 +5,6 @@ import { TaskEditor } from './components/TaskEditor';
 import { ProjectMetadataEditor } from './components/ProjectMetadataEditor';
 import { ProjectManager } from './components/ProjectManager';
 import { AIChat } from './components/AIChat';
-import { AIProjectEditor } from './components/AIProjectEditor';
 import { CalendarManager } from './components/CalendarManager';
 import { BaselineManager } from './components/BaselineManager';
 import { HowToUse } from './components/HowToUse';
@@ -30,7 +29,7 @@ import type {
   TaskCreate,
   TaskUpdate,
 } from './api/client';
-import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle, Save, Cloud, LogOut, User, ChevronDown, Wand2 } from 'lucide-react';
+import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle, Save, Cloud, LogOut, User, ChevronDown } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { parseISO, addDays, differenceInDays, format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
@@ -54,7 +53,6 @@ function AppContent() {
   const [isBaselineManagerOpen, setIsBaselineManagerOpen] = useState(false);
   const [isHowToUseOpen, setIsHowToUseOpen] = useState(false);
   const [isDropboxSettingsOpen, setIsDropboxSettingsOpen] = useState(false);
-  const [isAIEditorOpen, setIsAIEditorOpen] = useState(false);
   const [isSavingToDropbox, setIsSavingToDropbox] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
@@ -507,6 +505,7 @@ function AppContent() {
     // Build task map for quick lookup
     const taskMap = new Map(tasks.map(t => [t.outline_number, t]));
     const taskDates = new Map<string, Date>();
+    const computing = new Set<string>(); // Track tasks being computed to detect circular deps
     const startDate = parseISO(metadata.start_date);
 
     // Calculate start dates for all tasks (considering predecessors)
@@ -515,8 +514,17 @@ function AppContent() {
         return taskDates.get(task.id)!;
       }
 
+      // Detect circular dependency - if we're already computing this task, break the cycle
+      if (computing.has(task.id)) {
+        console.warn(`Circular dependency detected for task: ${task.name} (${task.outline_number})`);
+        return startDate; // Break cycle by returning project start date
+      }
+
+      computing.add(task.id);
+
       if (!task.predecessors || task.predecessors.length === 0) {
         taskDates.set(task.id, startDate);
+        computing.delete(task.id);
         return startDate;
       }
 
@@ -536,6 +544,7 @@ function AppContent() {
       }
 
       taskDates.set(task.id, latestEnd);
+      computing.delete(task.id);
       return latestEnd;
     };
 
@@ -623,15 +632,6 @@ function AppContent() {
               >
                 <MessageCircle className="h-4 w-4" />
                 AI Chat
-              </button>
-
-              <button
-                onClick={() => setIsAIEditorOpen(true)}
-                title="AI Project Editor"
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-all shadow-md"
-              >
-                <Wand2 className="h-4 w-4" />
-                AI Editor
               </button>
 
               <button
@@ -924,16 +924,6 @@ function AppContent() {
       <CloudStorageSettings
         isOpen={isDropboxSettingsOpen}
         onClose={() => setIsDropboxSettingsOpen(false)}
-      />
-
-      <AIProjectEditor
-        isOpen={isAIEditorOpen}
-        onClose={() => setIsAIEditorOpen(false)}
-        projectId={metadata?.project_id}
-        onProjectUpdated={() => {
-          queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
-          queryClientInstance.invalidateQueries({ queryKey: ['metadata'] });
-        }}
       />
     </div>
   );

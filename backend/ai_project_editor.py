@@ -25,10 +25,10 @@ class AIProjectEditor:
         self.command_patterns = {
             # Move task commands
             'move_task': [
-                r'move\s+task\s+([0-9.]+)\s+(?:to\s+)?(?:under|into|beneath)\s+(?:task\s+)?([0-9.]+)',
-                r'move\s+([0-9.]+)\s+(?:to\s+)?after\s+([0-9.]+)',
-                r'move\s+([0-9.]+)\s+(?:to\s+)?before\s+([0-9.]+)',
-                r'relocate\s+task\s+([0-9.]+)\s+to\s+(?:phase\s+)?([0-9.]+)',
+                r'move\s+(?:task\s+)?([0-9.]+)\s+(?:to\s+)?(?:under|into|beneath)\s+(?:task\s+)?([0-9.]+)',
+                r'move\s+(?:task\s+)?([0-9.]+)\s+(?:to\s+)?after\s+(?:task\s+)?([0-9.]+)',
+                r'move\s+(?:task\s+)?([0-9.]+)\s+(?:to\s+)?before\s+(?:task\s+)?([0-9.]+)',
+                r'relocate\s+(?:task\s+)?([0-9.]+)\s+to\s+(?:phase\s+)?([0-9.]+)',
             ],
             # Insert task commands
             'insert_task': [
@@ -122,12 +122,19 @@ class AIProjectEditor:
         groups = match.groups()
 
         if action == 'move_task':
+            msg_lower = original_message.lower()
+            if "under" in msg_lower or "into" in msg_lower or "beneath" in msg_lower:
+                position = "under"
+            elif "before" in msg_lower:
+                position = "before"
+            else:
+                position = "after"
             return {
                 "action": "move_task",
                 "params": {
                     "source_outline": groups[0],
                     "target_outline": groups[1],
-                    "position": "under" if "under" in original_message.lower() else "after"
+                    "position": position
                 }
             }
 
@@ -323,6 +330,27 @@ class AIProjectEditor:
             ]
             next_child_num = len(existing_children) + 1
             new_base_outline = f"{target}.{next_child_num}"
+        elif position == "before":
+            # Move before target (take target's position, shift target down)
+            new_level = target_task["outline_level"]
+            new_base_outline = target  # Take the target's position
+            # Shift the target and siblings after it
+            parts = target.split(".")
+            target_num = int(parts[-1])
+            parent = ".".join(parts[:-1]) if len(parts) > 1 else ""
+
+            for task in remaining_tasks:
+                task_parts = task["outline_number"].split(".")
+                task_parent = ".".join(task_parts[:-1]) if len(task_parts) > 1 else ""
+                if task_parent == parent and len(task_parts) == len(parts):
+                    task_num = int(task_parts[-1])
+                    if task_num >= target_num:
+                        # Shift this task down by 1
+                        new_num = task_num + 1
+                        if parent:
+                            task["outline_number"] = f"{parent}.{new_num}"
+                        else:
+                            task["outline_number"] = str(new_num)
         else:
             # Move after target (same level)
             new_level = target_task["outline_level"]
