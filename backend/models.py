@@ -1,6 +1,19 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from enum import IntEnum
+
+
+class ConstraintType(IntEnum):
+    """MS Project compatible task constraint types"""
+    AS_SOON_AS_POSSIBLE = 0      # Default - schedule task as early as possible
+    AS_LATE_AS_POSSIBLE = 1      # Schedule task as late as possible
+    MUST_START_ON = 2            # Task must start on the constraint date
+    MUST_FINISH_ON = 3           # Task must finish on the constraint date
+    START_NO_EARLIER_THAN = 4    # Task cannot start before the constraint date
+    START_NO_LATER_THAN = 5      # Task must start by the constraint date
+    FINISH_NO_EARLIER_THAN = 6   # Task cannot finish before the constraint date
+    FINISH_NO_LATER_THAN = 7     # Task must finish by the constraint date
 
 
 class Predecessor(BaseModel):
@@ -37,6 +50,11 @@ class TaskBase(BaseModel):
     milestone: bool = Field(default=False, description="Whether this is a milestone")
     percent_complete: int = Field(default=0, ge=0, le=100, description="Percent complete (0-100)")
     predecessors: List[Predecessor] = Field(default_factory=list, description="List of predecessor tasks")
+    # Task Constraints (MS Project compatible)
+    # 0=As Soon As Possible, 1=As Late As Possible, 2=Must Start On, 3=Must Finish On,
+    # 4=Start No Earlier Than, 5=Start No Later Than, 6=Finish No Earlier Than, 7=Finish No Later Than
+    constraint_type: int = Field(default=0, ge=0, le=7, description="Task constraint type (0-7)")
+    constraint_date: Optional[str] = Field(default=None, description="Constraint date in ISO 8601 format (required for types 2-7)")
 
 
 class TaskCreate(TaskBase):
@@ -53,6 +71,8 @@ class TaskUpdate(BaseModel):
     milestone: Optional[bool] = None
     percent_complete: Optional[int] = Field(default=None, ge=0, le=100)
     predecessors: Optional[List[Predecessor]] = None
+    constraint_type: Optional[int] = Field(default=None, ge=0, le=7)
+    constraint_date: Optional[str] = None
 
 
 class Task(TaskBase):
