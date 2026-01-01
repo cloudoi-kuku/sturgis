@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Task, TaskCreate, TaskUpdate, Predecessor } from '../api/client';
-import { Plus, Trash2, X } from 'lucide-react';
+import { ConstraintType, CONSTRAINT_TYPE_LABELS } from '../api/client';
+import { Plus, Trash2, X, Lock } from 'lucide-react';
 import { AITaskHelper } from './AITaskHelper';
 
 interface TaskEditorProps {
@@ -44,6 +45,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     milestone: false,
     percent_complete: 0,
     predecessors: [],
+    constraint_type: ConstraintType.AS_SOON_AS_POSSIBLE,
+    constraint_date: undefined,
   });
 
   const [durationDays, setDurationDays] = useState<number>(1);
@@ -67,6 +70,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         milestone: task.milestone,
         percent_complete: task.percent_complete,
         predecessors: task.predecessors,
+        constraint_type: task.constraint_type ?? ConstraintType.AS_SOON_AS_POSSIBLE,
+        constraint_date: task.constraint_date,
       });
       setDurationDays(durationToDays(task.duration));
     } else {
@@ -78,6 +83,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         milestone: false,
         percent_complete: 0,
         predecessors: [],
+        constraint_type: ConstraintType.AS_SOON_AS_POSSIBLE,
+        constraint_date: undefined,
       });
       setDurationDays(1);
     }
@@ -183,7 +190,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
           flexDirection: 'column',
           overflow: 'hidden',
           zIndex: 1000,
-          border: '4px solid red'
+          border: '1px solid #e2e8f0'
         }}
       >
         {/* Close Button */}
@@ -351,6 +358,73 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                 Milestone (zero duration)
               </label>
             </div>
+
+            {/* Task Constraints Section */}
+            {!isCurrentTaskSummary && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Lock size={16} style={{ color: '#64748b' }} />
+                  <span style={{ ...labelStyle, marginBottom: 0 }}>Task Constraint</span>
+                </div>
+
+                <div style={{ padding: '24px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: formData.constraint_type !== undefined && formData.constraint_type >= 2 ? '1fr 1fr' : '1fr', gap: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Constraint Type</label>
+                      <select
+                        value={formData.constraint_type ?? ConstraintType.AS_SOON_AS_POSSIBLE}
+                        onChange={(e) => {
+                          const newType = parseInt(e.target.value);
+                          // Clear constraint_date if switching to ASAP or ALAP
+                          if (newType < 2) {
+                            setFormData({ ...formData, constraint_type: newType, constraint_date: undefined });
+                          } else {
+                            setFormData({ ...formData, constraint_type: newType });
+                          }
+                        }}
+                        style={{ ...inputStyle, height: '48px' }}
+                      >
+                        {Object.entries(CONSTRAINT_TYPE_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                      <p style={helperStyle}>
+                        {formData.constraint_type === ConstraintType.AS_SOON_AS_POSSIBLE && 'Default: Schedule task as early as possible'}
+                        {formData.constraint_type === ConstraintType.AS_LATE_AS_POSSIBLE && 'Schedule task as late as possible without delaying successors'}
+                        {formData.constraint_type === ConstraintType.MUST_START_ON && 'Task must start exactly on the specified date'}
+                        {formData.constraint_type === ConstraintType.MUST_FINISH_ON && 'Task must finish exactly on the specified date'}
+                        {formData.constraint_type === ConstraintType.START_NO_EARLIER_THAN && 'Task cannot start before the specified date'}
+                        {formData.constraint_type === ConstraintType.START_NO_LATER_THAN && 'Task must start by the specified date'}
+                        {formData.constraint_type === ConstraintType.FINISH_NO_EARLIER_THAN && 'Task cannot finish before the specified date'}
+                        {formData.constraint_type === ConstraintType.FINISH_NO_LATER_THAN && 'Task must finish by the specified date'}
+                      </p>
+                    </div>
+
+                    {/* Show date picker for constraint types 2-7 */}
+                    {formData.constraint_type !== undefined && formData.constraint_type >= 2 && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>
+                          Constraint Date <span style={{ color: '#ef4444' }}>*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.constraint_date ? formData.constraint_date.split('T')[0] : ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value) {
+                              setFormData({ ...formData, constraint_date: value + 'T08:00:00' });
+                            }
+                          }}
+                          required={formData.constraint_type >= 2}
+                          style={{ ...inputStyle, height: '48px' }}
+                        />
+                        <p style={helperStyle}>Required for this constraint type</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Predecessors Section */}
             {!isCurrentTaskSummary && (

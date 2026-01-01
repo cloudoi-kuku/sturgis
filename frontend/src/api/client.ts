@@ -113,6 +113,31 @@ export type TaskBaseline = {
   interim?: boolean;
 }
 
+// MS Project compatible constraint types
+export const ConstraintType = {
+  AS_SOON_AS_POSSIBLE: 0,      // Default - schedule task as early as possible
+  AS_LATE_AS_POSSIBLE: 1,      // Schedule task as late as possible
+  MUST_START_ON: 2,            // Task must start on the constraint date
+  MUST_FINISH_ON: 3,           // Task must finish on the constraint date
+  START_NO_EARLIER_THAN: 4,    // Task cannot start before the constraint date
+  START_NO_LATER_THAN: 5,      // Task must start by the constraint date
+  FINISH_NO_EARLIER_THAN: 6,   // Task cannot finish before the constraint date
+  FINISH_NO_LATER_THAN: 7,     // Task must finish by the constraint date
+} as const;
+
+export type ConstraintTypeValue = typeof ConstraintType[keyof typeof ConstraintType];
+
+export const CONSTRAINT_TYPE_LABELS: Record<number, string> = {
+  [ConstraintType.AS_SOON_AS_POSSIBLE]: 'As Soon As Possible',
+  [ConstraintType.AS_LATE_AS_POSSIBLE]: 'As Late As Possible',
+  [ConstraintType.MUST_START_ON]: 'Must Start On',
+  [ConstraintType.MUST_FINISH_ON]: 'Must Finish On',
+  [ConstraintType.START_NO_EARLIER_THAN]: 'Start No Earlier Than',
+  [ConstraintType.START_NO_LATER_THAN]: 'Start No Later Than',
+  [ConstraintType.FINISH_NO_EARLIER_THAN]: 'Finish No Earlier Than',
+  [ConstraintType.FINISH_NO_LATER_THAN]: 'Finish No Later Than',
+};
+
 export type Task = {
   id: string;
   uid: string;
@@ -127,6 +152,9 @@ export type Task = {
   predecessors: Predecessor[];
   start_date?: string;
   finish_date?: string;
+  // MS Project Task Constraints
+  constraint_type?: number;  // 0-7 (see ConstraintType enum)
+  constraint_date?: string;  // ISO 8601 date (required for types 2-7)
   // MS Project Baselines (up to 11: 0-10)
   baselines?: TaskBaseline[];
   // Critical Path Method fields (populated by /api/critical-path)
@@ -146,6 +174,8 @@ export type TaskCreate = {
   milestone?: boolean;
   percent_complete?: number;
   predecessors?: Predecessor[];
+  constraint_type?: number;  // 0-7 (see ConstraintType enum)
+  constraint_date?: string;  // ISO 8601 date (required for types 2-7)
 }
 
 export type TaskUpdate = {
@@ -156,6 +186,8 @@ export type TaskUpdate = {
   milestone?: boolean;
   percent_complete?: number;
   predecessors?: Predecessor[];
+  constraint_type?: number;  // 0-7 (see ConstraintType enum)
+  constraint_date?: string;  // ISO 8601 date (required for types 2-7)
 }
 
 export type ProjectMetadata = {
