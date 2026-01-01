@@ -143,3 +143,217 @@ export function getCategoryIcon(category: string): string {
   return icons[category] || '📌';
 }
 
+// ============================================================================
+// AI PROJECT EDITOR TYPES & FUNCTIONS
+// ============================================================================
+
+export interface AIEditChange {
+  type: string;
+  task_name?: string;
+  old_outline?: string;
+  new_outline?: string;
+  description: string;
+}
+
+export interface AIEditResult {
+  success: boolean;
+  message: string;
+  command_type?: string;
+  changes: AIEditChange[];
+  tasks_affected: number;
+}
+
+export interface AISuggestion {
+  id: string;
+  type: string;
+  priority: 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  command: string;
+  affected_tasks: string[];
+  estimated_improvement: string;
+}
+
+export interface AISuggestionsResult {
+  success: boolean;
+  suggestions: AISuggestion[];
+  project_analyzed: string;
+  total_tasks: number;
+}
+
+export interface LearnedTemplate {
+  project_type: string;
+  common_phases: string[];
+  common_tasks: Array<{ name: string; frequency: number; avg_duration_hours: number }>;
+  common_milestones: string[];
+  duration_norms: Record<string, { avg_hours: number; sample_count: number }>;
+  projects_analyzed: number;
+}
+
+/**
+ * Execute an AI project editing command
+ * Supports: move, insert, delete, merge, split, sequence, reorganize
+ */
+export async function executeAIEditCommand(
+  command: string,
+  projectId?: string
+): Promise<AIEditResult> {
+  const response = await fetch(`${API_BASE}/ai/edit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      command,
+      project_id: projectId
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'AI edit command failed');
+  }
+
+  return response.json();
+}
+
+/**
+ * Get AI suggestions for improving project structure
+ */
+export async function getAISuggestions(
+  suggestionType: 'all' | 'reorganize' | 'dependencies' | 'sequence' | 'phases' = 'all',
+  projectId?: string
+): Promise<AISuggestionsResult> {
+  const response = await fetch(`${API_BASE}/ai/suggest`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      suggestion_type: suggestionType,
+      project_id: projectId
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error('AI suggestions failed');
+  }
+
+  return response.json();
+}
+
+/**
+ * Apply a specific AI suggestion
+ */
+export async function applyAISuggestion(
+  suggestionId: string,
+  command: string,
+  projectId?: string
+): Promise<AIEditResult> {
+  const response = await fetch(`${API_BASE}/ai/apply-suggestion`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      suggestion_id: suggestionId,
+      command,
+      project_id: projectId
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error('Apply suggestion failed');
+  }
+
+  return response.json();
+}
+
+/**
+ * Learn patterns from existing projects
+ */
+export async function learnFromProjects(
+  projectIds?: string[],
+  maxProjects: number = 10
+): Promise<LearnedTemplate> {
+  const response = await fetch(`${API_BASE}/ai/learn-template`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      project_ids: projectIds,
+      max_projects: maxProjects
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error('Template learning failed');
+  }
+
+  return response.json();
+}
+
+/**
+ * Auto-reorganize entire project
+ */
+export async function autoReorganizeProject(projectId?: string): Promise<AIEditResult> {
+  const response = await fetch(`${API_BASE}/ai/auto-reorganize`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ project_id: projectId })
+  });
+
+  if (!response.ok) {
+    throw new Error('Auto-reorganize failed');
+  }
+
+  return response.json();
+}
+
+/**
+ * Generate project from learned templates
+ */
+export async function generateFromTemplate(
+  description: string,
+  projectType: string = 'commercial',
+  useLearnedPatterns: boolean = true
+): Promise<{
+  success: boolean;
+  project_id: string;
+  project_name: string;
+  task_count: number;
+  learned_from: number;
+  message: string;
+}> {
+  const response = await fetch(
+    `${API_BASE}/ai/generate-from-template?description=${encodeURIComponent(description)}&project_type=${projectType}&use_learned_patterns=${useLearnedPatterns}`,
+    { method: 'POST' }
+  );
+
+  if (!response.ok) {
+    throw new Error('Template-based generation failed');
+  }
+
+  return response.json();
+}
+
+/**
+ * Get priority badge color
+ */
+export function getPriorityColor(priority: string): string {
+  const colors: Record<string, string> = {
+    high: '#ef4444',    // Red
+    medium: '#f59e0b',  // Amber
+    low: '#10b981'      // Green
+  };
+  return colors[priority] || '#6b7280';
+}
+
+/**
+ * Get suggestion type icon
+ */
+export function getSuggestionIcon(type: string): string {
+  const icons: Record<string, string> = {
+    sequence: '🔄',
+    dependency: '🔗',
+    reorganize: '📊',
+    merge: '🔀',
+    split: '✂️',
+    phase: '📁'
+  };
+  return icons[type] || '💡';
+}
+

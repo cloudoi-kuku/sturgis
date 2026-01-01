@@ -240,3 +240,86 @@ class ProjectBaselinesResponse(BaseModel):
     """Response with all project baseline information"""
     baselines: List[BaselineInfo] = Field(default_factory=list, description="List of baselines in the project")
     total_tasks: int = Field(default=0, description="Total number of tasks in project")
+
+
+# ============================================================================
+# AI PROJECT EDITOR MODELS
+# ============================================================================
+
+class AIEditCommandRequest(BaseModel):
+    """Request to execute an AI project editing command"""
+    command: str = Field(..., description="Natural language command to execute (e.g., 'move task 1.3 under phase 2')")
+    project_id: Optional[str] = Field(default=None, description="Optional project ID. Uses current project if not specified.")
+
+
+class AIEditChange(BaseModel):
+    """Represents a single change made by the AI editor"""
+    type: str = Field(..., description="Type of change: move, insert, delete, merge, split, reorder, etc.")
+    task_name: Optional[str] = Field(default=None, description="Name of affected task")
+    old_outline: Optional[str] = Field(default=None, description="Original outline number")
+    new_outline: Optional[str] = Field(default=None, description="New outline number")
+    description: str = Field(default="", description="Human-readable description of the change")
+
+
+class AIEditResult(BaseModel):
+    """Result of an AI project editing command"""
+    success: bool = Field(..., description="Whether the command succeeded")
+    message: str = Field(..., description="Result message")
+    command_type: Optional[str] = Field(default=None, description="Type of command executed")
+    changes: List[AIEditChange] = Field(default_factory=list, description="List of changes made")
+    tasks_affected: int = Field(default=0, description="Number of tasks affected")
+
+
+class AISuggestionRequest(BaseModel):
+    """Request for AI to suggest project improvements"""
+    suggestion_type: str = Field(
+        default="all",
+        description="Type of suggestions: 'all', 'reorganize', 'dependencies', 'sequence', 'phases'"
+    )
+    project_id: Optional[str] = Field(default=None, description="Optional project ID. Uses current project if not specified.")
+
+
+class AISuggestion(BaseModel):
+    """A single AI suggestion for project improvement"""
+    id: str = Field(..., description="Unique suggestion ID")
+    type: str = Field(..., description="Type: reorganize, dependency, sequence, phase, merge, split")
+    priority: str = Field(default="medium", description="Priority: high, medium, low")
+    title: str = Field(..., description="Short title of the suggestion")
+    description: str = Field(..., description="Detailed description of what would change")
+    command: str = Field(..., description="Command that would implement this suggestion")
+    affected_tasks: List[str] = Field(default_factory=list, description="Outline numbers of affected tasks")
+    estimated_improvement: str = Field(default="", description="Expected improvement (e.g., 'Better task flow')")
+
+
+class AISuggestionsResult(BaseModel):
+    """Result containing AI suggestions for project improvement"""
+    success: bool = Field(..., description="Whether suggestion generation succeeded")
+    suggestions: List[AISuggestion] = Field(default_factory=list, description="List of suggestions")
+    project_analyzed: str = Field(default="", description="Name of the project analyzed")
+    total_tasks: int = Field(default=0, description="Total tasks in the project")
+
+
+class TemplateLearnRequest(BaseModel):
+    """Request to learn patterns from existing projects"""
+    project_ids: Optional[List[str]] = Field(
+        default=None,
+        description="List of project IDs to learn from. If None, uses all available projects."
+    )
+    max_projects: int = Field(default=10, description="Maximum number of projects to analyze")
+
+
+class LearnedTemplate(BaseModel):
+    """Learned template data from projects"""
+    project_type: str = Field(..., description="Detected project type")
+    common_phases: List[str] = Field(default_factory=list, description="Most common phase names")
+    common_tasks: List[Dict[str, Any]] = Field(default_factory=list, description="Common task patterns with durations")
+    common_milestones: List[str] = Field(default_factory=list, description="Common milestone names")
+    duration_norms: Dict[str, Any] = Field(default_factory=dict, description="Duration norms by category")
+    projects_analyzed: int = Field(default=0, description="Number of projects used for learning")
+
+
+class ApplySuggestionRequest(BaseModel):
+    """Request to apply a specific AI suggestion"""
+    suggestion_id: str = Field(..., description="ID of the suggestion to apply")
+    command: str = Field(..., description="Command to execute")
+    project_id: Optional[str] = Field(default=None, description="Optional project ID. Uses current project if not specified.")

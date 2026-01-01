@@ -22,7 +22,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: `Hi! I'm your construction project AI assistant${projectId ? ' for this project' : ''}. I can help you:\n\n🏗️ **Generate entire projects from scratch:**\nJust describe what you want to build! For example:\n• 'Create a 3-bedroom residential home with 2-car garage and full basement'\n• 'Generate a 10,000 sq ft office building renovation with new HVAC'\n• 'Build a 20,000 sq ft warehouse with loading docks and office space'\n\nI'll create a complete project with 30-50 tasks, realistic durations, dependencies, and milestones!\n\n✨ **Modify existing projects:**\n• 'Change task 1.2 duration to 10 days'\n• 'Set lag for task 2.3 to 5 days'\n• 'Set project start date to 2024-01-15'\n• 'Add 10% buffer to all tasks'\n\n💡 **Answer questions:**\n• 'What's the critical path?'\n• 'How long will this project take?'\n• 'What tasks depend on task 1.5?'\n\nWhat would you like to do?`,
+      content: `Hi! I'm your construction project AI assistant${projectId ? ' for this project' : ''}. I can help you:\n\n🏗️ **Generate entire projects from scratch:**\nJust describe what you want to build! For example:\n• 'Create a 3-bedroom residential home with 2-car garage and full basement'\n• 'Generate a 10,000 sq ft office building renovation with new HVAC'\n• 'Build a 20,000 sq ft warehouse with loading docks and office space'\n\nI'll create a complete project with 30-50 tasks, realistic durations, dependencies, and milestones!\n\n✨ **Modify existing projects:**\n• 'Change task 1.2 duration to 10 days'\n• 'Set lag for task 2.3 to 5 days'\n• 'Set project start date to 2024-01-15'\n• 'Add 10% buffer to all tasks'\n• 'Set task 1.4 constraint to Must Start On 2024-02-15'\n• 'Change task 2.1 to Start No Earlier Than 2024-03-01'\n\n📅 **Task Constraints (NEW!):**\nNow supporting full MS Project-compatible task constraints:\n• As Soon/Late As Possible (ASAP/ALAP)\n• Must Start/Finish On specific dates\n• Start/Finish No Earlier/Later Than dates\n• Helps enforce project milestones and external dependencies\n\n💡 **Answer questions:**\n• 'What's the critical path?'\n• 'How long will this project take?'\n• 'What tasks depend on task 1.5?'\n• 'Which tasks have constraints?'\n\nWhat would you like to do?`,
       timestamp: new Date()
     }
   ]);
@@ -148,7 +148,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
         <div className="ai-chat-header">
           <div className="ai-chat-title">
             <span className="ai-chat-icon">🤖</span>
-            <h3>AI Project Assistant</h3>
+            <h3>SturgisAI Assistant</h3>
           </div>
           <div className="ai-chat-actions">
             <button

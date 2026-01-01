@@ -152,6 +152,22 @@ The tool validates:
 - ✅ Predecessor existence
 - ✅ Circular dependency detection
 - ✅ Milestone duration constraints
+- ✅ Task constraint types (0-7) and required constraint dates
+
+## Task Constraints
+
+Full MS Project-compatible task constraints are supported:
+
+- **0 - As Soon As Possible (ASAP)**: Default - schedule task as early as possible
+- **1 - As Late As Possible (ALAP)**: Schedule task as late as possible without delaying successors
+- **2 - Must Start On**: Task must start exactly on the specified date
+- **3 - Must Finish On**: Task must finish exactly on the specified date
+- **4 - Start No Earlier Than**: Task cannot start before the specified date
+- **5 - Start No Later Than**: Task must start by the specified date
+- **6 - Finish No Earlier Than**: Task cannot finish before the specified date
+- **7 - Finish No Later Than**: Task must finish by the specified date
+
+Constraints types 2-7 require a constraint date. Use these to enforce external deadlines, permit requirements, or material delivery schedules.
 
 ## API Documentation
 
