@@ -80,9 +80,21 @@ class DatabaseService:
                     actual_finish TEXT,
                     actual_duration TEXT,
                     create_date TEXT,
+                    constraint_type INTEGER DEFAULT 0,
+                    constraint_date TEXT,
                     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
                 )
             """)
+
+            # Add constraint columns to existing tables (migration)
+            try:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN constraint_type INTEGER DEFAULT 0")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            try:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN constraint_date TEXT")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
             
             # Predecessors table
             cursor.execute("""
@@ -350,8 +362,9 @@ class DatabaseService:
                 INSERT INTO tasks (
                     id, project_id, uid, name, outline_number, outline_level,
                     duration, value, milestone, summary, percent_complete,
-                    start_date, finish_date, actual_start, actual_finish, actual_duration, create_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    start_date, finish_date, actual_start, actual_finish, actual_duration, create_date,
+                    constraint_type, constraint_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 task_id, project_id, task_data.get('uid', task_id),
                 task_data['name'], task_data['outline_number'], task_data.get('outline_level', 1),
@@ -361,7 +374,8 @@ class DatabaseService:
                 task_data.get('percent_complete', 0),
                 task_data.get('start_date'), task_data.get('finish_date'),
                 task_data.get('actual_start'), task_data.get('actual_finish'),
-                task_data.get('actual_duration'), task_data.get('create_date')
+                task_data.get('actual_duration'), task_data.get('create_date'),
+                task_data.get('constraint_type', 0), task_data.get('constraint_date')
             ))
 
             # Insert predecessors
@@ -417,6 +431,9 @@ class DatabaseService:
                 # Convert boolean fields
                 task['milestone'] = bool(task['milestone'])
                 task['summary'] = bool(task['summary'])
+                # Ensure constraint fields have defaults
+                task['constraint_type'] = task.get('constraint_type', 0) or 0
+                task['constraint_date'] = task.get('constraint_date')
 
                 # Get predecessors for this task
                 cursor.execute("""
@@ -458,6 +475,9 @@ class DatabaseService:
                 task = dict(row)
                 task['milestone'] = bool(task['milestone'])
                 task['summary'] = bool(task['summary'])
+                # Ensure constraint fields have defaults
+                task['constraint_type'] = task.get('constraint_type', 0) or 0
+                task['constraint_date'] = task.get('constraint_date')
 
                 # Get predecessors
                 cursor.execute("""
@@ -506,7 +526,8 @@ class DatabaseService:
             values = []
 
             for field in ['name', 'outline_number', 'duration', 'value', 'percent_complete',
-                         'start_date', 'finish_date', 'actual_start', 'actual_finish', 'actual_duration']:
+                         'start_date', 'finish_date', 'actual_start', 'actual_finish', 'actual_duration',
+                         'constraint_type', 'constraint_date']:
                 if field in task_data:
                     update_fields.append(f"{field} = ?")
                     values.append(task_data[field])
@@ -595,8 +616,9 @@ class DatabaseService:
                     INSERT INTO tasks (
                         id, project_id, uid, name, outline_number, outline_level,
                         duration, value, milestone, summary, percent_complete,
-                        start_date, finish_date, actual_start, actual_finish, actual_duration, create_date
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        start_date, finish_date, actual_start, actual_finish, actual_duration, create_date,
+                        constraint_type, constraint_date
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     task_id, project_id, task_data.get('uid', task_id),
                     task_data['name'], task_data['outline_number'], task_data.get('outline_level', 1),
@@ -606,7 +628,8 @@ class DatabaseService:
                     task_data.get('percent_complete', 0),
                     task_data.get('start_date'), task_data.get('finish_date'),
                     task_data.get('actual_start'), task_data.get('actual_finish'),
-                    task_data.get('actual_duration'), task_data.get('create_date')
+                    task_data.get('actual_duration'), task_data.get('create_date'),
+                    task_data.get('constraint_type', 0), task_data.get('constraint_date')
                 ))
 
                 # Insert predecessors

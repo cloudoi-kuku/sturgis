@@ -210,10 +210,53 @@ Provide your estimate:"""
     # MS PROJECT CRITICAL PATH CALCULATION (CPM Algorithm)
     # ============================================================================
 
-    def _calculate_critical_path(self, tasks: list) -> dict:
+    def _parse_constraint_date_to_days(self, constraint_date: str, project_start: str = None) -> float:
+        """
+        Convert a constraint date to days from project start.
+        Returns the number of working days from project start to the constraint date.
+        """
+        if not constraint_date:
+            return 0.0
+        try:
+            from datetime import datetime
+            # Parse constraint date (ISO 8601 format)
+            if 'T' in constraint_date:
+                constraint_dt = datetime.fromisoformat(constraint_date.replace('Z', '+00:00'))
+            else:
+                constraint_dt = datetime.strptime(constraint_date[:10], '%Y-%m-%d')
+
+            # If no project start, assume constraint is absolute days from day 0
+            if not project_start:
+                # Use a reference date (Jan 1, 2024)
+                ref_date = datetime(2024, 1, 1)
+                delta = constraint_dt - ref_date
+                return delta.days
+            else:
+                if 'T' in project_start:
+                    start_dt = datetime.fromisoformat(project_start.replace('Z', '+00:00'))
+                else:
+                    start_dt = datetime.strptime(project_start[:10], '%Y-%m-%d')
+                delta = constraint_dt - start_dt
+                return delta.days
+        except Exception as e:
+            print(f"Error parsing constraint date: {e}")
+            return 0.0
+
+    def _calculate_critical_path(self, tasks: list, project_start: str = None) -> dict:
         """
         Calculate critical path using CPM (Critical Path Method).
         Implements forward pass and backward pass per MS Project standards.
+        Enforces task constraints (SNET, FNLT, MSO, MFO, etc.)
+
+        Constraint Types (MS Project compatible):
+            0 = AS_SOON_AS_POSSIBLE (default)
+            1 = AS_LATE_AS_POSSIBLE
+            2 = MUST_START_ON
+            3 = MUST_FINISH_ON
+            4 = START_NO_EARLIER_THAN
+            5 = START_NO_LATER_THAN
+            6 = FINISH_NO_EARLIER_THAN
+            7 = FINISH_NO_LATER_THAN
 
         Returns:
             dict with:
@@ -262,9 +305,9 @@ Provide your estimate:"""
                     continue
 
                 if can_process(task):
-                    # Calculate early start
+                    # Calculate early start based on predecessors
                     if not task.get("predecessors"):
-                        task["early_start"] = 0.0
+                        base_early_start = 0.0
                     else:
                         max_finish = 0.0
                         for pred in task["predecessors"]:
@@ -296,10 +339,31 @@ Provide your estimate:"""
 
                                 max_finish = max(max_finish, finish_time)
 
-                        task["early_start"] = max_finish
+                        base_early_start = max_finish
+
+                    # Apply constraint enforcement on early_start (forward pass)
+                    constraint_type = task.get("constraint_type", 0)
+                    constraint_date = task.get("constraint_date")
+                    duration_days = self._parse_duration_to_days(task.get("duration", ""))
+
+                    if constraint_type == 2:  # MUST_START_ON
+                        constraint_day = self._parse_constraint_date_to_days(constraint_date, project_start)
+                        task["early_start"] = constraint_day
+                    elif constraint_type == 3:  # MUST_FINISH_ON
+                        constraint_day = self._parse_constraint_date_to_days(constraint_date, project_start)
+                        task["early_start"] = constraint_day - duration_days
+                    elif constraint_type == 4:  # START_NO_EARLIER_THAN
+                        constraint_day = self._parse_constraint_date_to_days(constraint_date, project_start)
+                        task["early_start"] = max(base_early_start, constraint_day)
+                    elif constraint_type == 6:  # FINISH_NO_EARLIER_THAN
+                        constraint_day = self._parse_constraint_date_to_days(constraint_date, project_start)
+                        min_early_start = constraint_day - duration_days
+                        task["early_start"] = max(base_early_start, min_early_start)
+                    else:
+                        # ASAP (0), ALAP (1), SNLT (5), FNLT (7) - use calculated early start
+                        task["early_start"] = base_early_start
 
                     # Calculate early finish
-                    duration_days = self._parse_duration_to_days(task.get("duration", ""))
                     task["early_finish"] = task["early_start"] + duration_days
 
                     processed.add(task["id"])
@@ -346,10 +410,11 @@ Provide your estimate:"""
 
                 if can_process_backward(task):
                     successors = successor_map.get(task["id"], [])
+                    duration_days = self._parse_duration_to_days(task.get("duration", ""))
 
                     if not successors:
                         # No successors - use project end date
-                        task["late_finish"] = project_end
+                        base_late_finish = project_end
                     else:
                         min_start = project_end
                         for succ_info in successors:
@@ -360,20 +425,44 @@ Provide your estimate:"""
                             if dep_type == 1:  # FS (Finish-to-Start)
                                 start_time = succ_task["late_start"] - lag_days
                             elif dep_type == 3:  # SS (Start-to-Start)
-                                start_time = succ_task["late_start"] - lag_days + self._parse_duration_to_days(task.get("duration", ""))
+                                start_time = succ_task["late_start"] - lag_days + duration_days
                             elif dep_type == 0:  # FF (Finish-to-Finish)
                                 start_time = succ_task["late_finish"] - lag_days
                             elif dep_type == 2:  # SF (Start-to-Finish)
-                                start_time = succ_task["late_finish"] - lag_days + self._parse_duration_to_days(task.get("duration", ""))
+                                start_time = succ_task["late_finish"] - lag_days + duration_days
                             else:
                                 start_time = succ_task["late_start"] - lag_days
 
                             min_start = min(min_start, start_time)
 
-                        task["late_finish"] = min_start
+                        base_late_finish = min_start
+
+                    # Apply constraint enforcement on late_finish (backward pass)
+                    constraint_type = task.get("constraint_type", 0)
+                    constraint_date = task.get("constraint_date")
+
+                    if constraint_type == 2:  # MUST_START_ON
+                        constraint_day = self._parse_constraint_date_to_days(constraint_date, project_start)
+                        task["late_finish"] = constraint_day + duration_days
+                    elif constraint_type == 3:  # MUST_FINISH_ON
+                        constraint_day = self._parse_constraint_date_to_days(constraint_date, project_start)
+                        task["late_finish"] = constraint_day
+                    elif constraint_type == 5:  # START_NO_LATER_THAN
+                        constraint_day = self._parse_constraint_date_to_days(constraint_date, project_start)
+                        max_late_finish = constraint_day + duration_days
+                        task["late_finish"] = min(base_late_finish, max_late_finish)
+                    elif constraint_type == 7:  # FINISH_NO_LATER_THAN
+                        constraint_day = self._parse_constraint_date_to_days(constraint_date, project_start)
+                        task["late_finish"] = min(base_late_finish, constraint_day)
+                    elif constraint_type == 1:  # AS_LATE_AS_POSSIBLE
+                        # For ALAP, late_finish = base_late_finish (normal backward pass)
+                        # But early_start should be pushed to late_start after backward pass
+                        task["late_finish"] = base_late_finish
+                    else:
+                        # ASAP (0), SNET (4), FNET (6) - use calculated late finish
+                        task["late_finish"] = base_late_finish
 
                     # Calculate late start
-                    duration_days = self._parse_duration_to_days(task.get("duration", ""))
                     task["late_start"] = task["late_finish"] - duration_days
 
                     processed.add(task["id"])
@@ -381,6 +470,14 @@ Provide your estimate:"""
 
             if not made_progress:
                 break
+
+        # Handle ALAP (As Late As Possible) constraints
+        # For ALAP tasks, push early_start to late_start
+        for task in tasks:
+            constraint_type = task.get("constraint_type", 0)
+            if constraint_type == 1:  # AS_LATE_AS_POSSIBLE
+                task["early_start"] = task["late_start"]
+                task["early_finish"] = task["late_finish"]
 
         # Calculate Total Float and identify Critical Path
         critical_tasks = []
@@ -393,7 +490,9 @@ Provide your estimate:"""
             task_floats[task["id"]] = total_float
 
             # Critical if float is approximately zero (within 0.01 days tolerance)
-            if abs(total_float) < 0.01:
+            # Note: MUST constraints (types 2, 3) are always critical
+            constraint_type = task.get("constraint_type", 0)
+            if abs(total_float) < 0.01 or constraint_type in [2, 3]:
                 task["is_critical"] = True
                 critical_tasks.append(task)
 
