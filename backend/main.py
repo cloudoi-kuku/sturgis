@@ -65,11 +65,19 @@ atexit.register(shutdown_azure_storage)
 async def lifespan(app: FastAPI):
     """Application lifespan handler for startup/shutdown events"""
     # Startup: Azure storage already initialized above
+    # Load saved project on startup (must be done here, not with @app.on_event which is deprecated with lifespan)
+    load_project_on_startup()
     print("Application startup complete")
     yield
     # Shutdown: Perform final backup
     print("Application shutting down...")
     shutdown_azure_storage()
+
+
+def load_project_on_startup():
+    """Load saved project on server startup - called from lifespan handler"""
+    # load_project_from_db is defined later but this function is called at runtime
+    load_project_from_db()
 
 
 app = FastAPI(
@@ -233,11 +241,8 @@ def load_project_from_db(project_id: Optional[str] = None):
     return False
 
 
-# Load project on startup
-@app.on_event("startup")
-async def startup_event():
-    """Load saved project on server startup"""
-    load_project_from_db()
+# NOTE: Project loading moved to lifespan handler (load_project_on_startup)
+# @app.on_event is deprecated when using lifespan
 
 
 # Health check endpoint
