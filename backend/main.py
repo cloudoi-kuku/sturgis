@@ -31,16 +31,60 @@ from models import (
     SetBaselineRequest,
     ClearBaselineRequest,
     BaselineInfo,
-    ProjectBaselinesResponse
+    ProjectBaselinesResponse,
+    # AI Project Editor models
+    AIEditCommandRequest,
+    AIEditResult,
+    AISuggestionRequest,
+    AISuggestionsResult,
+    AISuggestion,
+    TemplateLearnRequest,
+    LearnedTemplate,
+    ApplySuggestionRequest,
 )
 from xml_processor import MSProjectXMLProcessor
 from validator import ProjectValidator
 from ai_service import ai_service
 from ai_command_handler import ai_command_handler
-from database import DatabaseService
+from ai_project_editor import ai_project_editor, project_template_learner
+from database import DatabaseService, DATA_DIR
 from auth import router as auth_router
+from azure_storage import init_azure_storage, shutdown_azure_storage, get_azure_storage
+from contextlib import asynccontextmanager
+import atexit
 
-app = FastAPI(title="MS Project Configuration API", version="1.0.0")
+# Initialize Azure Storage BEFORE creating the database service
+# This ensures the database is restored from blob storage on startup
+_azure_storage = init_azure_storage(os.path.join(DATA_DIR, "projects.db"))
+
+# Register shutdown handler for final backup
+atexit.register(shutdown_azure_storage)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler for startup/shutdown events"""
+    # Startup: Azure storage already initialized above
+    # Load saved project on startup (must be done here, not with @app.on_event which is deprecated with lifespan)
+    load_project_on_startup()
+    print("Application startup complete")
+    yield
+    # Shutdown: Perform final backup
+    print("Application shutting down...")
+    shutdown_azure_storage()
+
+
+def load_project_on_startup():
+    """Load saved project on server startup - called from lifespan handler"""
+    # load_project_from_db is defined later but this function is called at runtime
+    load_project_from_db()
+
+
+app = FastAPI(
+    title="MS Project Configuration API",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 # Include authentication router
 app.include_router(auth_router)
@@ -70,6 +114,49 @@ STORAGE_DIR.mkdir(exist_ok=True)
 async def health_check():
     """Health check endpoint for container orchestration"""
     return {"status": "healthy", "service": "sturgis-project"}
+
+
+# Azure Storage status and backup endpoints
+@app.get("/api/storage/status")
+async def get_storage_status():
+    """Get Azure Storage service status"""
+    storage = get_azure_storage()
+    return storage.get_status()
+
+
+@app.post("/api/storage/backup")
+async def trigger_backup():
+    """Manually trigger a backup to Azure Blob Storage"""
+    storage = get_azure_storage()
+    if not storage.enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Azure Storage is not enabled. Set AZURE_STORAGE_CONNECTION_STRING environment variable."
+        )
+
+    success = storage.backup_to_azure(force=True)
+    if success:
+        return {"success": True, "message": "Database backed up to Azure Blob Storage"}
+    else:
+        raise HTTPException(status_code=500, detail="Backup failed")
+
+
+@app.post("/api/storage/restore")
+async def trigger_restore():
+    """Manually trigger a restore from Azure Blob Storage"""
+    storage = get_azure_storage()
+    if not storage.enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Azure Storage is not enabled. Set AZURE_STORAGE_CONNECTION_STRING environment variable."
+        )
+
+    success = storage.restore_from_azure()
+    if success:
+        return {"success": True, "message": "Database restored from Azure Blob Storage. Restart the application to reload data."}
+    else:
+        raise HTTPException(status_code=404, detail="No backup found in Azure Blob Storage")
+
 
 # Initialize database service
 db = DatabaseService()
@@ -154,11 +241,8 @@ def load_project_from_db(project_id: Optional[str] = None):
     return False
 
 
-# Load project on startup
-@app.on_event("startup")
-async def startup_event():
-    """Load saved project on server startup"""
-    load_project_from_db()
+# NOTE: Project loading moved to lifespan handler (load_project_on_startup)
+# @app.on_event is deprecated when using lifespan
 
 
 # Health check endpoint
@@ -566,12 +650,14 @@ class TaskCategorizationRequest(BaseModel):
 
 @app.get("/api/ai/health")
 async def ai_health_check():
-    """Check if local AI service (Ollama) is available"""
+    """Check if AI service is available"""
     is_healthy = await ai_service.health_check()
+    model = ai_service.azure_deployment if ai_service.use_azure else ai_service.ollama_model
+    provider = "Azure OpenAI" if ai_service.use_azure else "Ollama (Local)"
     return {
         "status": "healthy" if is_healthy else "unavailable",
-        "model": ai_service.model,
-        "provider": "Ollama (Local)"
+        "model": model,
+        "provider": provider
     }
 
 
@@ -622,12 +708,158 @@ async def categorize_task(request: TaskCategorizationRequest):
         raise HTTPException(status_code=500, detail=f"Task categorization failed: {str(e)}")
 
 
+# ============================================================================
+# AI CHAT HELPER FUNCTIONS
+# ============================================================================
+
+async def _handle_suggestion_request(message: str, project: Dict, project_id: str) -> Dict:
+    """Handle requests for project suggestions/analysis via chat"""
+    tasks = project.get("tasks", [])
+    suggestions = []
+
+    message_lower = message.lower()
+
+    # Determine what type of suggestions to provide
+    check_sequence = any(w in message_lower for w in ['sequence', 'order', 'reorder'])
+    check_deps = any(w in message_lower for w in ['dependency', 'dependencies', 'predecessor'])
+    check_all = not check_sequence and not check_deps  # Default to all if not specific
+
+    work_tasks = [t for t in tasks if not t.get("summary") and not t.get("milestone")]
+
+    # Check for sequence issues
+    if check_all or check_sequence:
+        for i, task in enumerate(work_tasks):
+            if i == 0:
+                continue
+            category = ai_project_editor._detect_construction_category(task["name"])
+            order = ai_project_editor.construction_sequence.get(category, 99)
+
+            prev_task = work_tasks[i-1]
+            prev_category = ai_project_editor._detect_construction_category(prev_task["name"])
+            prev_order = ai_project_editor.construction_sequence.get(prev_category, 99)
+
+            # Skip general category
+            if category == 'general' or prev_category == 'general':
+                continue
+
+            if order < prev_order - 1:
+                suggestions.append({
+                    "type": "sequence",
+                    "issue": f"'{prev_task['name']}' ({prev_category}) appears before '{task['name']}' ({category})",
+                    "command": f"move task {prev_task['outline_number']} after {task['outline_number']}",
+                    "reason": f"{category} work typically comes before {prev_category}"
+                })
+
+    # Check for missing dependencies
+    if check_all or check_deps:
+        for task in work_tasks:
+            has_predecessors = len(task.get("predecessors", [])) > 0
+            category = ai_project_editor._detect_construction_category(task["name"])
+            order = ai_project_editor.construction_sequence.get(category, 99)
+
+            if not has_predecessors and order > 3 and category != 'general':
+                suggestions.append({
+                    "type": "dependency",
+                    "issue": f"'{task['name']}' has no predecessors but is not an early-phase task",
+                    "command": f"Consider adding a predecessor to task {task['outline_number']}",
+                    "reason": f"{category} tasks typically depend on earlier work"
+                })
+
+    # Format response
+    if not suggestions:
+        response = "✅ **Project looks good!** No obvious sequence or dependency issues found.\n\n"
+        response += "You can ask me to:\n"
+        response += "• Move tasks: `move task 1.2 after 1.3`\n"
+        response += "• Insert tasks: `insert task 'Site Prep' after 1.1`\n"
+        response += "• Delete tasks: `delete task 1.4`\n"
+        response += "• Merge tasks: `merge tasks 1.2 and 1.3`"
+    else:
+        response = f"📋 **Found {len(suggestions)} potential improvement(s):**\n\n"
+        for i, s in enumerate(suggestions[:10], 1):  # Limit to 10
+            response += f"**{i}. {s['type'].title()} Issue**\n"
+            response += f"   {s['issue']}\n"
+            response += f"   💡 Command: `{s['command']}`\n\n"
+
+        if len(suggestions) > 10:
+            response += f"_...and {len(suggestions) - 10} more issues_\n\n"
+
+        response += "To apply a fix, just type the command (e.g., `move task 1.2 after 1.3`)"
+
+    return {
+        "response": response,
+        "command_executed": False,
+        "suggestions": suggestions[:10]
+    }
+
+
+async def _handle_editor_command(command: Dict, project: Dict, project_id: str, request_project_id: Optional[str]) -> Dict:
+    """Handle project editor commands (move, insert, delete, etc.) via chat"""
+    global current_project
+
+    result = ai_project_editor.execute_command(command, project)
+
+    if result["success"]:
+        # Update project with changes
+        updated_project = result["project"]
+
+        # Save to database
+        if request_project_id:
+            for task in updated_project.get("tasks", []):
+                db.update_task(task["id"], task)
+        else:
+            # Update current project in memory
+            current_project = updated_project
+            save_project_to_db()
+
+        # Format response
+        response = f"✅ {result['message']}\n\n"
+
+        if result["changes"]:
+            response += "**Changes made:**\n"
+            for change in result["changes"][:5]:
+                change_type = change.get("type", "update")
+                if change_type == "move":
+                    response += f"• Moved '{change.get('task_name', 'task')}': {change.get('old_outline')} → {change.get('new_outline')}\n"
+                elif change_type == "insert":
+                    response += f"• Inserted '{change.get('task_name')}' at {change.get('outline_number')}\n"
+                elif change_type == "delete":
+                    response += f"• Deleted '{change.get('task_name')}' ({change.get('outline_number')})\n"
+                elif change_type == "merge":
+                    response += f"• Merged into '{change.get('merged_name')}'\n"
+                elif change_type == "split":
+                    response += f"• Split '{change.get('original_task')}' into {change.get('num_parts')} parts\n"
+                elif change_type == "reorder":
+                    response += f"• Reordered '{change.get('task_name')}': {change.get('old_outline')} → {change.get('new_outline')}\n"
+                else:
+                    response += f"• {change}\n"
+
+            if len(result["changes"]) > 5:
+                response += f"• _...and {len(result['changes']) - 5} more changes_\n"
+
+        return {
+            "response": response.strip(),
+            "command_executed": True,
+            "changes": result["changes"]
+        }
+    else:
+        return {
+            "response": f"❌ {result['message']}\n\nTry commands like:\n• `move task 1.2 after 1.3`\n• `move task 1.2 under 2`\n• `delete task 1.4`",
+            "command_executed": False,
+            "error": result["message"]
+        }
+
+
 @app.post("/api/ai/chat")
 async def chat_with_ai(request: ChatRequest):
     """
     Conversational AI chat for construction project assistance with command execution
     Can answer questions AND modify tasks/project based on natural language commands
     Returns AI response as text, plus any modifications made
+
+    Supports:
+    - Basic commands: set duration, set lag, set start date, etc.
+    - Project editing: move task, insert task, delete task, merge tasks, etc.
+    - Suggestions: "suggest improvements", "what's out of sequence?", etc.
 
     If project_id is provided, uses that specific project.
     Otherwise, uses the currently active project.
@@ -653,7 +885,21 @@ async def chat_with_ai(request: ChatRequest):
                 }
                 target_project_id = request.project_id
 
-        # First, check if the message contains a command
+        message_lower = request.message.lower().strip()
+
+        # Check for suggestion requests
+        if target_project and any(phrase in message_lower for phrase in [
+            'suggest', 'improvement', 'what should', 'out of sequence',
+            'analyze', 'review', 'check for issues', 'find problems'
+        ]):
+            return await _handle_suggestion_request(request.message, target_project, target_project_id)
+
+        # Check for project editor commands (move, insert, delete, merge, split, etc.)
+        editor_command = ai_project_editor.parse_command(request.message)
+        if editor_command and target_project:
+            return await _handle_editor_command(editor_command, target_project, target_project_id, request.project_id)
+
+        # Check for basic commands (duration, lag, start date, etc.)
         command = ai_command_handler.parse_command(request.message)
 
         if command and target_project:
@@ -1187,6 +1433,514 @@ async def clear_baseline(request: ClearBaselineRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to clear baseline: {str(e)}")
+
+
+# ============================================================================
+# AI PROJECT EDITOR ENDPOINTS
+# ============================================================================
+
+@app.post("/api/ai/edit", response_model=AIEditResult)
+async def execute_ai_edit_command(request: AIEditCommandRequest):
+    """
+    Execute an AI project editing command using natural language.
+
+    Supported commands:
+    - Move task: "move task 1.3 under phase 2", "move task 1.2 after 2.1"
+    - Insert task: "insert task 'Electrical rough-in' after 2.3"
+    - Delete task: "delete task 1.4"
+    - Merge tasks: "merge tasks 1.2 and 1.3"
+    - Split task: "split task 1.2 into 3 parts"
+    - Auto-sequence: "sequence all tasks", "reorganize project"
+    - Reorganize phase: "reorganize phase 2"
+    - Update dependencies: "update all dependencies"
+    - Create phase: "create phase 'Interior Work' after 2"
+
+    Returns the changes made and updates the project in database.
+    """
+    global current_project, current_project_id
+
+    try:
+        # Determine which project to use
+        target_project = current_project
+        target_project_id = current_project_id
+
+        if request.project_id:
+            project_data = db.get_project(request.project_id)
+            if project_data:
+                tasks = db.get_tasks(request.project_id)
+                target_project = {
+                    "name": project_data["name"],
+                    "start_date": project_data["start_date"],
+                    "status_date": project_data["status_date"],
+                    "tasks": tasks
+                }
+                target_project_id = request.project_id
+            else:
+                raise HTTPException(status_code=404, detail=f"Project {request.project_id} not found")
+
+        if not target_project:
+            raise HTTPException(status_code=404, detail="No project loaded")
+
+        # Parse the command
+        command = ai_project_editor.parse_command(request.command)
+
+        if not command:
+            # Try the basic command handler as fallback
+            basic_command = ai_command_handler.parse_command(request.command)
+            if basic_command:
+                result = ai_command_handler.execute_command(basic_command, target_project)
+
+                # Save changes if successful
+                if result["success"]:
+                    for task in target_project.get("tasks", []):
+                        db.update_task(task["id"], task)
+
+                    # Update in-memory if this is the current project
+                    if target_project_id == current_project_id:
+                        current_project = target_project
+
+                return AIEditResult(
+                    success=result["success"],
+                    message=result["message"],
+                    command_type=basic_command["action"],
+                    changes=[],
+                    tasks_affected=len(result.get("changes", []))
+                )
+
+            return AIEditResult(
+                success=False,
+                message=f"Could not understand command: '{request.command}'. Try commands like 'move task 1.2 under phase 2' or 'delete task 1.3'",
+                command_type=None,
+                changes=[],
+                tasks_affected=0
+            )
+
+        # Execute the command
+        result = ai_project_editor.execute_command(command, target_project)
+
+        if result["success"]:
+            # Update the project with modified tasks
+            updated_project = result.get("project", target_project)
+
+            # Save all tasks to database
+            # First, we need to handle task deletions and additions properly
+            existing_task_ids = {t["id"] for t in db.get_tasks(target_project_id)}
+            new_task_ids = {t["id"] for t in updated_project.get("tasks", [])}
+
+            # Delete removed tasks
+            for task_id in existing_task_ids - new_task_ids:
+                db.delete_task(task_id)
+
+            # Update/insert remaining tasks
+            for task in updated_project.get("tasks", []):
+                if task["id"] in existing_task_ids:
+                    db.update_task(task["id"], task)
+                else:
+                    db.create_task(target_project_id, task)
+
+            # Update in-memory state if this is the current project
+            if target_project_id == current_project_id:
+                current_project = updated_project
+                save_project_to_db()
+
+        # Convert changes to response format
+        changes = [
+            {
+                "type": c.get("type", "unknown"),
+                "task_name": c.get("task_name"),
+                "old_outline": c.get("old_outline"),
+                "new_outline": c.get("new_outline"),
+                "description": c.get("description", str(c))
+            }
+            for c in result.get("changes", [])
+        ]
+
+        return AIEditResult(
+            success=result["success"],
+            message=result["message"],
+            command_type=command["action"],
+            changes=changes,
+            tasks_affected=len(changes)
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"AI edit error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"AI edit failed: {str(e)}")
+
+
+@app.post("/api/ai/suggest", response_model=AISuggestionsResult)
+async def get_ai_suggestions(request: AISuggestionRequest):
+    """
+    Get AI-powered suggestions for improving the project structure.
+
+    Analyzes the project and returns suggestions for:
+    - Task reorganization
+    - Dependency improvements
+    - Sequence optimizations
+    - Phase restructuring
+    - Task merging/splitting opportunities
+    """
+    global current_project, current_project_id
+
+    try:
+        # Determine which project to analyze
+        target_project = current_project
+        target_project_id = current_project_id
+
+        if request.project_id:
+            project_data = db.get_project(request.project_id)
+            if project_data:
+                tasks = db.get_tasks(request.project_id)
+                target_project = {
+                    "name": project_data["name"],
+                    "start_date": project_data["start_date"],
+                    "status_date": project_data["status_date"],
+                    "tasks": tasks
+                }
+                target_project_id = request.project_id
+            else:
+                raise HTTPException(status_code=404, detail=f"Project {request.project_id} not found")
+
+        if not target_project:
+            raise HTTPException(status_code=404, detail="No project loaded")
+
+        tasks = target_project.get("tasks", [])
+        suggestions = []
+        suggestion_id = 0
+
+        # Analyze for sequence issues
+        if request.suggestion_type in ["all", "sequence"]:
+            work_tasks = [t for t in tasks if not t.get("summary") and not t.get("milestone")]
+
+            for i, task in enumerate(work_tasks):
+                category = ai_project_editor._detect_construction_category(task["name"])
+                order = ai_project_editor.construction_sequence.get(category, 99)
+
+                # Check if task is out of sequence
+                if i > 0:
+                    prev_task = work_tasks[i-1]
+                    prev_category = ai_project_editor._detect_construction_category(prev_task["name"])
+                    prev_order = ai_project_editor.construction_sequence.get(prev_category, 99)
+
+                    # Skip if either task is 'general' (unknown category) - we can't reliably sequence them
+                    if category == 'general' or prev_category == 'general':
+                        continue
+
+                    # If current task should come BEFORE previous task in construction sequence
+                    if order < prev_order - 1:  # Significantly out of order
+                        suggestion_id += 1
+                        # Suggest moving the PREVIOUS task later (after current), not current earlier
+                        # Because the current task is correctly positioned, it's the previous that's wrong
+                        suggestions.append(AISuggestion(
+                            id=f"seq_{suggestion_id}",
+                            type="sequence",
+                            priority="high",
+                            title=f"Reorder '{prev_task['name'][:30]}...'",
+                            description=f"Task '{prev_task['name']}' ({prev_category}) appears to be out of construction sequence. It should come after '{task['name']}' ({category}).",
+                            command=f"move task {prev_task['outline_number']} after {task['outline_number']}",
+                            affected_tasks=[prev_task["outline_number"], task["outline_number"]],
+                            estimated_improvement="Better construction sequence flow"
+                        ))
+
+        # Analyze for missing dependencies
+        if request.suggestion_type in ["all", "dependencies"]:
+            for task in tasks:
+                if task.get("summary") or task.get("milestone"):
+                    continue
+
+                has_predecessors = len(task.get("predecessors", [])) > 0
+                category = ai_project_editor._detect_construction_category(task["name"])
+                order = ai_project_editor.construction_sequence.get(category, 99)
+
+                # If task is not early phase and has no predecessors, suggest adding some
+                if not has_predecessors and order > 3:
+                    suggestion_id += 1
+                    suggestions.append(AISuggestion(
+                        id=f"dep_{suggestion_id}",
+                        type="dependency",
+                        priority="medium",
+                        title=f"Add predecessor to '{task['name'][:25]}...'",
+                        description=f"Task '{task['name']}' has no predecessors but is a mid/late-phase task ({category}). Consider adding logical dependencies.",
+                        command="update all dependencies",
+                        affected_tasks=[task["outline_number"]],
+                        estimated_improvement="Proper dependency chain"
+                    ))
+
+        # Analyze for phase reorganization opportunities
+        if request.suggestion_type in ["all", "phases", "reorganize"]:
+            phases = [t for t in tasks if t.get("summary") and t.get("outline_level", 0) == 1]
+
+            for phase in phases:
+                children = ai_project_editor._get_direct_children(tasks, phase["outline_number"])
+                if len(children) >= 3:
+                    # Check if children are in good order
+                    categories = [ai_project_editor._detect_construction_category(c["name"]) for c in children]
+                    orders = [ai_project_editor.construction_sequence.get(c, 99) for c in categories]
+
+                    if orders != sorted(orders):
+                        suggestion_id += 1
+                        suggestions.append(AISuggestion(
+                            id=f"phase_{suggestion_id}",
+                            type="reorganize",
+                            priority="medium",
+                            title=f"Reorganize '{phase['name'][:25]}...'",
+                            description=f"Phase '{phase['name']}' has {len(children)} tasks that could be better ordered based on construction sequence.",
+                            command=f"reorganize phase {phase['outline_number']}",
+                            affected_tasks=[c["outline_number"] for c in children],
+                            estimated_improvement="Optimized task order within phase"
+                        ))
+
+        # Analyze for merge opportunities (similar adjacent tasks)
+        if request.suggestion_type in ["all", "reorganize"]:
+            work_tasks = [t for t in tasks if not t.get("summary") and not t.get("milestone")]
+
+            for i in range(len(work_tasks) - 1):
+                task1 = work_tasks[i]
+                task2 = work_tasks[i + 1]
+
+                # Check if tasks have similar names (potential merge candidates)
+                name1_words = set(task1["name"].lower().split())
+                name2_words = set(task2["name"].lower().split())
+                overlap = name1_words & name2_words
+
+                if len(overlap) >= 2 and len(overlap) / max(len(name1_words), len(name2_words)) > 0.5:
+                    suggestion_id += 1
+                    suggestions.append(AISuggestion(
+                        id=f"merge_{suggestion_id}",
+                        type="merge",
+                        priority="low",
+                        title=f"Consider merging similar tasks",
+                        description=f"Tasks '{task1['name']}' and '{task2['name']}' appear similar and might be candidates for merging.",
+                        command=f"merge tasks {task1['outline_number']} and {task2['outline_number']}",
+                        affected_tasks=[task1["outline_number"], task2["outline_number"]],
+                        estimated_improvement="Simplified project structure"
+                    ))
+
+        # Sort suggestions by priority
+        priority_order = {"high": 0, "medium": 1, "low": 2}
+        suggestions.sort(key=lambda s: priority_order.get(s.priority, 99))
+
+        # Limit to top 20 suggestions
+        suggestions = suggestions[:20]
+
+        return AISuggestionsResult(
+            success=True,
+            suggestions=suggestions,
+            project_analyzed=target_project.get("name", "Unknown"),
+            total_tasks=len(tasks)
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"AI suggestion error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"AI suggestion failed: {str(e)}")
+
+
+@app.post("/api/ai/apply-suggestion")
+async def apply_ai_suggestion(request: ApplySuggestionRequest):
+    """
+    Apply a specific AI suggestion to the project.
+    Executes the command associated with the suggestion.
+    """
+    # Reuse the edit endpoint logic
+    edit_request = AIEditCommandRequest(
+        command=request.command,
+        project_id=request.project_id
+    )
+    return await execute_ai_edit_command(edit_request)
+
+
+@app.post("/api/ai/learn-template", response_model=LearnedTemplate)
+async def learn_from_projects(request: TemplateLearnRequest):
+    """
+    Learn patterns from existing projects to improve AI generation.
+
+    Analyzes historical projects to extract:
+    - Common phase structures
+    - Task naming patterns and typical durations
+    - Dependency patterns
+    - Milestone patterns
+
+    Returns learned template data that can be used for generating new projects.
+    """
+    try:
+        # Get projects to learn from
+        if request.project_ids:
+            projects = []
+            for pid in request.project_ids[:request.max_projects]:
+                project_data = db.get_project(pid)
+                if project_data:
+                    tasks = db.get_tasks(pid)
+                    projects.append({
+                        "name": project_data["name"],
+                        "tasks": tasks
+                    })
+        else:
+            # Get all projects
+            all_projects = db.list_projects()
+            projects = []
+            for p in all_projects[:request.max_projects]:
+                tasks = db.get_tasks(p['id'])
+                projects.append({
+                    "name": p["name"],
+                    "tasks": tasks
+                })
+
+        if not projects:
+            return LearnedTemplate(
+                project_type="unknown",
+                common_phases=[],
+                common_tasks=[],
+                common_milestones=[],
+                duration_norms={},
+                projects_analyzed=0
+            )
+
+        # Learn from projects
+        patterns = project_template_learner.learn_from_multiple_projects(projects)
+
+        # Generate template
+        template = project_template_learner.generate_template(patterns)
+
+        # Convert to response format
+        common_phases = list(patterns.get("common_phases", {}).keys())[:10]
+        common_tasks = [
+            {"name": name, "frequency": data.get("count", 0), "avg_duration_hours": data.get("avg_duration_hours", 8)}
+            for name, data in list(patterns.get("task_name_frequency", {}).items())[:20]
+        ]
+        common_milestones = list(patterns.get("common_milestones", {}).keys())[:10]
+
+        return LearnedTemplate(
+            project_type=template.get("project_type", "commercial"),
+            common_phases=common_phases,
+            common_tasks=common_tasks,
+            common_milestones=common_milestones,
+            duration_norms=patterns.get("category_duration_norms", {}),
+            projects_analyzed=len(projects)
+        )
+
+    except Exception as e:
+        print(f"Template learning error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Template learning failed: {str(e)}")
+
+
+@app.post("/api/ai/auto-reorganize")
+async def auto_reorganize_project(project_id: Optional[str] = None):
+    """
+    Automatically reorganize the entire project based on construction best practices.
+
+    This applies the 'auto_sequence' command which:
+    1. Analyzes all tasks by construction category
+    2. Reorders tasks based on logical construction sequence
+    3. Updates dependencies to reflect the new order
+
+    Returns the changes made and the optimized project structure.
+    """
+    edit_request = AIEditCommandRequest(
+        command="auto sequence all tasks",
+        project_id=project_id
+    )
+    return await execute_ai_edit_command(edit_request)
+
+
+@app.post("/api/ai/generate-from-template")
+async def generate_project_from_template(
+    description: str,
+    project_type: str = "commercial",
+    use_learned_patterns: bool = True
+):
+    """
+    Generate a new project using learned patterns from existing projects.
+
+    Enhanced project generation that:
+    1. First learns patterns from all existing projects
+    2. Uses those patterns to generate a more consistent project
+    3. Maintains company-specific naming conventions and durations
+    """
+    global current_project, current_project_id
+
+    try:
+        # Get historical project data
+        historical_data = []
+
+        if use_learned_patterns:
+            all_projects = db.list_projects()
+            for p in all_projects[:10]:  # Use up to 10 projects for learning
+                tasks = db.get_tasks(p['id'])
+                historical_data.append({
+                    "name": p["name"],
+                    "tasks": tasks
+                })
+
+        # Generate project using AI with learned patterns
+        result = await ai_service.generate_project(
+            description=description,
+            project_type=project_type,
+            historical_data=historical_data
+        )
+
+        if not result.get("success", False):
+            raise HTTPException(
+                status_code=500,
+                detail=f"AI project generation failed: {result.get('error', 'Unknown error')}"
+            )
+
+        project_name = result.get("project_name", "AI Generated Project")
+        start_date = result.get("start_date", datetime.now().strftime("%Y-%m-%d"))
+        tasks = result.get("tasks", [])
+
+        # Create new project
+        project_id = db.create_project(
+            name=project_name,
+            start_date=start_date,
+            status_date=start_date
+        )
+
+        # Add project_id and generate UIDs for each task
+        import uuid
+        for task in tasks:
+            task["id"] = str(uuid.uuid4())
+            task["uid"] = task["id"]
+            task["project_id"] = project_id
+
+        # Insert generated tasks
+        if tasks:
+            db.bulk_create_tasks(project_id, tasks)
+
+        # Update in-memory state
+        current_project = {
+            "name": project_name,
+            "start_date": start_date,
+            "status_date": start_date,
+            "tasks": tasks
+        }
+        current_project_id = project_id
+
+        xml_processor.xml_root = None
+
+        return {
+            "success": True,
+            "project_id": project_id,
+            "project_name": project_name,
+            "task_count": len(tasks),
+            "learned_from": len(historical_data),
+            "message": f"Generated project '{project_name}' with {len(tasks)} tasks using patterns from {len(historical_data)} existing projects"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Template-based generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate project: {str(e)}")
 
 
 # ==================== STATIC FILE SERVING (Production) ====================

@@ -505,6 +505,7 @@ function AppContent() {
     // Build task map for quick lookup
     const taskMap = new Map(tasks.map(t => [t.outline_number, t]));
     const taskDates = new Map<string, Date>();
+    const computing = new Set<string>(); // Track tasks being computed to detect circular deps
     const startDate = parseISO(metadata.start_date);
 
     // Calculate start dates for all tasks (considering predecessors)
@@ -513,8 +514,17 @@ function AppContent() {
         return taskDates.get(task.id)!;
       }
 
+      // Detect circular dependency - if we're already computing this task, break the cycle
+      if (computing.has(task.id)) {
+        console.warn(`Circular dependency detected for task: ${task.name} (${task.outline_number})`);
+        return startDate; // Break cycle by returning project start date
+      }
+
+      computing.add(task.id);
+
       if (!task.predecessors || task.predecessors.length === 0) {
         taskDates.set(task.id, startDate);
+        computing.delete(task.id);
         return startDate;
       }
 
@@ -534,6 +544,7 @@ function AppContent() {
       }
 
       taskDates.set(task.id, latestEnd);
+      computing.delete(task.id);
       return latestEnd;
     };
 

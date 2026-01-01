@@ -22,7 +22,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: `Hi! I'm your construction project AI assistant${projectId ? ' for this project' : ''}. I can help you:\n\n🏗️ **Generate entire projects from scratch:**\nJust describe what you want to build! For example:\n• 'Create a 3-bedroom residential home with 2-car garage and full basement'\n• 'Generate a 10,000 sq ft office building renovation with new HVAC'\n• 'Build a 20,000 sq ft warehouse with loading docks and office space'\n\nI'll create a complete project with 30-50 tasks, realistic durations, dependencies, and milestones!\n\n✨ **Modify existing projects:**\n• 'Change task 1.2 duration to 10 days'\n• 'Set lag for task 2.3 to 5 days'\n• 'Set project start date to 2024-01-15'\n• 'Add 10% buffer to all tasks'\n\n💡 **Answer questions:**\n• 'What's the critical path?'\n• 'How long will this project take?'\n• 'What tasks depend on task 1.5?'\n\nWhat would you like to do?`,
+      content: `Hi! I'm your construction project AI assistant${projectId ? ' for this project' : ''}. I can help you:\n\n🏗️ **Generate projects:**\n• 'Create a 3-bedroom residential home with garage'\n• 'Generate a 10,000 sq ft office renovation'\n\n✏️ **Edit project structure:**\n• 'Move task 1.2 after 1.3' or 'Move task 1.2 under 2'\n• 'Insert task \"Site Prep\" after 1.1'\n• 'Delete task 1.4'\n• 'Merge tasks 1.2 and 1.3'\n• 'Split task 1.5 into 3 parts'\n\n⏱️ **Modify durations & dates:**\n• 'Change task 1.2 duration to 10 days'\n• 'Set lag for task 2.3 to 5 days'\n• 'Set project start date to 2024-01-15'\n\n📋 **Get suggestions:**\n• 'Suggest improvements'\n• 'What tasks are out of sequence?'\n• 'Check for dependency issues'\n\n💡 **Ask questions:**\n• 'What's the critical path?'\n• 'How long will this project take?'\n\nWhat would you like to do?`,
       timestamp: new Date()
     }
   ]);
@@ -148,7 +148,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
         <div className="ai-chat-header">
           <div className="ai-chat-title">
             <span className="ai-chat-icon">🤖</span>
-            <h3>AI Project Assistant</h3>
+            <h3>SturgisAI Assistant</h3>
           </div>
           <div className="ai-chat-actions">
             <button

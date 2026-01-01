@@ -142,6 +142,38 @@ Changes made:
 
 ---
 
+### **7. Set Task Constraints**
+
+Set MS Project-compatible constraints on tasks to control when they can start or finish.
+
+**Syntax:**
+- `"Set task 1.2 constraint to Must Start On 2024-01-15"`
+- `"Change task 3.4 to Start No Earlier Than 2024-02-01"`
+- `"Set task 2.1 constraint to Must Finish On 2024-03-15"`
+- `"Change task 1.5 to Finish No Later Than 2024-04-30"`
+
+**Constraint Types:**
+- `"As Soon As Possible"` (default)
+- `"As Late As Possible"`
+- `"Must Start On [date]"`
+- `"Must Finish On [date]"`
+- `"Start No Earlier Than [date]"`
+- `"Start No Later Than [date]"`
+- `"Finish No Earlier Than [date]"`
+- `"Finish No Later Than [date]"`
+
+**Example:**
+```
+User: "Set task 1.4 constraint to Must Start On 2024-02-15"
+AI: "✅ Updated task 1.4 'Electrical Rough-in' constraint to Must Start On 2024-02-15
+
+Changes made:
+• Task 1.4 constraint: As Soon As Possible → Must Start On
+• Task 1.4 constraint date: None → 2024-02-15"
+```
+
+---
+
 ## 🎨 **Visual Feedback**
 
 When a command is executed:

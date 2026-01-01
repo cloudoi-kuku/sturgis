@@ -44,6 +44,8 @@
 "Set project start date to 2024-01-15"
 "Add 10% buffer to all tasks"
 "Remove lag from task 3.4"
+"Set task 1.4 constraint to Must Start On 2024-02-15"
+"Change task 2.1 to Start No Earlier Than 2024-03-01"
 ```
 
 **How to Use**:

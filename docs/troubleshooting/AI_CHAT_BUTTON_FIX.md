@@ -57,7 +57,7 @@ transform: scale(0.95);         /* Shrink slightly when clicked */
 
 **Header:**
 - Background: `#2c3e50` (dark blue-gray, matches main navbar)
-- Title: "AI Project Assistant" in white
+- Title: "SturgisAI Assistant" in white
 
 **Buttons:**
 - **Clear History** (trash icon): White button with dark icon
@@ -102,7 +102,7 @@ npm run dev
 
 3. **Look at the header** - You should see:
    - Dark blue-gray header (matches navbar)
-   - "AI Project Assistant" title on the left
+   - "SturgisAI Assistant" title on the left
    - **Two white buttons on the right** (these should be VERY visible)
    - Trash icon button (clear history)
    - X icon button (close)

@@ -115,6 +115,12 @@ class MSProjectXMLProcessor:
                             "lag_format": lag_format
                         })
 
+            # Extract task constraints (MS Project compatible)
+            constraint_type_elem = task_elem.find('msproj:ConstraintType', self.NS)
+            constraint_date_elem = task_elem.find('msproj:ConstraintDate', self.NS)
+            constraint_type = int(constraint_type_elem.text) if constraint_type_elem is not None else 0
+            constraint_date = constraint_date_elem.text if constraint_date_elem is not None else None
+
             # Extract baselines (MS Project supports up to 11 baselines: 0-10)
             baselines = []
             for baseline_elem in task_elem.findall('msproj:Baseline', self.NS):
@@ -140,6 +146,8 @@ class MSProjectXMLProcessor:
                 "predecessors": predecessors,
                 "start_date": start_elem.text if start_elem is not None else None,
                 "finish_date": finish_elem.text if finish_elem is not None else None,
+                "constraint_type": constraint_type,
+                "constraint_date": constraint_date,
                 "baselines": baselines
             }
         except Exception as e:
@@ -463,6 +471,14 @@ class MSProjectXMLProcessor:
 
         create_elem(task_elem, 'EffortDriven', '0')
         create_elem(task_elem, 'CalendarUID', '1')
+
+        # Task Constraints (MS Project compatible)
+        constraint_type = task_data.get("constraint_type", 0)
+        create_elem(task_elem, 'ConstraintType', constraint_type)
+        # ConstraintDate is required for constraint types 2-7
+        constraint_date = task_data.get("constraint_date")
+        if constraint_date and constraint_type >= 2:
+            create_elem(task_elem, 'ConstraintDate', constraint_date)
 
         # Preserve Actual dates if they exist (for in-progress tasks)
         actual_start = task_data.get("actual_start")
