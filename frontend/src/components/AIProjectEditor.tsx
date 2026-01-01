@@ -20,11 +20,13 @@ import {
   applyAISuggestion,
   learnFromProjects,
   autoReorganizeProject,
-  AISuggestion,
-  LearnedTemplate,
-  AIEditResult,
   getPriorityColor,
   getSuggestionIcon
+} from '../api/aiClient';
+import type {
+  AISuggestion,
+  LearnedTemplate,
+  AIEditResult
 } from '../api/aiClient';
 import './AIProjectEditor.css';
 
