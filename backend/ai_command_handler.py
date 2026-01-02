@@ -48,6 +48,11 @@ class AICommandHandler:
                 r'add\s+(\d+)%?\s+buffer\s+to\s+all\s+tasks',
                 r'increase\s+all\s+tasks\s+by\s+(\d+)%?',
             ],
+            # Task constraints
+            'set_constraint': [
+                r'(?:set|change|update|modify)\s+task\s+([0-9.]+)\s+constraint\s+to\s+(must\s+start\s+on|must\s+finish\s+on|start\s+no\s+earlier\s+than|start\s+no\s+later\s+than|finish\s+no\s+earlier\s+than|finish\s+no\s+later\s+than|as\s+soon\s+as\s+possible|as\s+late\s+as\s+possible)(?:\s+(\d{4}-\d{2}-\d{2}))?',
+                r'(?:change|set|update|modify)\s+task\s+([0-9.]+)\s+to\s+(must\s+start\s+on|must\s+finish\s+on|start\s+no\s+earlier\s+than|start\s+no\s+later\s+than|finish\s+no\s+earlier\s+than|finish\s+no\s+later\s+than|as\s+soon\s+as\s+possible|as\s+late\s+as\s+possible)(?:\s+(\d{4}-\d{2}-\d{2}))?',
+            ],
         }
     
     def parse_command(self, message: str) -> Optional[Dict[str, Any]]:
@@ -130,6 +135,32 @@ class AICommandHandler:
                 }
             }
         
+        elif action == 'set_constraint':
+            # Map constraint type strings to numbers
+            constraint_map = {
+                'as soon as possible': 0,
+                'as late as possible': 1,
+                'must start on': 2,
+                'must finish on': 3,
+                'start no earlier than': 4,
+                'start no later than': 5,
+                'finish no earlier than': 6,
+                'finish no later than': 7
+            }
+            
+            constraint_type_str = groups[1].lower()
+            constraint_type = constraint_map.get(constraint_type_str, 0)
+            constraint_date = groups[2] if len(groups) > 2 and groups[2] else None
+            
+            return {
+                "action": "set_constraint",
+                "params": {
+                    "task_outline": groups[0],
+                    "constraint_type": constraint_type,
+                    "constraint_date": constraint_date + 'T08:00:00' if constraint_date else None
+                }
+            }
+        
         return None
     
     def execute_command(self, command: Dict[str, Any], project: Dict[str, Any]) -> Dict[str, Any]:
@@ -157,6 +188,9 @@ class AICommandHandler:
         
         elif action == "add_buffer":
             return self._add_buffer_to_all_tasks(project, params["buffer_percent"])
+        
+        elif action == "set_constraint":
+            return self._set_task_constraint(project, params["task_outline"], params["constraint_type"], params["constraint_date"])
         
         return {"success": False, "message": "Unknown command", "changes": []}
 
@@ -371,6 +405,88 @@ class AICommandHandler:
         return {
             "success": True,
             "message": f"Added {buffer_percent}% buffer to {len(changes)} tasks",
+            "changes": changes
+        }
+    
+    def _set_task_constraint(self, project: Dict[str, Any], task_outline: str, constraint_type: int, constraint_date: str) -> Dict[str, Any]:
+        """Set task constraint type and date"""
+        task = self._find_task_by_outline(project, task_outline)
+        if not task:
+            return {"success": False, "message": f"Task {task_outline} not found", "changes": []}
+
+        # Validate: Summary tasks should not have constraints
+        if task.get("summary", False):
+            return {
+                "success": False,
+                "message": f"Cannot set constraint for summary task {task_outline} '{task['name']}'. Summary tasks should not have constraints.",
+                "changes": []
+            }
+
+        # Validate constraint type requires date for types 2-7
+        if constraint_type >= 2 and not constraint_date:
+            constraint_names = {
+                2: "Must Start On", 3: "Must Finish On", 4: "Start No Earlier Than",
+                5: "Start No Later Than", 6: "Finish No Earlier Than", 7: "Finish No Later Than"
+            }
+            return {
+                "success": False,
+                "message": f"Constraint type '{constraint_names[constraint_type]}' requires a date",
+                "changes": []
+            }
+
+        # Store old values for change tracking
+        old_constraint_type = task.get("constraint_type", 0)
+        old_constraint_date = task.get("constraint_date")
+        
+        # Map constraint types to readable names
+        constraint_names = {
+            0: "As Soon As Possible", 1: "As Late As Possible", 2: "Must Start On",
+            3: "Must Finish On", 4: "Start No Earlier Than", 5: "Start No Later Than",
+            6: "Finish No Earlier Than", 7: "Finish No Later Than"
+        }
+
+        # Update task
+        task["constraint_type"] = constraint_type
+        if constraint_type >= 2:
+            task["constraint_date"] = constraint_date
+        else:
+            task["constraint_date"] = None
+
+        changes = []
+        
+        # Track constraint type change
+        if old_constraint_type != constraint_type:
+            changes.append({
+                "type": "constraint_type",
+                "task": task_outline,
+                "task_name": task["name"],
+                "old_value": old_constraint_type,
+                "new_value": constraint_type,
+                "old_name": constraint_names.get(old_constraint_type, "Unknown"),
+                "new_name": constraint_names.get(constraint_type, "Unknown")
+            })
+        
+        # Track constraint date change
+        if old_constraint_date != constraint_date:
+            changes.append({
+                "type": "constraint_date",
+                "task": task_outline,
+                "task_name": task["name"],
+                "old_value": old_constraint_date,
+                "new_value": constraint_date
+            })
+
+        message_parts = []
+        if old_constraint_type != constraint_type:
+            message_parts.append(f"constraint: {constraint_names[old_constraint_type]} → {constraint_names[constraint_type]}")
+        if old_constraint_date != constraint_date:
+            date_str = constraint_date.split('T')[0] if constraint_date else 'None'
+            old_date_str = old_constraint_date.split('T')[0] if old_constraint_date else 'None'
+            message_parts.append(f"constraint date: {old_date_str} → {date_str}")
+
+        return {
+            "success": True,
+            "message": f"Updated task {task_outline} '{task['name']}' {', '.join(message_parts)}",
             "changes": changes
         }
 

@@ -153,6 +153,7 @@ The tool validates:
 - ✅ Circular dependency detection
 - ✅ Milestone duration constraints
 - ✅ Task constraint types (0-7) and required constraint dates
+- ✅ Constraint date format and requirements per constraint type
 
 ## Task Constraints
 

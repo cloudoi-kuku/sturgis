@@ -175,6 +175,38 @@ class ProjectValidator:
                     "message": f"Invalid lag format: {lag_format}. Must be one of {valid_lag_formats}"
                 })
         
+        # Validate task constraints
+        constraint_type = task.get("constraint_type", 0)
+        constraint_date = task.get("constraint_date")
+        
+        # Validate constraint type is in valid range
+        if constraint_type < 0 or constraint_type > 7:
+            errors.append({
+                "field": "constraint_type",
+                "message": f"Invalid constraint type: {constraint_type}. Must be 0-7"
+            })
+        
+        # Constraint types 2-7 require a constraint date
+        if constraint_type >= 2 and not constraint_date:
+            errors.append({
+                "field": "constraint_date",
+                "message": f"Constraint type {constraint_type} requires a constraint date"
+            })
+        
+        # Validate constraint date format if provided
+        if constraint_date and not self._validate_date_format(constraint_date):
+            errors.append({
+                "field": "constraint_date",
+                "message": f"Invalid constraint date format: {constraint_date}. Expected ISO 8601 format"
+            })
+        
+        # Constraint types 0 and 1 should not have a constraint date
+        if constraint_type < 2 and constraint_date:
+            errors.append({
+                "field": "constraint_date",
+                "message": f"Constraint type {constraint_type} should not have a constraint date"
+            })
+        
         return errors
     
     def _validate_predecessors(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

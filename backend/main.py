@@ -927,6 +927,12 @@ async def chat_with_ai(request: ChatRequest):
                             response += f"• Task {change['task']} '{change['task_name']}': {change['old_days']:.1f} → {change['new_days']} days\n"
                         elif change["type"] == "lag":
                             response += f"• Task {change['task']} lag: {change['old_days']:.1f} → {change['new_days']} days\n"
+                        elif change["type"] == "constraint_type":
+                            response += f"• Task {change['task']} constraint: {change['old_name']} → {change['new_name']}\n"
+                        elif change["type"] == "constraint_date":
+                            old_date = change['old_value'].split('T')[0] if change['old_value'] else 'None'
+                            new_date = change['new_value'].split('T')[0] if change['new_value'] else 'None'
+                            response += f"• Task {change['task']} constraint date: {old_date} → {new_date}\n"
                         elif change["type"] == "project_start_date":
                             response += f"• Project start date: {change['old_value']} → {change['new_value']}\n"
 

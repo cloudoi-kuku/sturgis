@@ -74,7 +74,4 @@ coverage/
 docker-compose.override.yml
 *.tar.gz
 backups/
-
-# Project data (optional - uncomment if you don't want to commit project files)
-# backend/project_data/*.xml
-# backend/project_data/*.json
+backend/project_data/
