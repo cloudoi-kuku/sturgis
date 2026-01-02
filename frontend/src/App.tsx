@@ -224,10 +224,13 @@ function AppContent() {
     }
   };
 
-  const handleProjectChanged = () => {
-    // Refresh all data when project changes
-    queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
-    queryClientInstance.invalidateQueries({ queryKey: ['metadata'] });
+  const handleProjectChanged = async () => {
+    // Refresh all data when project changes - use refetchQueries to wait for completion
+    await Promise.all([
+      queryClientInstance.refetchQueries({ queryKey: ['tasks'] }),
+      queryClientInstance.refetchQueries({ queryKey: ['metadata'] }),
+      queryClientInstance.refetchQueries({ queryKey: ['calendar'] }),
+    ]);
   };
 
   const handleExport = async () => {

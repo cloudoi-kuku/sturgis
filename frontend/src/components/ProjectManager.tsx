@@ -7,7 +7,7 @@ import './ProjectManager.css';
 interface ProjectManagerProps {
   isOpen: boolean;
   onClose: () => void;
-  onProjectChanged: () => void;
+  onProjectChanged: () => void | Promise<void>;
 }
 
 export const ProjectManager: React.FC<ProjectManagerProps> = ({
@@ -50,8 +50,9 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
       await createNewProject(newProjectName);
       setNewProjectName('');
       setShowNewProjectInput(false);
+      // Wait for data refresh to complete
+      await onProjectChanged();
       await loadProjects();
-      onProjectChanged();
     } catch (error) {
       console.error('Failed to create project:', error);
       alert('Failed to create project');
@@ -64,8 +65,9 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
     setLoading(true);
     try {
       await switchProject(projectId);
+      // Wait for data refresh before closing modal
+      await onProjectChanged();
       await loadProjects();
-      onProjectChanged();
       onClose();
     } catch (error) {
       console.error('Failed to switch project:', error);
@@ -83,8 +85,9 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
     setLoading(true);
     try {
       await deleteProject(projectId);
+      // Wait for data refresh to complete
+      await onProjectChanged();
       await loadProjects();
-      onProjectChanged();
     } catch (error: any) {
       console.error('Failed to delete project:', error);
       alert(error.response?.data?.detail || 'Failed to delete project');
