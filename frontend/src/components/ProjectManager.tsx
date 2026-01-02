@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, FolderOpen, Trash2, Check, Briefcase, Calendar, ListTodo } from 'lucide-react';
-import { getAllProjects, createNewProject, switchProject, deleteProject } from '../api/client';
+import { X, Plus, FolderOpen, Trash2, Check, Briefcase, Calendar, ListTodo, Share2, Lock, Users } from 'lucide-react';
+import { getAllProjects, createNewProject, switchProject, deleteProject, updateProjectSharing } from '../api/client';
 import type { ProjectListItem } from '../api/client';
 import './ProjectManager.css';
 
@@ -93,6 +93,20 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
     }
   };
 
+  const handleToggleSharing = async (project: ProjectListItem) => {
+    const newSharedState = !project.is_shared;
+    setLoading(true);
+    try {
+      await updateProjectSharing(project.id, newSharedState);
+      await loadProjects();
+    } catch (error: any) {
+      console.error('Failed to update project sharing:', error);
+      alert(error.response?.data?.detail || 'Failed to update sharing');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -163,6 +177,18 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                   <div className="project-name">
                     {project.name}
                     {project.is_active && <span className="active-badge">Active</span>}
+                    {project.is_shared && (
+                      <span className="shared-badge" title="Shared with others">
+                        <Users size={10} />
+                        Shared
+                      </span>
+                    )}
+                    {project.is_owned === false && (
+                      <span className="others-badge" title="Owned by another user">
+                        <Share2 size={10} />
+                        From Others
+                      </span>
+                    )}
                   </div>
                   <div className="project-meta">
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -177,6 +203,17 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                   </div>
                 </div>
                 <div className="project-actions">
+                  {/* Share/Unshare button - only for owned projects */}
+                  {project.is_owned !== false && (
+                    <button
+                      className={`action-button ${project.is_shared ? 'shared' : ''}`}
+                      onClick={() => handleToggleSharing(project)}
+                      disabled={loading}
+                      title={project.is_shared ? 'Make Private' : 'Share with Others'}
+                    >
+                      {project.is_shared ? <Lock size={14} /> : <Share2 size={14} />}
+                    </button>
+                  )}
                   {!project.is_active && (
                     <button
                       className="action-button"
@@ -188,7 +225,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                       Open
                     </button>
                   )}
-                  {!project.is_active && (
+                  {!project.is_active && project.is_owned !== false && (
                     <button
                       className="action-button danger"
                       onClick={() => handleDeleteProject(project.id, project.name)}

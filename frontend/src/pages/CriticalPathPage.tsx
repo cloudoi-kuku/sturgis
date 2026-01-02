@@ -623,7 +623,7 @@ export const CriticalPathPage: React.FC<CriticalPathPageProps> = ({
     <div className="critical-path-page">
       <div className="page-header">
         <div className="header-left">
-          <button className="back-button" onClick={() => navigate(-1)} title="Back">
+          <button className="back-button" onClick={() => navigate('/app')} title="Back to Project">
             <ArrowLeft size={24} />
           </button>
           <div className="page-title">

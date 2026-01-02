@@ -56,7 +56,10 @@ class DatabaseService:
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     is_active INTEGER DEFAULT 0,
-                    xml_template TEXT
+                    xml_template TEXT,
+                    user_id TEXT,
+                    is_shared INTEGER DEFAULT 0,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
                 )
             """)
             
@@ -93,6 +96,16 @@ class DatabaseService:
                 pass  # Column already exists
             try:
                 cursor.execute("ALTER TABLE tasks ADD COLUMN constraint_date TEXT")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+
+            # Add user_id and is_shared columns to projects table (migration)
+            try:
+                cursor.execute("ALTER TABLE projects ADD COLUMN user_id TEXT")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            try:
+                cursor.execute("ALTER TABLE projects ADD COLUMN is_shared INTEGER DEFAULT 0")
             except sqlite3.OperationalError:
                 pass  # Column already exists
             
@@ -186,26 +199,31 @@ class DatabaseService:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_task_baselines_task ON task_baselines(task_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_task_baselines_project ON task_baselines(project_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_projects_shared ON projects(is_shared)")
 
             conn.commit()
     
-    def create_project(self, name: str, start_date: str, status_date: str, xml_template: Optional[str] = None) -> str:
+    def create_project(self, name: str, start_date: str, status_date: str, xml_template: Optional[str] = None, user_id: Optional[str] = None, is_shared: bool = False) -> str:
         """Create a new project and return its ID"""
         project_id = str(uuid.uuid4())
         now = datetime.now().isoformat()
-        
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            
-            # Deactivate all other projects
-            cursor.execute("UPDATE projects SET is_active = 0")
-            
+
+            # Deactivate all other projects for this user (or all if no user)
+            if user_id:
+                cursor.execute("UPDATE projects SET is_active = 0 WHERE user_id = ? OR user_id IS NULL", (user_id,))
+            else:
+                cursor.execute("UPDATE projects SET is_active = 0")
+
             # Insert new project
             cursor.execute("""
-                INSERT INTO projects (id, name, start_date, status_date, created_at, updated_at, is_active, xml_template)
-                VALUES (?, ?, ?, ?, ?, ?, 1, ?)
-            """, (project_id, name, start_date, status_date, now, now, xml_template))
-            
+                INSERT INTO projects (id, name, start_date, status_date, created_at, updated_at, is_active, xml_template, user_id, is_shared)
+                VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+            """, (project_id, name, start_date, status_date, now, now, xml_template, user_id, 1 if is_shared else 0))
+
         return project_id
     
     def get_project(self, project_id: str) -> Optional[Dict[str, Any]]:
@@ -219,28 +237,68 @@ class DatabaseService:
                 return dict(row)
         return None
     
-    def get_active_project(self) -> Optional[Dict[str, Any]]:
-        """Get the currently active project"""
+    def get_active_project(self, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Get the currently active project for a user.
+
+        Args:
+            user_id: Optional user ID to filter by. If None, returns any active project.
+
+        Returns:
+            The active project for the user, or None if no active project exists.
+        """
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM projects WHERE is_active = 1 LIMIT 1")
+            if user_id:
+                # Get active project that belongs to user OR is shared
+                cursor.execute("""
+                    SELECT * FROM projects
+                    WHERE is_active = 1 AND (user_id = ? OR user_id IS NULL OR is_shared = 1)
+                    ORDER BY
+                        CASE WHEN user_id = ? THEN 0 ELSE 1 END
+                    LIMIT 1
+                """, (user_id, user_id))
+            else:
+                cursor.execute("SELECT * FROM projects WHERE is_active = 1 LIMIT 1")
             row = cursor.fetchone()
 
             if row:
                 return dict(row)
         return None
 
-    def list_projects(self) -> List[Dict[str, Any]]:
-        """List all projects"""
+    def list_projects(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List all projects accessible to a user.
+
+        Args:
+            user_id: Optional user ID to filter by. If provided, returns:
+                     - Projects owned by the user
+                     - Projects with no owner (legacy/public)
+                     - Shared projects
+                     If None, returns all projects (for backward compatibility).
+
+        Returns:
+            List of projects with task counts.
+        """
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT p.*, COUNT(t.id) as task_count
-                FROM projects p
-                LEFT JOIN tasks t ON p.id = t.project_id
-                GROUP BY p.id
-                ORDER BY p.updated_at DESC
-            """)
+            if user_id:
+                cursor.execute("""
+                    SELECT p.*, COUNT(t.id) as task_count
+                    FROM projects p
+                    LEFT JOIN tasks t ON p.id = t.project_id
+                    WHERE p.user_id = ? OR p.user_id IS NULL OR p.is_shared = 1
+                    GROUP BY p.id
+                    ORDER BY
+                        CASE WHEN p.user_id = ? THEN 0 ELSE 1 END,
+                        p.updated_at DESC
+                """, (user_id, user_id))
+            else:
+                cursor.execute("""
+                    SELECT p.*, COUNT(t.id) as task_count
+                    FROM projects p
+                    LEFT JOIN tasks t ON p.id = t.project_id
+                    GROUP BY p.id
+                    ORDER BY p.updated_at DESC
+                """)
             return [dict(row) for row in cursor.fetchall()]
 
     def get_historical_project_data(self, limit: int = 5) -> List[Dict[str, Any]]:
@@ -290,24 +348,72 @@ class DatabaseService:
 
             return projects
 
-    def switch_project(self, project_id: str) -> bool:
-        """Switch to a different project"""
+    def switch_project(self, project_id: str, user_id: Optional[str] = None) -> bool:
+        """Switch to a different project.
+
+        Args:
+            project_id: The project ID to switch to.
+            user_id: Optional user ID. If provided, verifies the user has access
+                     to the project (owns it, or it's shared, or has no owner).
+
+        Returns:
+            True if switch was successful, False otherwise.
+        """
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
-            # Check if project exists
-            cursor.execute("SELECT id FROM projects WHERE id = ?", (project_id,))
+            # Check if project exists and user has access
+            if user_id:
+                cursor.execute("""
+                    SELECT id FROM projects
+                    WHERE id = ? AND (user_id = ? OR user_id IS NULL OR is_shared = 1)
+                """, (project_id, user_id))
+            else:
+                cursor.execute("SELECT id FROM projects WHERE id = ?", (project_id,))
+
             if not cursor.fetchone():
                 return False
 
-            # Deactivate all projects
-            cursor.execute("UPDATE projects SET is_active = 0")
+            # Deactivate all projects for this user (or all if no user)
+            if user_id:
+                cursor.execute("UPDATE projects SET is_active = 0 WHERE user_id = ? OR user_id IS NULL", (user_id,))
+            else:
+                cursor.execute("UPDATE projects SET is_active = 0")
 
             # Activate the selected project
             cursor.execute("UPDATE projects SET is_active = 1, updated_at = ? WHERE id = ?",
                          (datetime.now().isoformat(), project_id))
 
             return True
+
+    def update_project_sharing(self, project_id: str, is_shared: bool, user_id: Optional[str] = None) -> bool:
+        """Update project sharing status.
+
+        Args:
+            project_id: The project ID to update.
+            is_shared: Whether the project should be shared.
+            user_id: Optional user ID to verify ownership.
+
+        Returns:
+            True if update was successful, False otherwise.
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # If user_id provided, verify ownership
+            if user_id:
+                cursor.execute("SELECT user_id FROM projects WHERE id = ?", (project_id,))
+                row = cursor.fetchone()
+                if not row or (row['user_id'] is not None and row['user_id'] != user_id):
+                    return False  # User doesn't own this project
+
+            cursor.execute("""
+                UPDATE projects
+                SET is_shared = ?, updated_at = ?
+                WHERE id = ?
+            """, (1 if is_shared else 0, datetime.now().isoformat(), project_id))
+
+            return cursor.rowcount > 0
 
     def update_project_metadata(self, project_id: str, name: str, start_date: str, status_date: str) -> bool:
         """Update project metadata"""

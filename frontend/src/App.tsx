@@ -30,6 +30,7 @@ import type {
   TaskUpdate,
 } from './api/client';
 import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle, Save, Cloud, LogOut, User, ChevronDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { parseISO, addDays, differenceInDays, format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
@@ -577,11 +578,13 @@ function AppContent() {
         <div className="flex items-center justify-between">
           {/* Logo & Title */}
           <div className="flex items-center gap-5">
-            <img src="/sturgis-logo.png" alt="Sturgis Logo" className="h-10 w-auto object-contain" style={{ filter: 'brightness(1.1)' }} />
-            <div className="h-8 w-px bg-slate-600"></div>
-            <span className="text-base font-semibold text-white tracking-tight">
-              Sturgis Project
-            </span>
+            <Link to="/app" className="flex items-center gap-5 hover:opacity-80 transition-opacity" title="Go to Home">
+              <img src="/sturgis-logo.png" alt="Sturgis Logo" className="h-10 w-auto object-contain" style={{ filter: 'brightness(1.1)' }} />
+              <div className="h-8 w-px bg-slate-600"></div>
+              <span className="text-base font-semibold text-white tracking-tight">
+                Sturgis Project
+              </span>
+            </Link>
           </div>
           
           {/* Navigation Actions */}

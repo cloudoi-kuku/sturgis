@@ -304,6 +304,8 @@ export type ProjectListItem = {
   task_count: number;
   start_date: string;
   is_active: boolean;
+  is_shared?: boolean;
+  is_owned?: boolean | null;  // null = legacy project with no owner
 }
 
 // Project Management Functions
@@ -356,6 +358,17 @@ export const deleteProject = async (projectId: string): Promise<{
   message: string;
 }> => {
   const response = await apiClient.delete(`/projects/${projectId}`);
+  return response.data;
+};
+
+export const updateProjectSharing = async (projectId: string, isShared: boolean): Promise<{
+  success: boolean;
+  message: string;
+  is_shared: boolean;
+}> => {
+  const response = await apiClient.put(`/projects/${projectId}/share`, null, {
+    params: { is_shared: isShared }
+  });
   return response.data;
 };
 

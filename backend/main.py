@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
@@ -48,7 +48,7 @@ from ai_service import ai_service
 from ai_command_handler import ai_command_handler
 from ai_project_editor import ai_project_editor, project_template_learner
 from database import DatabaseService, DATA_DIR
-from auth import router as auth_router
+from auth import router as auth_router, get_current_user, decode_token
 from azure_storage import init_azure_storage, shutdown_azure_storage, get_azure_storage
 from contextlib import asynccontextmanager
 import atexit
@@ -168,6 +168,33 @@ xml_processor = MSProjectXMLProcessor()
 validator = ProjectValidator()
 
 
+from fastapi import Request
+
+async def get_optional_user(request: Request) -> Optional[dict]:
+    """Optional user dependency - returns user if authenticated, None otherwise.
+
+    This allows endpoints to work both with and without authentication,
+    enabling backward compatibility while supporting user-based filtering.
+    """
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+
+    token = auth_header.split(" ")[1]
+    payload = decode_token(token)
+    if payload is None:
+        return None
+
+    user_id = payload.get("sub")
+    if user_id is None:
+        return None
+
+    user = db.get_user_by_id(user_id)
+    if user:
+        user.pop("password_hash", None)
+    return user
+
+
 def save_project_to_db():
     """Save current project state to database"""
     global current_project_id
@@ -270,9 +297,19 @@ async def root():
 
 
 @app.get("/api/projects")
-async def get_all_projects():
-    """Get list of all saved projects"""
-    projects = db.list_projects()
+async def get_all_projects(current_user: Optional[dict] = Depends(get_optional_user)):
+    """Get list of all saved projects for the current user.
+
+    If authenticated, returns:
+    - Projects owned by the user
+    - Shared projects
+    - Projects with no owner (legacy)
+
+    If not authenticated, returns all projects (backward compatibility).
+    """
+    user_id = current_user.get("id") if current_user else None
+    projects = db.list_projects(user_id=user_id)
+
     # Format for frontend compatibility
     formatted_projects = []
     for p in projects:
@@ -281,21 +318,34 @@ async def get_all_projects():
             "name": p['name'],
             "task_count": p['task_count'],
             "start_date": p['start_date'],
-            "is_active": bool(p['is_active'])
+            "is_active": bool(p['is_active']),
+            "is_shared": bool(p.get('is_shared', 0)),
+            "is_owned": p.get('user_id') == user_id if user_id else None
         })
     return {"projects": formatted_projects}
 
 
 @app.post("/api/projects/new")
-async def create_new_project(name: str = "New Project"):
-    """Create a new empty project"""
+async def create_new_project(
+    name: str = "New Project",
+    is_shared: bool = False,
+    current_user: Optional[dict] = Depends(get_optional_user)
+):
+    """Create a new empty project.
+
+    If authenticated, the project is associated with the current user.
+    """
     global current_project, current_project_id
+
+    user_id = current_user.get("id") if current_user else None
 
     # Create project in database
     project_id = db.create_project(
         name=name,
         start_date=datetime.now().strftime("%Y-%m-%d"),
-        status_date=datetime.now().strftime("%Y-%m-%d")
+        status_date=datetime.now().strftime("%Y-%m-%d"),
+        user_id=user_id,
+        is_shared=is_shared
     )
 
     # Create minimal project structure in memory
@@ -319,9 +369,21 @@ async def create_new_project(name: str = "New Project"):
 
 
 @app.post("/api/projects/{project_id}/switch")
-async def switch_project(project_id: str):
-    """Switch to a different project"""
+async def switch_project(
+    project_id: str,
+    current_user: Optional[dict] = Depends(get_optional_user)
+):
+    """Switch to a different project.
+
+    If authenticated, verifies the user has access to the project.
+    """
     global current_project, current_project_id
+
+    user_id = current_user.get("id") if current_user else None
+
+    # Verify access and switch
+    if not db.switch_project(project_id, user_id=user_id):
+        raise HTTPException(status_code=404, detail="Project not found or access denied")
 
     if load_project_from_db(project_id):
         return {
@@ -332,6 +394,28 @@ async def switch_project(project_id: str):
         }
     else:
         raise HTTPException(status_code=404, detail="Project not found")
+
+
+@app.put("/api/projects/{project_id}/share")
+async def update_project_sharing(
+    project_id: str,
+    is_shared: bool = True,
+    current_user: Optional[dict] = Depends(get_optional_user)
+):
+    """Update project sharing status.
+
+    Only the project owner can change sharing status.
+    """
+    user_id = current_user.get("id") if current_user else None
+
+    if db.update_project_sharing(project_id, is_shared, user_id=user_id):
+        return {
+            "success": True,
+            "message": f"Project {'shared' if is_shared else 'unshared'} successfully",
+            "is_shared": is_shared
+        }
+    else:
+        raise HTTPException(status_code=403, detail="Access denied or project not found")
 
 
 @app.delete("/api/projects/{project_id}")
@@ -353,12 +437,20 @@ async def delete_project(project_id: str):
 
 
 @app.post("/api/project/upload")
-async def upload_project(file: UploadFile = File(...)):
-    """Upload and parse an MS Project XML file - creates a new project"""
+async def upload_project(
+    file: UploadFile = File(...),
+    current_user: Optional[dict] = Depends(get_optional_user)
+):
+    """Upload and parse an MS Project XML file - creates a new project.
+
+    If authenticated, the project is associated with the current user.
+    """
     global current_project, current_project_id
 
     if not file.filename.endswith('.xml'):
         raise HTTPException(status_code=400, detail="File must be an XML file")
+
+    user_id = current_user.get("id") if current_user else None
 
     try:
         print(f"=== Starting XML upload: {file.filename} ===")
@@ -380,7 +472,8 @@ async def upload_project(file: UploadFile = File(...)):
             name=project_data.get('name', 'Imported Project'),
             start_date=project_data.get('start_date', datetime.now().strftime("%Y-%m-%d")),
             status_date=project_data.get('status_date', datetime.now().strftime("%Y-%m-%d")),
-            xml_template=xml_content
+            xml_template=xml_content,
+            user_id=user_id
         )
         print(f"Project created with ID: {project_id}")
 
@@ -979,10 +1072,15 @@ async def clear_chat_history():
 
 
 @app.post("/api/ai/generate-project")
-async def generate_project_from_description(request: GenerateProjectRequest):
+async def generate_project_from_description(
+    request: GenerateProjectRequest,
+    current_user: Optional[dict] = Depends(get_optional_user)
+):
     """
     Generate a complete construction project from a natural language description.
     Can either create a new project OR populate an existing empty project.
+
+    If authenticated, the project is associated with the current user.
 
     Returns: {
         "success": bool,
@@ -993,6 +1091,8 @@ async def generate_project_from_description(request: GenerateProjectRequest):
     }
     """
     global current_project, current_project_id
+
+    user_id = current_user.get("id") if current_user else None
 
     try:
         # Get historical project data for AI learning
@@ -1045,7 +1145,8 @@ async def generate_project_from_description(request: GenerateProjectRequest):
             project_id = db.create_project(
                 name=project_name,
                 start_date=start_date,
-                status_date=start_date
+                status_date=start_date,
+                user_id=user_id
             )
             print(f"Created new project: {project_name} (ID: {project_id})")
 
@@ -1068,17 +1169,26 @@ async def generate_project_from_description(request: GenerateProjectRequest):
         if populate_existing:
             db.update_project_metadata(project_id, project_name, start_date, start_date)
 
-        # Update in-memory state
+        # IMPORTANT: Switch to the new/populated project in database
+        # This sets is_active=1 for this project and is_active=0 for others
+        db.switch_project(project_id)
+
+        # Get fresh tasks from database with all computed fields
+        db_tasks = db.get_tasks(project_id)
+
+        # Update in-memory state with database tasks
         current_project = {
             "name": project_name,
             "start_date": start_date,
             "status_date": start_date,
-            "tasks": tasks
+            "tasks": db_tasks
         }
         current_project_id = project_id
 
         # Clear XML template for AI-generated project
         xml_processor.xml_root = None
+
+        print(f"Switched to project: {project_name} (ID: {project_id}) with {len(db_tasks)} tasks")
 
         action = "populated" if populate_existing else "created"
         return {
