@@ -75,3 +75,4 @@ docker-compose.override.yml
 *.tar.gz
 backups/
 backend/project_data/
+docs/

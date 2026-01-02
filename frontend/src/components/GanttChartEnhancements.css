@@ -329,3 +329,237 @@
   /* Uncomment below to enable custom tooltip */
   /* title: none; */
 }
+
+/* =====================================================
+   TASK MOVE CONTROLS
+   ===================================================== */
+
+.gantt-move-header {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  text-align: center;
+}
+
+.gantt-task-move {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.move-controls {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.move-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.move-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.move-btn:active:not(:disabled) {
+  background: #e2e8f0;
+  transform: scale(0.95);
+}
+
+.move-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.move-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Loading spinner for move operation */
+.move-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.move-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Highlight row being moved */
+.gantt-task-row.moving {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: #6366f1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .gantt-move-header,
+  .gantt-task-move {
+    width: 70px;
+    min-width: 70px;
+    max-width: 70px;
+  }
+
+  .move-btn {
+    width: 16px;
+    height: 16px;
+  }
+
+  .move-btn svg {
+    width: 10px;
+    height: 10px;
+  }
+}
+
+/* =====================================================
+   DRAG AND DROP STYLES
+   ===================================================== */
+
+/* Drag Handle */
+.gantt-task-drag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: #94a3b8;
+  transition: all 0.15s ease;
+}
+
+.gantt-task-drag:hover {
+  color: #64748b;
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.gantt-task-drag:active {
+  cursor: grabbing;
+  color: #6366f1;
+}
+
+.gantt-drag-header {
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+}
+
+/* Row being dragged */
+.gantt-task-row.dragging {
+  opacity: 0.5;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px dashed #6366f1;
+}
+
+/* Drop target styling */
+.gantt-task-row.drop-target {
+  position: relative;
+}
+
+.gantt-task-row.drop-target.drop-before::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 2px;
+  z-index: 10;
+  animation: dropIndicatorPulse 1s ease-in-out infinite;
+}
+
+.gantt-task-row.drop-target.drop-after::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 2px;
+  z-index: 10;
+  animation: dropIndicatorPulse 1s ease-in-out infinite;
+}
+
+.gantt-task-row.drop-target.drop-under {
+  background: rgba(99, 102, 241, 0.15);
+  border: 2px solid #6366f1;
+}
+
+@keyframes dropIndicatorPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Drag overlay - the ghost element being dragged */
+.gantt-task-row.dragging-overlay {
+  background: white;
+  border: 2px solid #6366f1;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3), 0 4px 10px rgba(0, 0, 0, 0.1);
+  opacity: 0.95;
+  transform: scale(1.02);
+  z-index: 1000;
+}
+
+.gantt-task-row.dragging-overlay .gantt-task-drag {
+  color: #6366f1;
+}
+
+/* Disable pointer events on children during drag */
+.gantt-task-row.dragging * {
+  pointer-events: none;
+}
+
+/* Summary task drop-under indicator */
+.gantt-task-row.summary.drop-target.drop-under {
+  background: rgba(99, 102, 241, 0.2);
+  border: 2px dashed #6366f1;
+}
+
+/* Moving state (while API call is in progress) */
+.gantt-task-row.moving {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.gantt-task-row.moving::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  transform: translateY(-50%);
+}

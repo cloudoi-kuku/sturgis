@@ -255,6 +255,18 @@ export const updateProjectMetadata = async (metadata: ProjectMetadata) => {
   return response.data;
 };
 
+// Manual Save - persists all in-memory changes to database
+export type SaveProjectResponse = {
+  success: boolean;
+  message: string;
+  task_count: number;
+};
+
+export const saveProject = async (): Promise<SaveProjectResponse> => {
+  const response = await apiClient.post('/project/save');
+  return response.data;
+};
+
 export const getTasks = async (): Promise<{ tasks: Task[] }> => {
   const response = await apiClient.get('/tasks');
   return response.data;
@@ -272,6 +284,36 @@ export const updateTask = async (taskId: string, updates: TaskUpdate) => {
 
 export const deleteTask = async (taskId: string) => {
   const response = await apiClient.delete(`/tasks/${taskId}`);
+  return response.data;
+};
+
+// Move task types
+export type MovePosition = 'under' | 'before' | 'after';
+
+export type MoveTaskChange = {
+  type: string;
+  task_name: string;
+  old_outline: string;
+  new_outline: string;
+  description: string;
+};
+
+export type MoveTaskResponse = {
+  success: boolean;
+  message: string;
+  changes: MoveTaskChange[];
+  tasks_affected: number;
+};
+
+export const moveTask = async (
+  taskId: string,
+  targetOutline: string,
+  position: MovePosition
+): Promise<MoveTaskResponse> => {
+  const response = await apiClient.post(`/tasks/${taskId}/move`, {
+    target_outline: targetOutline,
+    position: position
+  });
   return response.data;
 };
 

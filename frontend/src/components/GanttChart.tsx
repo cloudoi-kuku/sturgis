@@ -1,15 +1,147 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
 import type { Task, CriticalPathResult } from '../api/client';
-import { getCriticalPath } from '../api/client';
+import { getCriticalPath, moveTask } from '../api/client';
 import { format, parseISO, addDays, differenceInDays, startOfWeek, addWeeks, addMonths, startOfMonth, eachDayOfInterval, getDay } from 'date-fns';
-import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch, ChevronsDownUp, ChevronsUpDown, Filter } from 'lucide-react';
+import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch, ChevronsDownUp, ChevronsUpDown, Filter, GripVertical } from 'lucide-react';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragStartEvent, DragEndEvent, DragOverEvent } from '@dnd-kit/core';
+import {
+  useSortable,
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface GanttChartProps {
   tasks: Task[];
   projectStartDate: string;
   onTaskClick: (task: Task) => void;
   onTaskEdit: (task: Task) => void;
+  onTasksChanged?: () => void;
 }
+
+// Sortable Task Row Component
+interface SortableTaskRowProps {
+  task: Task;
+  rowNumber: number;
+  calculatedStartDate: Date | null;
+  isCritical: boolean;
+  isExpanded: boolean;
+  onTaskClick: (task: Task) => void;
+  onToggleExpand: (taskId: string) => void;
+  getTaskIndent: (level: number) => number;
+  formatDate: (date: string) => string;
+  formatDuration: (duration: string) => string;
+  formatPredecessors: (preds: Task['predecessors']) => string;
+  calculateSummaryDuration: (task: Task) => number;
+  parseDuration: (duration: string) => number;
+  isDragging?: boolean;
+  isOver?: boolean;
+  dropPosition?: 'before' | 'after' | 'under' | null;
+}
+
+// Sortable Task Row Component
+const SortableTaskRow: React.FC<SortableTaskRowProps> = ({
+  task,
+  rowNumber,
+  calculatedStartDate,
+  isCritical,
+  isExpanded,
+  onTaskClick,
+  onToggleExpand,
+  getTaskIndent,
+  formatDate,
+  formatDuration,
+  formatPredecessors,
+  calculateSummaryDuration,
+  parseDuration,
+  isDragging,
+  isOver,
+  dropPosition,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`gantt-task-row ${task.summary ? 'summary' : ''} ${task.milestone ? 'milestone-row' : ''} ${isCritical ? 'critical-path' : ''} ${isDragging ? 'dragging' : ''} ${isOver ? `drop-target drop-${dropPosition}` : ''}`}
+      onClick={() => onTaskClick(task)}
+    >
+      <div className="gantt-task-drag" {...attributes} {...listeners}>
+        <GripVertical size={14} />
+      </div>
+      <div className="gantt-task-number">
+        {rowNumber}
+      </div>
+      <div className="gantt-task-wbs">{task.outline_number}</div>
+      <div className="gantt-task-name" style={{ paddingLeft: getTaskIndent(task.outline_level) }} title={task.name}>
+        {task.summary ? (
+          <button
+            className="expand-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand(task.id);
+            }}
+          >
+            {isExpanded ? (
+              <ChevronDown size={16} />
+            ) : (
+              <ChevronRight size={16} />
+            )}
+          </button>
+        ) : (
+          <span className="expand-button-spacer"></span>
+        )}
+        {task.milestone && <Diamond size={14} className="milestone-icon" />}
+        <span className="task-name-text">{task.name}</span>
+        {task.summary && <span className="summary-badge">Summary</span>}
+      </div>
+      <div className="gantt-task-start">
+        {calculatedStartDate ? formatDate(calculatedStartDate.toISOString()) : '-'}
+      </div>
+      <div className="gantt-task-duration">
+        {task.summary ? (() => {
+          const summaryDuration = calculateSummaryDuration(task);
+          return summaryDuration === 0 ? '0 days' :
+                 summaryDuration === 1 ? '1 day' :
+                 summaryDuration % 1 === 0 ? `${summaryDuration} days` :
+                 `${summaryDuration.toFixed(1)} days`;
+        })() : formatDuration(task.duration)}
+      </div>
+      <div className="gantt-task-finish">
+        {calculatedStartDate ? (() => {
+          const duration = task.summary ? calculateSummaryDuration(task) : parseDuration(task.duration);
+          const finishDate = addDays(calculatedStartDate, duration);
+          return formatDate(finishDate.toISOString());
+        })() : '-'}
+      </div>
+      <div className="gantt-task-predecessors" title={formatPredecessors(task.predecessors)}>
+        {formatPredecessors(task.predecessors)}
+      </div>
+    </div>
+  );
+};
 
 type ZoomLevel = 'day' | 'week' | 'month';
 
@@ -27,6 +159,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   projectStartDate,
   onTaskClick,
   onTaskEdit,
+  onTasksChanged,
 }) => {
   // Start with all summary tasks expanded by default
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(() => {
@@ -52,10 +185,125 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   // Refs for synchronized scrolling
   const taskListRef = useRef<HTMLDivElement>(null);
   const timelineBodyRef = useRef<HTMLDivElement>(null);
-  const skipSyncRef = useRef<{ taskList: boolean; timeline: boolean }>({ 
-    taskList: false, 
-    timeline: false 
+  const skipSyncRef = useRef<{ taskList: boolean; timeline: boolean }>({
+    taskList: false,
+    timeline: false
   });
+
+  // Drag and drop state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'under' | null>(null);
+  const [_isMoving, setIsMoving] = useState(false); // Prefixed to suppress unused warning
+
+  // Configure drag sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Minimum drag distance before activation
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
+
+  // Get the active task being dragged
+  const activeTask = useMemo(() => {
+    if (!activeId) return null;
+    return tasks.find(t => t.id === activeId) || null;
+  }, [activeId, tasks]);
+
+  // Handle drag start
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  // Handle drag over - determine drop position
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) {
+      setOverId(null);
+      setDropPosition(null);
+      return;
+    }
+
+    setOverId(over.id as string);
+
+    // Determine drop position based on cursor position relative to the target
+    const overRect = over.rect;
+    if (overRect) {
+      const overTask = tasks.find(t => t.id === over.id);
+      if (overTask) {
+        // Get the active element's current translated position
+        // The active rect includes the current transform, so we can calculate cursor position
+        const activeRect = active.rect.current.translated;
+        if (activeRect) {
+          // Use the center of the dragged element as the reference point
+          const dragCenterY = activeRect.top + (activeRect.height / 2);
+          const rowTop = overRect.top;
+          const rowHeight = overRect.height;
+          const positionInRow = dragCenterY - rowTop;
+
+          // Top third = before, middle third = under (if summary), bottom third = after
+          if (positionInRow < rowHeight * 0.33) {
+            setDropPosition('before');
+          } else if (positionInRow > rowHeight * 0.67) {
+            setDropPosition('after');
+          } else if (overTask.summary) {
+            setDropPosition('under');
+          } else {
+            setDropPosition('after');
+          }
+        }
+      }
+    }
+  };
+
+  // Handle drag end - execute the move
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    setActiveId(null);
+    setOverId(null);
+    setDropPosition(null);
+
+    if (!over || active.id === over.id || !dropPosition) {
+      return;
+    }
+
+    const sourceTask = tasks.find(t => t.id === active.id);
+    const targetTask = tasks.find(t => t.id === over.id);
+
+    if (!sourceTask || !targetTask) return;
+
+    // Prevent moving a task under itself or its children
+    if (dropPosition === 'under') {
+      if (targetTask.outline_number.startsWith(sourceTask.outline_number + '.') ||
+          targetTask.outline_number === sourceTask.outline_number) {
+        return;
+      }
+    }
+
+    setIsMoving(true);
+    try {
+      const result = await moveTask(sourceTask.id, targetTask.outline_number, dropPosition);
+      if (result.success) {
+        onTasksChanged?.();
+      } else {
+        console.error('Move failed:', result.message);
+      }
+    } catch (error) {
+      console.error('Move task error:', error);
+    } finally {
+      setIsMoving(false);
+    }
+  };
+
+  // Handle drag cancel
+  const handleDragCancel = () => {
+    setActiveId(null);
+    setOverId(null);
+    setDropPosition(null);
+  };
 
   // Parse duration from ISO 8601 format (PT8H0M0S) to days
   const parseDuration = (duration: string): number => {
@@ -772,85 +1020,80 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       </div>
 
       <div className="gantt-container">
-        {/* Task List */}
-        <div className="gantt-task-list">
-          <div className="gantt-header">
-            <div className="gantt-header-cell" title="Row Number">#</div>
-            <div className="gantt-header-cell" title="Work Breakdown Structure">WBS</div>
-            <div className="gantt-header-cell" title="Task Name">Task Name</div>
-            <div className="gantt-header-cell" title="Start Date">Start</div>
-            <div className="gantt-header-cell" title="Duration in Days">Duration</div>
-            <div className="gantt-header-cell" title="Finish Date">Finish</div>
-            <div className="gantt-header-cell" title="Predecessor Tasks">Predecessors</div>
+        {/* Task List with Drag and Drop */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <div className="gantt-task-list">
+            <div className="gantt-header">
+              <div className="gantt-header-cell gantt-drag-header" title="Drag to Reorder"></div>
+              <div className="gantt-header-cell" title="Row Number">#</div>
+              <div className="gantt-header-cell" title="Work Breakdown Structure">WBS</div>
+              <div className="gantt-header-cell" title="Task Name">Task Name</div>
+              <div className="gantt-header-cell" title="Start Date">Start</div>
+              <div className="gantt-header-cell" title="Duration in Days">Duration</div>
+              <div className="gantt-header-cell" title="Finish Date">Finish</div>
+              <div className="gantt-header-cell" title="Predecessor Tasks">Predecessors</div>
+            </div>
+            <div className="gantt-tasks" ref={taskListRef} onScroll={handleTaskListScroll}>
+              <SortableContext items={visibleTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                {visibleTasks.map((task, index) => {
+                  const taskPos = taskPositions.find(p => p.task.id === task.id);
+                  const calculatedStartDate = taskPos?.startDate || null;
+                  const rowNumber = taskRowNumbers.get(task.outline_number) || index + 1;
+                  const isCritical = showCriticalPath && criticalTaskIds.has(task.id);
+
+                  return (
+                    <SortableTaskRow
+                      key={task.id}
+                      task={task}
+                      rowNumber={rowNumber}
+                      calculatedStartDate={calculatedStartDate}
+                      isCritical={isCritical}
+                      isExpanded={expandedTasks.has(task.id)}
+                      onTaskClick={onTaskClick}
+                      onToggleExpand={toggleExpand}
+                      getTaskIndent={getTaskIndent}
+                      formatDate={formatDate}
+                      formatDuration={formatDuration}
+                      formatPredecessors={formatPredecessors}
+                      calculateSummaryDuration={calculateSummaryDuration}
+                      parseDuration={parseDuration}
+                      isDragging={activeId === task.id}
+                      isOver={overId === task.id}
+                      dropPosition={overId === task.id ? dropPosition : null}
+                    />
+                  );
+                })}
+              </SortableContext>
+            </div>
           </div>
-          <div className="gantt-tasks" ref={taskListRef} onScroll={handleTaskListScroll}>
-            {visibleTasks.map((task, index) => {
-              const taskPos = taskPositions.find(p => p.task.id === task.id);
-              const calculatedStartDate = taskPos?.startDate;
-              // Get the permanent row number for this task
-              const rowNumber = taskRowNumbers.get(task.outline_number) || index + 1;
 
-              const isCritical = showCriticalPath && criticalTaskIds.has(task.id);
-
-              return (
-                <div
-                  key={task.id}
-                  className={`gantt-task-row ${task.summary ? 'summary' : ''} ${task.milestone ? 'milestone-row' : ''} ${isCritical ? 'critical-path' : ''}`}
-                  onClick={() => onTaskClick(task)}
-                >
-                  <div className="gantt-task-number">
-                    {rowNumber}
-                  </div>
-                  <div className="gantt-task-wbs">{task.outline_number}</div>
-                  <div className="gantt-task-name" style={{ paddingLeft: getTaskIndent(task.outline_level) }} title={task.name}>
-                    {task.summary ? (
-                      <button
-                        className="expand-button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleExpand(task.id);
-                        }}
-                      >
-                        {expandedTasks.has(task.id) ? (
-                          <ChevronDown size={16} />
-                        ) : (
-                          <ChevronRight size={16} />
-                        )}
-                      </button>
-                    ) : (
-                      <span className="expand-button-spacer"></span>
-                    )}
-                    {task.milestone && <Diamond size={14} className="milestone-icon" />}
-                    <span className="task-name-text">{task.name}</span>
-                    {task.summary && <span className="summary-badge">Summary</span>}
-                  </div>
-                  <div className="gantt-task-start">
-                    {calculatedStartDate ? formatDate(calculatedStartDate.toISOString()) : '-'}
-                  </div>
-                  <div className="gantt-task-duration">
-                    {task.summary ? (() => {
-                      const summaryDuration = calculateSummaryDuration(task);
-                      return summaryDuration === 0 ? '0 days' :
-                             summaryDuration === 1 ? '1 day' :
-                             summaryDuration % 1 === 0 ? `${summaryDuration} days` :
-                             `${summaryDuration.toFixed(1)} days`;
-                    })() : formatDuration(task.duration)}
-                  </div>
-                  <div className="gantt-task-finish">
-                    {calculatedStartDate ? (() => {
-                      const duration = task.summary ? calculateSummaryDuration(task) : parseDuration(task.duration);
-                      const finishDate = addDays(calculatedStartDate, duration);
-                      return formatDate(finishDate.toISOString());
-                    })() : '-'}
-                  </div>
-                  <div className="gantt-task-predecessors" title={formatPredecessors(task.predecessors)}>
-                    {formatPredecessors(task.predecessors)}
-                  </div>
+          {/* Drag Overlay - shows the dragged item */}
+          <DragOverlay>
+            {activeTask ? (
+              <div className="gantt-task-row dragging-overlay">
+                <div className="gantt-task-drag">
+                  <GripVertical size={14} />
                 </div>
-              );
-            })}
-          </div>
-        </div>
+                <div className="gantt-task-number">-</div>
+                <div className="gantt-task-wbs">{activeTask.outline_number}</div>
+                <div className="gantt-task-name">
+                  <span className="task-name-text">{activeTask.name}</span>
+                </div>
+                <div className="gantt-task-start">-</div>
+                <div className="gantt-task-duration">{formatDuration(activeTask.duration)}</div>
+                <div className="gantt-task-finish">-</div>
+                <div className="gantt-task-predecessors">-</div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
 
         {/* Timeline */}
         <div className="gantt-timeline">

@@ -313,6 +313,19 @@ async def get_all_projects(current_user: Optional[dict] = Depends(get_optional_u
     # Format for frontend compatibility
     formatted_projects = []
     for p in projects:
+        project_user_id = p.get('user_id')
+        # Determine ownership:
+        # - None (not logged in): is_owned = None
+        # - Project has no owner (legacy): is_owned = True (treat as owned/editable)
+        # - Project owned by current user: is_owned = True
+        # - Project owned by someone else: is_owned = False
+        if user_id is None:
+            is_owned = None
+        elif project_user_id is None:
+            is_owned = True  # Legacy project, treat as owned
+        else:
+            is_owned = project_user_id == user_id
+
         formatted_projects.append({
             "id": p['id'],
             "name": p['name'],
@@ -320,7 +333,7 @@ async def get_all_projects(current_user: Optional[dict] = Depends(get_optional_u
             "start_date": p['start_date'],
             "is_active": bool(p['is_active']),
             "is_shared": bool(p.get('is_shared', 0)),
-            "is_owned": p.get('user_id') == user_id if user_id else None
+            "is_owned": is_owned
         })
     return {"projects": formatted_projects}
 
@@ -563,27 +576,72 @@ async def update_project_metadata(metadata: ProjectMetadata):
     return {"success": True, "metadata": metadata}
 
 
-@app.get("/api/tasks")
-async def get_tasks():
-    """Get all tasks in the current project - always reads from database for consistency"""
+@app.post("/api/project/save")
+async def save_project():
+    """
+    Explicitly save the current project state to the database.
+    This is the only way to persist changes - no auto-save.
+    """
     global current_project, current_project_id
 
-    # Always fetch active project from database to ensure consistency across workers
+    if not current_project or not current_project_id:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    try:
+        # Update project metadata
+        db.update_project_metadata(
+            current_project_id,
+            current_project.get('name', 'Unnamed Project'),
+            current_project.get('start_date', '2024-01-01'),
+            current_project.get('status_date', '2024-01-01')
+        )
+
+        # Save all tasks
+        for task in current_project.get("tasks", []):
+            db.update_task(task["id"], task)
+
+        # Save XML template if available
+        if xml_processor.xml_root is not None:
+            xml_str = ET.tostring(xml_processor.xml_root, encoding='unicode')
+            db.save_xml_template(current_project_id, xml_str)
+
+        print(f"[SAVE] Project saved: {current_project.get('name', 'Unknown')} (ID: {current_project_id})")
+
+        return {
+            "success": True,
+            "message": f"Project '{current_project.get('name', 'Unknown')}' saved successfully",
+            "task_count": len(current_project.get("tasks", []))
+        }
+    except Exception as e:
+        print(f"[SAVE ERROR] Failed to save project: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save project: {str(e)}")
+
+
+@app.get("/api/tasks")
+async def get_tasks():
+    """Get all tasks in the current project - returns in-memory state for manual save mode"""
+    global current_project, current_project_id
+
+    # Check active project from database
     project_data = db.get_active_project()
     if not project_data:
         raise HTTPException(status_code=404, detail="No project loaded")
 
-    # Sync in-memory state if out of sync
-    if current_project_id != project_data['id']:
+    # If no in-memory state or different project, load from database
+    if not current_project or current_project_id != project_data['id']:
         load_project_from_db(project_data['id'])
 
-    # Get tasks from database
-    tasks = db.get_tasks(project_data['id'])
+    # MANUAL SAVE MODE: Return in-memory state (may have unsaved changes)
+    if current_project and current_project.get("tasks"):
+        tasks = current_project["tasks"]
+        # Ensure summary tasks are calculated
+        tasks = xml_processor._calculate_summary_tasks(tasks)
+        return {"tasks": tasks}
 
-    # Ensure summary tasks are calculated before returning
+    # Fallback: Load from database if no in-memory state
+    tasks = db.get_tasks(project_data['id'])
     tasks = xml_processor._calculate_summary_tasks(tasks)
 
-    # Update in-memory state
     if current_project:
         current_project["tasks"] = tasks
 
@@ -608,17 +666,12 @@ async def create_task(task: TaskCreate):
     # This also recalculates summary tasks for all affected tasks
     new_task = xml_processor.add_task(current_project, task_dict)
 
-    # Save the new task to database
-    db.create_task(current_project_id, new_task)
-
-    # Update all tasks in database to reflect summary status changes
-    # (parent tasks may have become summary tasks)
-    for task in current_project.get("tasks", []):
-        if task["id"] != new_task["id"]:  # Don't update the new task twice
-            db.update_task(task["id"], task)
-
-    # Save XML template
-    save_project_to_db()
+    # MANUAL SAVE MODE: Changes kept in memory only until user saves
+    # db.create_task(current_project_id, new_task)
+    # for task in current_project.get("tasks", []):
+    #     if task["id"] != new_task["id"]:
+    #         db.update_task(task["id"], task)
+    # save_project_to_db()
 
     return {"success": True, "task": new_task}
 
@@ -660,12 +713,10 @@ async def update_task(task_id: str, task: TaskUpdate):
     if not updated_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Update all tasks in database to reflect summary status changes
-    for task in current_project.get("tasks", []):
-        db.update_task(task["id"], task)
-
-    # Save XML template
-    save_project_to_db()
+    # MANUAL SAVE MODE: Changes kept in memory only until user saves
+    # for task in current_project.get("tasks", []):
+    #     db.update_task(task["id"], task)
+    # save_project_to_db()
 
     print(f"DEBUG: Updated task result: {updated_task}")
     return {"success": True, "task": updated_task}
@@ -686,18 +737,151 @@ async def delete_task(task_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Delete from database
-    db.delete_task(task_id)
-
-    # Update all remaining tasks in database to reflect summary status changes
-    # (parent tasks may no longer be summary tasks if all children were deleted)
-    for task in current_project.get("tasks", []):
-        db.update_task(task["id"], task)
-
-    # Save XML template
-    save_project_to_db()
+    # MANUAL SAVE MODE: Changes kept in memory only until user saves
+    # db.delete_task(task_id)
+    # for task in current_project.get("tasks", []):
+    #     db.update_task(task["id"], task)
+    # save_project_to_db()
 
     return {"success": True, "message": "Task deleted successfully"}
+
+
+class MoveTaskRequest(BaseModel):
+    """Request model for moving a task"""
+    target_outline: str = Field(..., description="Outline number of the target task")
+    position: str = Field(..., description="Position relative to target: 'under', 'before', or 'after'")
+
+
+class MoveTaskResponse(BaseModel):
+    """Response model for move task operation"""
+    success: bool
+    message: str
+    changes: List[Dict[str, Any]] = []
+    tasks_affected: int = 0
+
+
+@app.post("/api/tasks/{task_id}/move", response_model=MoveTaskResponse)
+async def move_task(task_id: str, request: MoveTaskRequest):
+    """
+    Move a task (and all its children) to a new position in the hierarchy.
+
+    Position options:
+    - "under": Move as a child of the target task
+    - "before": Move before the target task (same level)
+    - "after": Move after the target task (same level)
+
+    This operation:
+    - Updates all outline numbers for the moved task and its children
+    - Updates predecessor references that point to moved tasks
+    - Renumbers sibling tasks to maintain proper sequence
+    - Automatically marks target as summary if moving "under"
+    """
+    global current_project, current_project_id
+
+    # Validate position
+    if request.position not in ["under", "before", "after"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Position must be 'under', 'before', or 'after'"
+        )
+
+    # Ensure we have fresh data from database
+    project_data = db.get_active_project()
+    if not project_data:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    # Sync in-memory state if needed
+    if current_project_id != project_data['id']:
+        load_project_from_db(project_data['id'])
+
+    if not current_project or not current_project_id:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    # Find the source task by ID
+    source_task = None
+    for task in current_project.get("tasks", []):
+        if task["id"] == task_id:
+            source_task = task
+            break
+
+    if not source_task:
+        raise HTTPException(status_code=404, detail=f"Task with ID {task_id} not found")
+
+    source_outline = source_task["outline_number"]
+    target_outline = request.target_outline
+
+    # Find target task
+    target_task = None
+    for task in current_project.get("tasks", []):
+        if task["outline_number"] == target_outline:
+            target_task = task
+            break
+
+    if not target_task:
+        raise HTTPException(status_code=404, detail=f"Target task with outline {target_outline} not found")
+
+    # Pre-flight validation: Cannot move a task under its own children
+    if request.position == "under":
+        if target_outline.startswith(source_outline + ".") or target_outline == source_outline:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot move a task under itself or its own children"
+            )
+
+    # Cannot move task to the same position
+    if source_outline == target_outline:
+        raise HTTPException(
+            status_code=400,
+            detail="Source and target are the same task"
+        )
+
+    # Execute the move using ai_project_editor
+    result = ai_project_editor._move_task(
+        current_project,
+        source_outline,
+        target_outline,
+        request.position
+    )
+
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+
+    # Get the updated project
+    updated_project = result.get("project", current_project)
+
+    # Update in-memory state
+    current_project = updated_project
+
+    # MANUAL SAVE MODE: Changes kept in memory only until user saves
+    # existing_task_ids = {t["id"] for t in db.get_tasks(current_project_id)}
+    # new_task_ids = {t["id"] for t in updated_project.get("tasks", [])}
+    # for tid in existing_task_ids - new_task_ids:
+    #     db.delete_task(tid)
+    # for task in updated_project.get("tasks", []):
+    #     if task["id"] in existing_task_ids:
+    #         db.update_task(task["id"], task)
+    #     else:
+    #         db.create_task(current_project_id, task)
+    # save_project_to_db()
+
+    # Format changes for response
+    changes = [
+        {
+            "type": c.get("type", "move"),
+            "task_name": c.get("task_name"),
+            "old_outline": c.get("old_outline"),
+            "new_outline": c.get("new_outline"),
+            "description": f"Moved from {c.get('old_outline')} to {c.get('new_outline')}"
+        }
+        for c in result.get("changes", [])
+    ]
+
+    return MoveTaskResponse(
+        success=True,
+        message=result["message"],
+        changes=changes,
+        tasks_affected=len(changes)
+    )
 
 
 @app.post("/api/validate")
@@ -920,14 +1104,14 @@ async def _handle_editor_command(command: Dict, project: Dict, project_id: str, 
         # Update project with changes
         updated_project = result["project"]
 
-        # Save to database
+        # MANUAL SAVE MODE: Changes kept in memory only until user saves
         if request_project_id:
-            for task in updated_project.get("tasks", []):
-                db.update_task(task["id"], task)
+            # AI modifying a specific project - update in memory
+            pass  # Changes stored in updated_project
         else:
             # Update current project in memory
             current_project = updated_project
-            save_project_to_db()
+        # Note: User must click Save to persist changes
 
         # Format response
         response = f"✅ {result['message']}\n\n"
@@ -1025,14 +1209,13 @@ async def chat_with_ai(request: ChatRequest):
             result = ai_command_handler.execute_command(command, target_project)
 
             if result["success"]:
-                # Save changes to database
-                if request.project_id:
-                    # Save to the specific project
-                    for task in target_project.get("tasks", []):
-                        db.update_task(task["id"], task)
-                else:
-                    # Save to current project
-                    save_project_to_db()
+                # MANUAL SAVE MODE: Changes kept in memory only until user saves
+                # if request.project_id:
+                #     for task in target_project.get("tasks", []):
+                #         db.update_task(task["id"], task)
+                # else:
+                #     save_project_to_db()
+                # Note: User must click Save to persist changes
 
                 # Generate AI response confirming the change
                 response = f"✅ {result['message']}\n\n"
@@ -1348,16 +1531,15 @@ async def apply_optimization_strategy(request: ApplyOptimizationRequest):
                 changes_applied += 1
                 print(f"Compressed task {task['name']}: {change['current_value']:.1f}d → {change['suggested_value']:.1f}d")
 
-        # Save updated project to database
-        # Need to update all modified tasks in the database
-        for task in current_project.get("tasks", []):
-            db.update_task(task['id'], task)
-
-        save_project_to_db()
+        # MANUAL SAVE MODE: Changes kept in memory only until user saves
+        # for task in current_project.get("tasks", []):
+        #     db.update_task(task['id'], task)
+        # save_project_to_db()
+        # Note: User must click Save to persist changes
 
         return {
             "success": True,
-            "message": f"Applied {changes_applied} changes successfully",
+            "message": f"Applied {changes_applied} changes successfully. Remember to Save!",
             "changes_applied": changes_applied,
             "strategy_id": request.strategy_id
         }
@@ -1631,14 +1813,12 @@ async def execute_ai_edit_command(request: AIEditCommandRequest):
             if basic_command:
                 result = ai_command_handler.execute_command(basic_command, target_project)
 
-                # Save changes if successful
+                # MANUAL SAVE MODE: Changes kept in memory only until user saves
                 if result["success"]:
-                    for task in target_project.get("tasks", []):
-                        db.update_task(task["id"], task)
-
                     # Update in-memory if this is the current project
                     if target_project_id == current_project_id:
                         current_project = target_project
+                    # Note: User must click Save to persist changes
 
                 return AIEditResult(
                     success=result["success"],
@@ -1663,26 +1843,22 @@ async def execute_ai_edit_command(request: AIEditCommandRequest):
             # Update the project with modified tasks
             updated_project = result.get("project", target_project)
 
-            # Save all tasks to database
-            # First, we need to handle task deletions and additions properly
-            existing_task_ids = {t["id"] for t in db.get_tasks(target_project_id)}
-            new_task_ids = {t["id"] for t in updated_project.get("tasks", [])}
-
-            # Delete removed tasks
-            for task_id in existing_task_ids - new_task_ids:
-                db.delete_task(task_id)
-
-            # Update/insert remaining tasks
-            for task in updated_project.get("tasks", []):
-                if task["id"] in existing_task_ids:
-                    db.update_task(task["id"], task)
-                else:
-                    db.create_task(target_project_id, task)
-
             # Update in-memory state if this is the current project
             if target_project_id == current_project_id:
                 current_project = updated_project
-                save_project_to_db()
+
+            # MANUAL SAVE MODE: Changes kept in memory only until user saves
+            # existing_task_ids = {t["id"] for t in db.get_tasks(target_project_id)}
+            # new_task_ids = {t["id"] for t in updated_project.get("tasks", [])}
+            # for task_id in existing_task_ids - new_task_ids:
+            #     db.delete_task(task_id)
+            # for task in updated_project.get("tasks", []):
+            #     if task["id"] in existing_task_ids:
+            #         db.update_task(task["id"], task)
+            #     else:
+            #         db.create_task(target_project_id, task)
+            # save_project_to_db()
+            # Note: User must click Save to persist changes
 
         # Convert changes to response format
         changes = [

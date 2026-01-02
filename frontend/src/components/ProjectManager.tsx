@@ -236,6 +236,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                       title="Delete this project"
                     >
                       <Trash2 size={14} />
+                      Delete
                     </button>
                   )}
                 </div>

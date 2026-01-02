@@ -586,7 +586,7 @@ body {
 /* Header Row - Dark and Bold */
 .gantt-header {
   display: grid;
-  grid-template-columns: 44px 72px 280px 110px 90px 110px 160px;
+  grid-template-columns: 28px 44px 72px 280px 110px 90px 110px 160px;
   background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
   color: var(--text-primary);
   font-weight: 600;
@@ -637,7 +637,7 @@ body {
 
 .gantt-task-row {
   display: grid;
-  grid-template-columns: 44px 72px 280px 110px 90px 110px 160px;
+  grid-template-columns: 28px 44px 72px 280px 110px 90px 110px 160px;
   border-bottom: 1px solid #f1f5f9;
   cursor: pointer;
   transition: var(--transition-fast);

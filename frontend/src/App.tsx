@@ -9,7 +9,7 @@ import { CalendarManager } from './components/CalendarManager';
 import { BaselineManager } from './components/BaselineManager';
 import { HowToUse } from './components/HowToUse';
 import { ExportMenu } from './components/ExportMenu';
-import { CloudStorageSettings, uploadToDropbox, uploadToOneDrive, isDropboxConnected, isOneDriveConnected } from './components/CloudStorageSettings';
+import { uploadToDropbox, uploadToOneDrive, isDropboxConnected, isOneDriveConnected } from './components/CloudStorageSettings';
 import { Button } from './components/ui/button';
 import {
   uploadProject,
@@ -23,6 +23,7 @@ import {
   exportProject,
   getCalendar,
   updateCalendar,
+  saveProject,
 } from './api/client';
 import type {
   Task,
@@ -53,12 +54,28 @@ function AppContent() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isBaselineManagerOpen, setIsBaselineManagerOpen] = useState(false);
   const [isHowToUseOpen, setIsHowToUseOpen] = useState(false);
-  const [isDropboxSettingsOpen, setIsDropboxSettingsOpen] = useState(false);
   const [isSavingToDropbox, setIsSavingToDropbox] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'project' | 'cloud'>('project');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<any[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const queryClientInstance = useQueryClient();
+
+  // Warn user about unsaved changes when leaving
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Queries
   const { data: tasksData, isLoading: tasksLoading } = useQuery({
@@ -80,12 +97,13 @@ function AppContent() {
     retry: false,
   });
 
-  // Mutations
+  // Mutations - all mutations mark project as having unsaved changes
   const uploadMutation = useMutation({
     mutationFn: uploadProject,
     onSuccess: () => {
       queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
       queryClientInstance.invalidateQueries({ queryKey: ['metadata'] });
+      setHasUnsavedChanges(false); // Fresh upload is saved
     },
   });
 
@@ -95,6 +113,7 @@ function AppContent() {
       queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
       setIsEditorOpen(false);
       setSelectedTask(undefined);
+      setHasUnsavedChanges(true); // Mark as unsaved
     },
   });
 
@@ -105,6 +124,7 @@ function AppContent() {
       queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
       setIsEditorOpen(false);
       setSelectedTask(undefined);
+      setHasUnsavedChanges(true); // Mark as unsaved
     },
   });
 
@@ -112,6 +132,7 @@ function AppContent() {
     mutationFn: deleteTask,
     onSuccess: () => {
       queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
+      setHasUnsavedChanges(true); // Mark as unsaved
     },
   });
 
@@ -120,6 +141,7 @@ function AppContent() {
     onSuccess: () => {
       queryClientInstance.invalidateQueries({ queryKey: ['metadata'] });
       setIsMetadataOpen(false);
+      setHasUnsavedChanges(true); // Mark as unsaved
     },
   });
 
@@ -129,6 +151,7 @@ function AppContent() {
       queryClientInstance.invalidateQueries({ queryKey: ['calendar'] });
       queryClientInstance.invalidateQueries({ queryKey: ['tasks'] }); // Refresh tasks as dates may change
       setIsCalendarOpen(false);
+      setHasUnsavedChanges(true); // Mark as unsaved
     },
   });
 
@@ -138,6 +161,7 @@ function AppContent() {
       // Refresh all data when AI chat modifies the project
       queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
       queryClientInstance.invalidateQueries({ queryKey: ['metadata'] });
+      setHasUnsavedChanges(true); // AI changes are unsaved
     };
 
     window.addEventListener('projectUpdated', handleProjectUpdate);
@@ -145,6 +169,30 @@ function AppContent() {
       window.removeEventListener('projectUpdated', handleProjectUpdate);
     };
   }, [queryClientInstance]);
+
+  // Manual Save Handler
+  const handleSave = async () => {
+    if (!metadata) {
+      alert('No project loaded');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const result = await saveProject();
+      if (result.success) {
+        setHasUnsavedChanges(false);
+        alert(`Project saved successfully! (${result.task_count} tasks)`);
+      } else {
+        alert(`Save failed: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      alert(`Error saving project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Handlers
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,6 +279,7 @@ function AppContent() {
       queryClientInstance.refetchQueries({ queryKey: ['metadata'] }),
       queryClientInstance.refetchQueries({ queryKey: ['calendar'] }),
     ]);
+    setHasUnsavedChanges(true); // Mark as unsaved after any change
   };
 
   const handleExport = async () => {
@@ -294,7 +343,8 @@ function AppContent() {
     if (!dropboxConnected && !oneDriveConnected) {
       const connect = confirm('No cloud storage connected. Would you like to configure cloud storage settings?');
       if (connect) {
-        setIsDropboxSettingsOpen(true);
+        setSettingsInitialTab('cloud');
+        setIsMetadataOpen(true);
       }
       return;
     }
@@ -731,29 +781,42 @@ function AppContent() {
               >
                 <Calendar className="h-4 w-4" />
               </button>
+              {/* Manual Save Button - prominent when unsaved changes exist */}
+              <button
+                onClick={handleSave}
+                disabled={isSaving || !hasUnsavedChanges}
+                title={hasUnsavedChanges ? "Save Project (Unsaved Changes)" : "All Changes Saved"}
+                style={{ padding: '10px' }}
+                className={`flex items-center rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  hasUnsavedChanges
+                    ? 'text-white bg-green-500 hover:bg-green-600 border-green-600 animate-pulse'
+                    : 'text-green-500 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-300'
+                }`}
+              >
+                {isSaving ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+              </button>
               <button
                 onClick={handleSaveToCloud}
                 disabled={isSavingToDropbox}
-                title="Save to Cloud"
+                title="Backup to Cloud"
                 style={{ padding: '10px' }}
                 className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-blue-200 hover:border-blue-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSavingToDropbox ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
                 ) : (
-                  <Save className="h-4 w-4" />
+                  <Cloud className="h-4 w-4" />
                 )}
               </button>
               <button
-                onClick={() => setIsDropboxSettingsOpen(true)}
-                title="Cloud Storage Settings"
-                style={{ padding: '10px' }}
-                className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
-              >
-                <Cloud className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setIsMetadataOpen(true)}
+                onClick={() => {
+                  setSettingsInitialTab('project');
+                  setIsMetadataOpen(true);
+                }}
                 title="Project Settings"
                 style={{ padding: '10px' }}
                 className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 hover:border-slate-300 transition-all"
@@ -846,6 +909,7 @@ function AppContent() {
             projectStartDate={metadata.start_date}
             onTaskClick={handleEditTask}
             onTaskEdit={handleEditTask}
+            onTasksChanged={handleProjectChanged}
           />
         )}
 
@@ -891,6 +955,7 @@ function AppContent() {
         onSave={async (updatedMetadata) => {
           await updateMetadataMutation.mutateAsync(updatedMetadata);
         }}
+        initialTab={settingsInitialTab}
       />
 
       <AIChat
@@ -927,10 +992,6 @@ function AppContent() {
         onClose={() => setIsHowToUseOpen(false)}
       />
 
-      <CloudStorageSettings
-        isOpen={isDropboxSettingsOpen}
-        onClose={() => setIsDropboxSettingsOpen(false)}
-      />
     </div>
   );
 }
