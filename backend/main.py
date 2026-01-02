@@ -516,16 +516,26 @@ async def upload_project(
 
 @app.get("/api/project/metadata")
 async def get_project_metadata():
-    """Get current project metadata"""
-    if not current_project:
+    """Get current project metadata - always reads from database for consistency"""
+    global current_project, current_project_id
+
+    # Always fetch from database to ensure consistency across workers
+    project_data = db.get_active_project()
+    if not project_data:
         raise HTTPException(status_code=404, detail="No project loaded")
 
+    # Sync in-memory state if out of sync
+    if current_project_id != project_data['id']:
+        load_project_from_db(project_data['id'])
+
+    task_count = len(db.get_tasks(project_data['id']))
+
     return {
-        "project_id": current_project_id,
-        "name": current_project.get("name"),
-        "start_date": current_project.get("start_date"),
-        "status_date": current_project.get("status_date"),
-        "task_count": len(current_project.get("tasks", []))
+        "project_id": project_data['id'],
+        "name": project_data['name'],
+        "start_date": project_data['start_date'],
+        "status_date": project_data['status_date'],
+        "task_count": task_count
     }
 
 
@@ -555,14 +565,29 @@ async def update_project_metadata(metadata: ProjectMetadata):
 
 @app.get("/api/tasks")
 async def get_tasks():
-    """Get all tasks in the current project"""
-    if not current_project:
+    """Get all tasks in the current project - always reads from database for consistency"""
+    global current_project, current_project_id
+
+    # Always fetch active project from database to ensure consistency across workers
+    project_data = db.get_active_project()
+    if not project_data:
         raise HTTPException(status_code=404, detail="No project loaded")
 
-    # Ensure summary tasks are calculated before returning
-    current_project["tasks"] = xml_processor._calculate_summary_tasks(current_project.get("tasks", []))
+    # Sync in-memory state if out of sync
+    if current_project_id != project_data['id']:
+        load_project_from_db(project_data['id'])
 
-    return {"tasks": current_project.get("tasks", [])}
+    # Get tasks from database
+    tasks = db.get_tasks(project_data['id'])
+
+    # Ensure summary tasks are calculated before returning
+    tasks = xml_processor._calculate_summary_tasks(tasks)
+
+    # Update in-memory state
+    if current_project:
+        current_project["tasks"] = tasks
+
+    return {"tasks": tasks}
 
 
 @app.post("/api/tasks")
