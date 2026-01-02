@@ -25,10 +25,12 @@
     "noUncheckedSideEffectImports": true,
 
     /* Path mapping */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+
+    /* Suppress deprecation warnings */
+    "ignoreDeprecations": "5.0"
   },
   "include": ["src"]
 }

@@ -1097,10 +1097,21 @@ body {
   border-radius: var(--radius-md);
   color: var(--text-dark-secondary);
   transition: var(--transition-fast);
+  position: relative;
 }
 
 .summary-filter-control:hover {
   border-color: var(--accent-primary);
+}
+
+.summary-filter-control.active {
+  background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+  border-color: #0ea5e9;
+  color: #0369a1;
+}
+
+.summary-filter-control.active svg {
+  color: #0ea5e9;
 }
 
 .summary-filter-select {
@@ -1111,13 +1122,90 @@ body {
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
-  min-width: 130px;
-  max-width: 220px;
-  color: var(--text-dark-secondary);
+  min-width: 150px;
+  max-width: 280px;
+  color: inherit;
 }
 
 .summary-filter-select:focus {
   outline: none;
+}
+
+.summary-filter-select optgroup {
+  font-weight: 600;
+  color: #1e3a5f;
+  background: #f8fafc;
+}
+
+.summary-filter-select option {
+  font-weight: 500;
+  padding: 0.5rem;
+}
+
+.filter-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: #0ea5e9;
+  color: white;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.2s;
+  margin-left: 0.25rem;
+}
+
+.filter-clear-btn:hover {
+  background: #0284c7;
+  transform: scale(1.1);
+}
+
+/* Active filter badge */
+.active-filter-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(14, 165, 233, 0.3);
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.active-filter-badge .filter-label {
+  opacity: 0.85;
+}
+
+.active-filter-badge .filter-value {
+  font-weight: 600;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-filter-badge .filter-count {
+  opacity: 0.85;
+  font-size: 0.7rem;
 }
 
 /* =====================================================

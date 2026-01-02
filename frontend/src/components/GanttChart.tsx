@@ -160,14 +160,27 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     return rowMap;
   }, [sortedTasks]);
 
-  // Get top-level summary tasks for the filter dropdown
+  // Get all summary tasks for the filter dropdown (hierarchically ordered)
   const summaryTaskOptions = useMemo(() => {
     return sortedTasks.filter(task =>
       task.summary &&
-      task.outline_number !== '0' &&
-      !task.outline_number.includes('.') // Only top-level (e.g., "1", "2", "3")
+      task.outline_number !== '0'
     );
   }, [sortedTasks]);
+
+  // Get the display name with indentation for hierarchical view
+  const getSummaryDisplayName = (task: Task): string => {
+    const level = task.outline_level - 1; // Adjust for display (level 1 = no indent)
+    const indent = '\u00A0\u00A0'.repeat(Math.max(0, level)); // Non-breaking spaces for indent
+    return `${indent}${task.outline_number} - ${task.name}`;
+  };
+
+  // Get the currently selected filter task name
+  const selectedFilterName = useMemo(() => {
+    if (summaryFilter === 'all') return null;
+    const task = sortedTasks.find(t => t.outline_number === summaryFilter);
+    return task ? task.name : null;
+  }, [summaryFilter, sortedTasks]);
 
   // Filter visible tasks based on expand/collapse state and summary filter
   const visibleTasks = useMemo(() => {
@@ -717,7 +730,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               Collapse All
             </button>
 
-            <div className="summary-filter-control">
+            <div className={`summary-filter-control ${summaryFilter !== 'all' ? 'active' : ''}`}>
               <Filter size={16} />
               <select
                 className="summary-filter-select"
@@ -725,14 +738,35 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 onChange={(e) => setSummaryFilter(e.target.value)}
                 title="Filter by Summary Task"
               >
-                <option value="all">All Tasks</option>
-                {summaryTaskOptions.map(task => (
-                  <option key={task.id} value={task.outline_number}>
-                    {task.outline_number} - {task.name}
-                  </option>
-                ))}
+                <option value="all">All Tasks ({sortedTasks.filter(t => t.outline_number !== '0').length})</option>
+                <optgroup label="Filter by Summary">
+                  {summaryTaskOptions.map(task => (
+                    <option key={task.id} value={task.outline_number}>
+                      {getSummaryDisplayName(task)}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
+              {summaryFilter !== 'all' && (
+                <button
+                  className="filter-clear-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSummaryFilter('all');
+                  }}
+                  title="Clear filter"
+                >
+                  ×
+                </button>
+              )}
             </div>
+            {summaryFilter !== 'all' && selectedFilterName && (
+              <div className="active-filter-badge" title={`Filtering: ${selectedFilterName}`}>
+                <span className="filter-label">Showing:</span>
+                <span className="filter-value">{summaryFilter} - {selectedFilterName.length > 20 ? selectedFilterName.substring(0, 20) + '...' : selectedFilterName}</span>
+                <span className="filter-count">({visibleTasks.length} tasks)</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
