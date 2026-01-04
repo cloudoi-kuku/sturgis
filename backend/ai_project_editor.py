@@ -570,6 +570,123 @@ class AIProjectEditor:
             "project": project
         }
 
+    def _ungroup_task(self, project: Dict, task_outline: str) -> Dict:
+        """
+        Remove a summary task but promote its children up one level.
+        Children become siblings at the parent level.
+        """
+        tasks = project.get("tasks", [])
+        task_to_ungroup = self._find_task_by_outline(tasks, task_outline)
+
+        if not task_to_ungroup:
+            return {
+                "success": False,
+                "message": f"Task {task_outline} not found",
+                "changes": [],
+                "project": project
+            }
+
+        if not task_to_ungroup.get("summary"):
+            return {
+                "success": False,
+                "message": f"Task {task_outline} is not a summary task",
+                "changes": [],
+                "project": project
+            }
+
+        # Get direct children of this task
+        children = [t for t in tasks if
+                    t["outline_number"].startswith(task_outline + ".") and
+                    t["outline_number"].count(".") == task_outline.count(".") + 1]
+
+        if not children:
+            # No children, just delete the task
+            return self._delete_task(project, task_outline)
+
+        changes = [{
+            "type": "ungroup",
+            "task_name": task_to_ungroup["name"],
+            "outline_number": task_outline,
+            "children_promoted": len(children)
+        }]
+
+        # Remove the summary task
+        remaining_tasks = [t for t in tasks if t["outline_number"] != task_outline]
+
+        # Promote children: reduce their outline level by 1
+        # If summary was "2", children "2.1", "2.2" become "2", "3" etc.
+        # If summary was "1.2", children "1.2.1", "1.2.2" become "1.2", "1.3" etc.
+
+        parent_parts = task_outline.split(".")
+        if len(parent_parts) > 1:
+            # Has a parent - children take the summary's position
+            grandparent = ".".join(parent_parts[:-1])
+            base_num = int(parent_parts[-1])
+        else:
+            # Top level - children become top level
+            grandparent = ""
+            base_num = int(task_outline)
+
+        # Update outline numbers for all tasks under the ungrouped task
+        for task in remaining_tasks:
+            old_outline = task["outline_number"]
+            if old_outline.startswith(task_outline + "."):
+                # This is a descendant of the ungrouped task
+                relative = old_outline[len(task_outline) + 1:]  # Remove "X." prefix
+                relative_parts = relative.split(".")
+
+                # First part becomes the new position at parent level
+                child_num = int(relative_parts[0])
+                new_base = base_num + child_num - 1
+
+                if len(relative_parts) > 1:
+                    # Has sub-children
+                    sub_path = ".".join(relative_parts[1:])
+                    if grandparent:
+                        new_outline = f"{grandparent}.{new_base}.{sub_path}"
+                    else:
+                        new_outline = f"{new_base}.{sub_path}"
+                else:
+                    # Direct child
+                    if grandparent:
+                        new_outline = f"{grandparent}.{new_base}"
+                    else:
+                        new_outline = str(new_base)
+
+                task["outline_number"] = new_outline
+                task["outline_level"] = task["outline_level"] - 1
+
+                changes.append({
+                    "type": "promote",
+                    "task_name": task["name"],
+                    "old_outline": old_outline,
+                    "new_outline": new_outline
+                })
+
+        # Update predecessors that referenced the deleted summary
+        for task in remaining_tasks:
+            if task.get("predecessors"):
+                new_predecessors = []
+                for pred in task["predecessors"]:
+                    if pred.get("outline_number") == task_outline:
+                        # Skip - the summary is gone
+                        continue
+                    new_predecessors.append(pred)
+                task["predecessors"] = new_predecessors
+
+        # Re-sort and renumber tasks
+        remaining_tasks.sort(key=lambda t: self._outline_sort_key(t["outline_number"]))
+        remaining_tasks = self._renumber_tasks(remaining_tasks)
+
+        project["tasks"] = remaining_tasks
+
+        return {
+            "success": True,
+            "message": f"Ungrouped '{task_to_ungroup['name']}' - promoted {len(children)} children",
+            "changes": changes,
+            "project": project
+        }
+
     def _merge_tasks(self, project: Dict, outline1: str, outline2: str) -> Dict:
         """
         Merge two tasks into one, combining their durations

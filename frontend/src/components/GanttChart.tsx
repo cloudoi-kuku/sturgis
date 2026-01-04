@@ -226,33 +226,43 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       return;
     }
 
+    const sourceTask = tasks.find(t => t.id === active.id);
+    const overTask = tasks.find(t => t.id === over.id);
+
+    // Prevent dropping on self or children
+    if (sourceTask && overTask) {
+      if (overTask.outline_number.startsWith(sourceTask.outline_number + '.') ||
+          overTask.outline_number === sourceTask.outline_number) {
+        setOverId(null);
+        setDropPosition(null);
+        return;
+      }
+    }
+
     setOverId(over.id as string);
 
     // Determine drop position based on cursor position relative to the target
     const overRect = over.rect;
-    if (overRect) {
-      const overTask = tasks.find(t => t.id === over.id);
-      if (overTask) {
-        // Get the active element's current translated position
-        // The active rect includes the current transform, so we can calculate cursor position
-        const activeRect = active.rect.current.translated;
-        if (activeRect) {
-          // Use the center of the dragged element as the reference point
-          const dragCenterY = activeRect.top + (activeRect.height / 2);
-          const rowTop = overRect.top;
-          const rowHeight = overRect.height;
-          const positionInRow = dragCenterY - rowTop;
+    if (overRect && overTask) {
+      // Get the active element's current translated position
+      const activeRect = active.rect.current.translated;
+      if (activeRect) {
+        // Use the center of the dragged element as the reference point
+        const dragCenterY = activeRect.top + (activeRect.height / 2);
+        const rowTop = overRect.top;
+        const rowHeight = overRect.height;
+        const positionInRow = dragCenterY - rowTop;
 
-          // Top third = before, middle third = under (if summary), bottom third = after
-          if (positionInRow < rowHeight * 0.33) {
-            setDropPosition('before');
-          } else if (positionInRow > rowHeight * 0.67) {
-            setDropPosition('after');
-          } else if (overTask.summary) {
-            setDropPosition('under');
-          } else {
-            setDropPosition('after');
-          }
+        // Larger drop zones: Top 25% = before, Bottom 25% = after, Middle 50% = under (if summary)
+        if (positionInRow < rowHeight * 0.25) {
+          setDropPosition('before');
+        } else if (positionInRow > rowHeight * 0.75) {
+          setDropPosition('after');
+        } else if (overTask.summary) {
+          setDropPosition('under');
+        } else {
+          // For non-summary tasks, use 50/50 split
+          setDropPosition(positionInRow < rowHeight * 0.5 ? 'before' : 'after');
         }
       }
     }

@@ -746,6 +746,68 @@ async def delete_task(task_id: str):
     return {"success": True, "message": "Task deleted successfully"}
 
 
+@app.post("/api/tasks/{task_id}/ungroup")
+async def ungroup_task(task_id: str):
+    """
+    Ungroup a summary task - remove it but promote its children up one level.
+    Children become siblings at the parent level instead of being deleted.
+    """
+    global current_project
+
+    if not current_project or not current_project_id:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    # Find the task
+    task = next((t for t in current_project.get("tasks", []) if t["id"] == task_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if not task.get("summary"):
+        raise HTTPException(status_code=400, detail="Only summary tasks can be ungrouped")
+
+    # Use the AI project editor to ungroup
+    result = ai_project_editor._ungroup_task(current_project, task["outline_number"])
+
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+
+    current_project = result["project"]
+
+    return {
+        "success": True,
+        "message": result["message"],
+        "changes": result["changes"]
+    }
+
+
+@app.get("/api/tasks/{task_id}/children-count")
+async def get_task_children_count(task_id: str):
+    """Get the count of children for a task (used for delete warning)"""
+    global current_project
+
+    if not current_project or not current_project_id:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    # Find the task
+    task = next((t for t in current_project.get("tasks", []) if t["id"] == task_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Count children
+    outline = task["outline_number"]
+    children = [t for t in current_project.get("tasks", [])
+                if t["outline_number"].startswith(outline + ".")]
+
+    return {
+        "task_id": task_id,
+        "task_name": task["name"],
+        "is_summary": task.get("summary", False),
+        "children_count": len(children),
+        "direct_children_count": len([t for t in children
+                                       if t["outline_number"].count(".") == outline.count(".") + 1])
+    }
+
+
 class MoveTaskRequest(BaseModel):
     """Request model for moving a task"""
     target_outline: str = Field(..., description="Outline number of the target task")

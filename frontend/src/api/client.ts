@@ -287,6 +287,30 @@ export const deleteTask = async (taskId: string) => {
   return response.data;
 };
 
+// Ungroup a summary task (remove it but keep children)
+export const ungroupTask = async (taskId: string): Promise<{
+  success: boolean;
+  message: string;
+  changes: Array<{ type: string; task_name: string; old_outline?: string; new_outline?: string }>;
+}> => {
+  const response = await apiClient.post(`/tasks/${taskId}/ungroup`);
+  return response.data;
+};
+
+// Get children count for a task (for delete warning)
+export type TaskChildrenCount = {
+  task_id: string;
+  task_name: string;
+  is_summary: boolean;
+  children_count: number;
+  direct_children_count: number;
+};
+
+export const getTaskChildrenCount = async (taskId: string): Promise<TaskChildrenCount> => {
+  const response = await apiClient.get(`/tasks/${taskId}/children-count`);
+  return response.data;
+};
+
 // Move task types
 export type MovePosition = 'under' | 'before' | 'after';
 

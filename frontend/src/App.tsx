@@ -19,6 +19,8 @@ import {
   createTask,
   updateTask,
   deleteTask,
+  ungroupTask,
+  getTaskChildrenCount,
   validateProject,
   exportProject,
   getCalendar,
@@ -61,6 +63,11 @@ function AppContent() {
   const [validationWarnings, setValidationWarnings] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
+    isOpen: boolean;
+    task: Task | null;
+    childrenCount: number;
+  }>({ isOpen: false, task: null, childrenCount: 0 });
   const queryClientInstance = useQueryClient();
 
   // Warn user about unsaved changes when leaving
@@ -130,6 +137,14 @@ function AppContent() {
 
   const deleteTaskMutation = useMutation({
     mutationFn: deleteTask,
+    onSuccess: () => {
+      queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
+      setHasUnsavedChanges(true); // Mark as unsaved
+    },
+  });
+
+  const ungroupTaskMutation = useMutation({
+    mutationFn: ungroupTask,
     onSuccess: () => {
       queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
       setHasUnsavedChanges(true); // Mark as unsaved
@@ -240,6 +255,31 @@ function AppContent() {
   };
 
   const handleDeleteTask = async (taskId: string) => {
+    // Find the task to check if it's a summary
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) {
+      alert('Task not found');
+      return;
+    }
+
+    // If it's a summary task, show confirmation dialog with options
+    if (task.summary) {
+      try {
+        const childInfo = await getTaskChildrenCount(taskId);
+        if (childInfo.children_count > 0) {
+          setDeleteConfirmDialog({
+            isOpen: true,
+            task: task,
+            childrenCount: childInfo.children_count
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Error getting children count:', error);
+      }
+    }
+
+    // For non-summary tasks or summary tasks with no children, delete directly
     try {
       await deleteTaskMutation.mutateAsync(taskId);
       setIsEditorOpen(false);
@@ -247,6 +287,26 @@ function AppContent() {
     } catch (error) {
       console.error('Delete error:', error);
       alert('Error deleting task. Please try again.');
+    }
+  };
+
+  const handleConfirmDelete = async (action: 'delete-all' | 'ungroup') => {
+    const task = deleteConfirmDialog.task;
+    if (!task) return;
+
+    try {
+      if (action === 'delete-all') {
+        await deleteTaskMutation.mutateAsync(task.id);
+      } else {
+        await ungroupTaskMutation.mutateAsync(task.id);
+      }
+      setIsEditorOpen(false);
+      setSelectedTask(undefined);
+    } catch (error) {
+      console.error('Delete/Ungroup error:', error);
+      alert('Error processing request. Please try again.');
+    } finally {
+      setDeleteConfirmDialog({ isOpen: false, task: null, childrenCount: 0 });
     }
   };
 
@@ -279,7 +339,9 @@ function AppContent() {
       queryClientInstance.refetchQueries({ queryKey: ['metadata'] }),
       queryClientInstance.refetchQueries({ queryKey: ['calendar'] }),
     ]);
-    setHasUnsavedChanges(true); // Mark as unsaved after any change
+    // Reset unsaved changes flag when switching to a different project
+    // (the project was loaded from the database, so it's already saved)
+    setHasUnsavedChanges(false);
   };
 
   const handleExport = async () => {
@@ -787,10 +849,10 @@ function AppContent() {
                 disabled={isSaving || !hasUnsavedChanges}
                 title={hasUnsavedChanges ? "Save Project (Unsaved Changes)" : "All Changes Saved"}
                 style={{ padding: '10px' }}
-                className={`flex items-center rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`flex items-center rounded-lg border transition-all disabled:cursor-not-allowed ${
                   hasUnsavedChanges
                     ? 'text-white bg-green-500 hover:bg-green-600 border-green-600 animate-pulse'
-                    : 'text-green-500 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-300'
+                    : 'text-slate-400 hover:text-slate-500 bg-slate-50 border-slate-200'
                 }`}
               >
                 {isSaving ? (
@@ -991,6 +1053,51 @@ function AppContent() {
         isOpen={isHowToUseOpen}
         onClose={() => setIsHowToUseOpen(false)}
       />
+
+      {/* Delete Summary Task Confirmation Dialog */}
+      {deleteConfirmDialog.isOpen && deleteConfirmDialog.task && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+            <div className="bg-gradient-to-r from-red-500 to-orange-500 px-6 py-4">
+              <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                Delete Summary Task
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-700 mb-4">
+                <strong>"{deleteConfirmDialog.task.name}"</strong> is a summary task with{' '}
+                <strong className="text-red-600">{deleteConfirmDialog.childrenCount} child task{deleteConfirmDialog.childrenCount !== 1 ? 's' : ''}</strong>.
+              </p>
+              <p className="text-gray-600 mb-6 text-sm">
+                What would you like to do?
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => handleConfirmDelete('ungroup')}
+                  className="w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-400 rounded-xl text-left transition-all"
+                >
+                  <div className="font-semibold text-blue-700">Ungroup (Keep Children)</div>
+                  <div className="text-sm text-blue-600">Remove the summary task but promote children up one level</div>
+                </button>
+                <button
+                  onClick={() => handleConfirmDelete('delete-all')}
+                  className="w-full px-4 py-3 bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-400 rounded-xl text-left transition-all"
+                >
+                  <div className="font-semibold text-red-700">Delete All</div>
+                  <div className="text-sm text-red-600">Delete the summary task AND all {deleteConfirmDialog.childrenCount} children</div>
+                </button>
+                <button
+                  onClick={() => setDeleteConfirmDialog({ isOpen: false, task: null, childrenCount: 0 })}
+                  className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-xl text-gray-700 font-medium transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
