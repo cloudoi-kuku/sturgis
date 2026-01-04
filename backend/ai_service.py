@@ -51,7 +51,14 @@ class LocalAIService:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        # Increase timeout and max_tokens for project generation
+        timeout = 120.0 if len(prompt) > 500 else 60.0
+        max_tokens = 4000 if len(prompt) > 500 else 2000
+
+        print(f"[Azure] Making request to: {url[:50]}...")
+        print(f"[Azure] Timeout: {timeout}s, max_tokens: {max_tokens}")
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
             try:
                 response = await client.post(
                     url,
@@ -63,22 +70,33 @@ class LocalAIService:
                         "messages": messages,
                         "temperature": 0.3,
                         "top_p": 0.9,
-                        "max_tokens": 2000,
+                        "max_tokens": max_tokens,
                     }
                 )
                 response.raise_for_status()
                 result = response.json()
-                return result["choices"][0]["message"]["content"]
+                content = result["choices"][0]["message"]["content"]
+                print(f"[Azure] Success! Response length: {len(content)}")
+                return content
             except httpx.HTTPStatusError as e:
-                print(f"Azure OpenAI API error: {e.response.status_code} - {e.response.text}")
+                print(f"[Azure] HTTP error: {e.response.status_code} - {e.response.text[:200]}")
+                return ""
+            except httpx.TimeoutException as e:
+                print(f"[Azure] Timeout error: {e}")
                 return ""
             except Exception as e:
-                print(f"Azure OpenAI error: {e}")
+                print(f"[Azure] Error: {type(e).__name__}: {e}")
                 return ""
 
     async def _generate_ollama(self, prompt: str, system: str = "") -> str:
         """Call Ollama API (fallback)"""
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        # Increase timeout for longer prompts (project generation)
+        timeout = 180.0 if len(prompt) > 500 else 60.0
+
+        print(f"[Ollama] Making request to: {self.ollama_base_url}/api/generate")
+        print(f"[Ollama] Model: {self.ollama_model}, Timeout: {timeout}s")
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
             try:
                 response = await client.post(
                     f"{self.ollama_base_url}/api/generate",
@@ -90,13 +108,22 @@ class LocalAIService:
                         "options": {
                             "temperature": 0.3,
                             "top_p": 0.9,
+                            "num_predict": 4000,  # Increase max tokens for project generation
                         }
                     }
                 )
                 result = response.json()
-                return result.get("response", "")
+                content = result.get("response", "")
+                print(f"[Ollama] Success! Response length: {len(content)}")
+                return content
+            except httpx.TimeoutException as e:
+                print(f"[Ollama] Timeout error: {e}")
+                return ""
+            except httpx.ConnectError as e:
+                print(f"[Ollama] Connection error (is Ollama running?): {e}")
+                return ""
             except Exception as e:
-                print(f"Ollama error: {e}")
+                print(f"[Ollama] Error: {type(e).__name__}: {e}")
                 return ""
     
     async def estimate_duration(self, task_name: str, task_type: str = "", project_context: Optional[Dict] = None) -> Dict:
@@ -948,10 +975,14 @@ Respond ONLY with JSON: {"category": "<type>", "confidence": <0-100>}"""
                         "message": f"I've generated a complete {project_type} project based on your description! The project '{result['project_name']}' has {len(result.get('tasks', []))} tasks organized into phases.{historical_note} Would you like me to explain the structure or make any adjustments?"
                     })
                 else:
-                    return "I tried to generate a project but encountered an issue. Could you provide more details about what you'd like to build?"
+                    error_msg = result.get("error", "Unknown error")
+                    print(f"[AI Chat] Project generation failed: {error_msg}")
+                    return f"I tried to generate a project but encountered an issue: {error_msg}. Could you provide more details about what you'd like to build?"
             except Exception as e:
-                print(f"Project generation error in chat: {e}")
-                return "I had trouble generating the project. Please make sure your description includes key details like project type, size, and main features."
+                print(f"[AI Chat] Project generation error: {e}")
+                import traceback
+                traceback.print_exc()
+                return f"I had trouble generating the project: {str(e)}. Please make sure your description includes key details like project type, size, and main features."
 
         # Build project context summary
         context_summary = ""
@@ -1164,14 +1195,33 @@ Create a complete project with:
 Remember: Return ONLY the JSON object, nothing else."""
 
         try:
+            print(f"[AI Generation] Starting project generation for: {description[:50]}...")
+            print(f"[AI Generation] Project type: {project_type}")
+            print(f"[AI Generation] Using {'Azure OpenAI' if self.use_azure else 'Ollama'}")
+
             response = await self._generate(prompt, system_prompt)
+
+            print(f"[AI Generation] Got response, length: {len(response) if response else 0}")
+
+            if not response:
+                print("[AI Generation] ERROR: Empty response from AI")
+                return {
+                    "success": False,
+                    "error": "AI returned empty response",
+                    "project_name": "Fallback Project",
+                    "start_date": "2024-01-01",
+                    "tasks": self._get_fallback_project_tasks()
+                }
 
             # Extract JSON from response
             json_start = response.find('{')
             json_end = response.rfind('}') + 1
 
+            print(f"[AI Generation] JSON markers: start={json_start}, end={json_end}")
+
             if json_start >= 0 and json_end > json_start:
                 json_str = response[json_start:json_end]
+                print(f"[AI Generation] Extracted JSON length: {len(json_str)}")
                 result = json.loads(json_str)
 
                 # Validate and transform the result
@@ -1211,13 +1261,24 @@ Remember: Return ONLY the JSON object, nothing else."""
                     duration_hours = int(duration_days * 8)  # 8-hour workday
                     duration_iso = f"PT{duration_hours}H0M0S"
 
+                    is_milestone = task.get("milestone", False)
+                    is_summary = task.get("summary", False)
+
+                    # ENFORCE: Milestones must have zero duration
+                    if is_milestone:
+                        duration_iso = "PT0H0M0S"
+
+                    # ENFORCE: Summary tasks cannot have predecessors
+                    if is_summary:
+                        predecessors = []
+
                     formatted_task = {
                         "name": task.get("name", "Unnamed Task"),
                         "outline_number": task.get("outline_number", "1"),
                         "outline_level": task.get("outline_level", 1),
                         "duration": duration_iso,
-                        "milestone": task.get("milestone", False),
-                        "summary": task.get("summary", False),
+                        "milestone": is_milestone,
+                        "summary": is_summary,
                         "percent_complete": 0,
                         "value": "",
                         "predecessors": predecessors
@@ -1261,11 +1322,23 @@ Remember: Return ONLY the JSON object, nothing else."""
                     "tasks": formatted_tasks
                 }
             else:
+                print(f"[AI Generation] ERROR: No valid JSON found in response")
+                print(f"[AI Generation] Response preview: {response[:500] if response else 'None'}")
                 raise ValueError("No valid JSON found in response")
 
+        except json.JSONDecodeError as e:
+            print(f"[AI Generation] JSON parse error: {e}")
+            print(f"[AI Generation] Response preview: {response[:1000] if 'response' in locals() and response else 'No response'}")
+            return {
+                "success": False,
+                "error": f"JSON parse error: {str(e)}",
+                "project_name": "Fallback Project",
+                "start_date": "2024-01-01",
+                "tasks": self._get_fallback_project_tasks()
+            }
         except Exception as e:
-            print(f"Project generation error: {e}")
-            print(f"Response: {response[:500] if 'response' in locals() else 'No response'}")
+            print(f"[AI Generation] Project generation error: {e}")
+            print(f"[AI Generation] Response: {response[:500] if 'response' in locals() and response else 'No response'}")
 
             # Return a minimal fallback project
             return {
