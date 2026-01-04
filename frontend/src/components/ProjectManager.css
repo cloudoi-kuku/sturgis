@@ -367,3 +367,230 @@
 .project-manager-modal .modal-content::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* =====================================================
+   CREATE OPTIONS (Manual vs AI)
+   ===================================================== */
+
+.create-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.create-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.create-option:hover {
+  border-color: #cbd5e1;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.create-option-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.create-option-icon.manual {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+}
+
+.create-option:hover .create-option-icon.manual {
+  background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+  color: white;
+}
+
+.create-option-icon.ai {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  color: #7c3aed;
+}
+
+.create-option:hover .create-option-icon.ai {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: white;
+}
+
+.create-option-content h4 {
+  margin: 0 0 0.375rem 0;
+  color: #1e293b;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.create-option-content p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/* =====================================================
+   AI GENERATOR FORM
+   ===================================================== */
+
+.ai-generator-form {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  border: 1px solid #e9d5ff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.ai-generator-form h4 {
+  margin: 0 0 0.875rem 0;
+  color: #6d28d9;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-generator-form textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  background-color: white;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.ai-generator-form textarea:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.ai-generator-form textarea::placeholder {
+  color: #94a3b8;
+}
+
+.ai-generator-options {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.ai-generator-options label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.ai-generator-options select {
+  flex: 1;
+  max-width: 200px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background-color: white;
+  color: #1e293b;
+  cursor: pointer;
+  outline: none;
+}
+
+.ai-generator-options select:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.ai-generator-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.ai-generator-actions .action-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-generator-actions .action-button.primary {
+  color: white;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  border: none;
+}
+
+.ai-generator-actions .action-button.primary:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+  transform: translateY(-1px);
+}
+
+.ai-generator-actions .action-button.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ai-generator-actions .action-button:not(.primary) {
+  color: #64748b;
+  background: white;
+  border: 1px solid #e2e8f0;
+}
+
+.ai-generator-actions .action-button:not(.primary):hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+/* Spinner */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 0.8s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

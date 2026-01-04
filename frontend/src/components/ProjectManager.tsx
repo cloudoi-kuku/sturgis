@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, FolderOpen, Trash2, Check, Briefcase, Calendar, ListTodo, Share2, Lock, Users } from 'lucide-react';
-import { getAllProjects, createNewProject, switchProject, deleteProject, updateProjectSharing } from '../api/client';
+import { X, Plus, FolderOpen, Trash2, Check, Briefcase, Calendar, ListTodo, Share2, Lock, Users, Wand2, FileText } from 'lucide-react';
+import { getAllProjects, createNewProject, switchProject, deleteProject, updateProjectSharing, generateProject } from '../api/client';
 import type { ProjectListItem } from '../api/client';
 import './ProjectManager.css';
 
@@ -19,6 +19,11 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
   const [loading, setLoading] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [showNewProjectInput, setShowNewProjectInput] = useState(false);
+  const [showCreateOptions, setShowCreateOptions] = useState(false);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [aiDescription, setAIDescription] = useState('');
+  const [aiProjectType, setAIProjectType] = useState('commercial');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -50,6 +55,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
       await createNewProject(newProjectName);
       setNewProjectName('');
       setShowNewProjectInput(false);
+      setShowCreateOptions(false);
       // Wait for data refresh to complete
       await onProjectChanged();
       await loadProjects();
@@ -58,6 +64,36 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
       alert('Failed to create project');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateProject = async () => {
+    if (!aiDescription.trim()) {
+      alert('Please enter a project description');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result = await generateProject(aiDescription, aiProjectType);
+      if (result.success) {
+        alert(`✅ ${result.message}`);
+        setAIDescription('');
+        setShowAIGenerator(false);
+        setShowCreateOptions(false);
+        // Wait for data refresh to complete
+        await onProjectChanged();
+        await loadProjects();
+        onClose(); // Close the modal after successful generation
+      } else {
+        alert(`❌ Generation failed: ${result.message}`);
+      }
+    } catch (error: any) {
+      console.error('Failed to generate project:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Unknown error';
+      alert(`❌ Failed to generate project: ${errorMessage}`);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -130,14 +166,39 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
             <h3>Your Projects</h3>
             <button
               className="action-button primary"
-              onClick={() => setShowNewProjectInput(!showNewProjectInput)}
-              disabled={loading}
+              onClick={() => setShowCreateOptions(!showCreateOptions)}
+              disabled={loading || isGenerating}
             >
               <Plus size={16} />
               New Project
             </button>
           </div>
 
+          {/* Create Options: Manual vs AI */}
+          {showCreateOptions && !showNewProjectInput && !showAIGenerator && (
+            <div className="create-options">
+              <div className="create-option" onClick={() => setShowNewProjectInput(true)}>
+                <div className="create-option-icon manual">
+                  <FileText size={24} />
+                </div>
+                <div className="create-option-content">
+                  <h4>Create Empty Project</h4>
+                  <p>Start with a blank project and add tasks manually</p>
+                </div>
+              </div>
+              <div className="create-option" onClick={() => setShowAIGenerator(true)}>
+                <div className="create-option-icon ai">
+                  <Wand2 size={24} />
+                </div>
+                <div className="create-option-content">
+                  <h4>Generate with AI</h4>
+                  <p>Describe your project and let AI create the schedule</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Manual Project Creation Form */}
           {showNewProjectInput && (
             <div className="new-project-form">
               <input
@@ -148,7 +209,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                 onKeyPress={(e) => e.key === 'Enter' && handleCreateProject()}
                 autoFocus
               />
-              <button className="action-button primary" onClick={handleCreateProject}>
+              <button className="action-button primary" onClick={handleCreateProject} disabled={loading}>
                 <Check size={16} />
                 Create
               </button>
@@ -156,8 +217,63 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                 setShowNewProjectInput(false);
                 setNewProjectName('');
               }}>
-                Cancel
+                Back
               </button>
+            </div>
+          )}
+
+          {/* AI Project Generator Form */}
+          {showAIGenerator && (
+            <div className="ai-generator-form">
+              <h4>Describe Your Project</h4>
+              <textarea
+                placeholder="E.g., Create a 3-bedroom residential home with garage, 2000 sq ft, standard finishes..."
+                value={aiDescription}
+                onChange={(e) => setAIDescription(e.target.value)}
+                rows={3}
+                autoFocus
+              />
+              <div className="ai-generator-options">
+                <label>Project Type:</label>
+                <select
+                  value={aiProjectType}
+                  onChange={(e) => setAIProjectType(e.target.value)}
+                >
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                  <option value="industrial">Industrial</option>
+                  <option value="renovation">Renovation</option>
+                </select>
+              </div>
+              <div className="ai-generator-actions">
+                <button
+                  className="action-button primary"
+                  onClick={handleGenerateProject}
+                  disabled={isGenerating || !aiDescription.trim()}
+                >
+                  {isGenerating ? (
+                    <>
+                      <div className="spinner" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 size={16} />
+                      Generate Project
+                    </>
+                  )}
+                </button>
+                <button
+                  className="action-button"
+                  onClick={() => {
+                    setShowAIGenerator(false);
+                    setAIDescription('');
+                  }}
+                  disabled={isGenerating}
+                >
+                  Back
+                </button>
+              </div>
             </div>
           )}
 
