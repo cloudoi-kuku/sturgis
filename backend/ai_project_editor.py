@@ -334,23 +334,44 @@ class AIProjectEditor:
             # Move before target (take target's position, shift target down)
             new_level = target_task["outline_level"]
             new_base_outline = target  # Take the target's position
-            # Shift the target and siblings after it
+            # Shift the target and siblings after it (INCLUDING their children)
             parts = target.split(".")
             target_num = int(parts[-1])
             parent = ".".join(parts[:-1]) if len(parts) > 1 else ""
 
+            # First, identify which top-level siblings need to shift
+            siblings_to_shift = set()
             for task in remaining_tasks:
                 task_parts = task["outline_number"].split(".")
                 task_parent = ".".join(task_parts[:-1]) if len(task_parts) > 1 else ""
                 if task_parent == parent and len(task_parts) == len(parts):
                     task_num = int(task_parts[-1])
                     if task_num >= target_num:
-                        # Shift this task down by 1
-                        new_num = task_num + 1
                         if parent:
-                            task["outline_number"] = f"{parent}.{new_num}"
+                            siblings_to_shift.add(f"{parent}.{task_num}")
                         else:
-                            task["outline_number"] = str(new_num)
+                            siblings_to_shift.add(str(task_num))
+
+            # Now shift those siblings AND all their descendants
+            for task in remaining_tasks:
+                outline = task["outline_number"]
+                # Check if this task is one of the siblings or a descendant of one
+                for sibling in siblings_to_shift:
+                    if outline == sibling or outline.startswith(sibling + "."):
+                        # Shift by incrementing the sibling number
+                        old_sibling_parts = sibling.split(".")
+                        old_num = int(old_sibling_parts[-1])
+                        new_num = old_num + 1
+                        if parent:
+                            new_sibling = f"{parent}.{new_num}"
+                        else:
+                            new_sibling = str(new_num)
+                        # Replace the sibling prefix with new prefix
+                        if outline == sibling:
+                            task["outline_number"] = new_sibling
+                        else:
+                            task["outline_number"] = new_sibling + outline[len(sibling):]
+                        break
         else:
             # Move after target (same level)
             new_level = target_task["outline_level"]
@@ -361,7 +382,40 @@ class AIProjectEditor:
                 sibling_num = int(parts[-1]) + 1
                 new_base_outline = f"{parent}.{sibling_num}"
             else:
-                new_base_outline = str(int(target) + 1)
+                parent = ""
+                sibling_num = int(target) + 1
+                new_base_outline = str(sibling_num)
+
+            # Shift tasks that are at or after the insertion point (INCLUDING their children)
+            siblings_to_shift = set()
+            for task in remaining_tasks:
+                task_parts = task["outline_number"].split(".")
+                task_parent = ".".join(task_parts[:-1]) if len(task_parts) > 1 else ""
+                if task_parent == parent and len(task_parts) == len(parts):
+                    task_num = int(task_parts[-1])
+                    if task_num >= sibling_num:
+                        if parent:
+                            siblings_to_shift.add(f"{parent}.{task_num}")
+                        else:
+                            siblings_to_shift.add(str(task_num))
+
+            # Now shift those siblings AND all their descendants
+            for task in remaining_tasks:
+                outline = task["outline_number"]
+                for sibling in siblings_to_shift:
+                    if outline == sibling or outline.startswith(sibling + "."):
+                        old_sibling_parts = sibling.split(".")
+                        old_num = int(old_sibling_parts[-1])
+                        new_num = old_num + 1
+                        if parent:
+                            new_sibling = f"{parent}.{new_num}"
+                        else:
+                            new_sibling = str(new_num)
+                        if outline == sibling:
+                            task["outline_number"] = new_sibling
+                        else:
+                            task["outline_number"] = new_sibling + outline[len(sibling):]
+                        break
 
         # Reassign outline numbers to moved tasks
         changes = []
@@ -1178,31 +1232,56 @@ class AIProjectEditor:
             return [0]
 
     def _renumber_tasks(self, tasks: List[Dict]) -> List[Dict]:
-        """Renumber tasks to fill gaps and maintain proper sequence"""
-        # Group by parent
-        by_parent = {}
-        for task in tasks:
-            outline = task.get("outline_number", "")
-            parts = outline.split(".")
-            if len(parts) > 1:
-                parent = ".".join(parts[:-1])
-            else:
-                parent = ""
-            if parent not in by_parent:
-                by_parent[parent] = []
-            by_parent[parent].append(task)
+        """Renumber tasks to fill gaps and maintain proper sequence.
 
-        # Renumber within each parent
-        for parent, children in by_parent.items():
-            children.sort(key=lambda t: self._outline_sort_key(t["outline_number"]))
-            for i, child in enumerate(children):
-                if parent:
-                    new_outline = f"{parent}.{i+1}"
+        This must be done level by level, updating children when parents change.
+        """
+        if not tasks:
+            return tasks
+
+        # Sort tasks first
+        tasks.sort(key=lambda t: self._outline_sort_key(t["outline_number"]))
+
+        # Build a mapping of old outline -> new outline
+        outline_mapping = {}
+
+        # Process level by level, starting from top level
+        max_level = max(t.get("outline_level", 0) for t in tasks)
+
+        for level in range(max_level + 1):
+            # Get tasks at this level
+            level_tasks = [t for t in tasks if t.get("outline_level", 0) == level]
+
+            # Group by parent
+            by_parent = {}
+            for task in level_tasks:
+                outline = task.get("outline_number", "")
+                parts = outline.split(".")
+                if len(parts) > 1:
+                    parent = ".".join(parts[:-1])
+                    # Check if parent was remapped
+                    parent = outline_mapping.get(parent, parent)
                 else:
-                    new_outline = str(i+1)
-                child["outline_number"] = new_outline
+                    parent = ""
+                if parent not in by_parent:
+                    by_parent[parent] = []
+                by_parent[parent].append(task)
 
-        # Sort all tasks
+            # Renumber within each parent
+            for parent, children in by_parent.items():
+                children.sort(key=lambda t: self._outline_sort_key(t["outline_number"]))
+                for i, child in enumerate(children):
+                    old_outline = child["outline_number"]
+                    if parent:
+                        new_outline = f"{parent}.{i+1}"
+                    else:
+                        new_outline = str(i+1)
+
+                    if old_outline != new_outline:
+                        outline_mapping[old_outline] = new_outline
+                        child["outline_number"] = new_outline
+
+        # Sort all tasks again after renumbering
         tasks.sort(key=lambda t: self._outline_sort_key(t["outline_number"]))
         return tasks
 
