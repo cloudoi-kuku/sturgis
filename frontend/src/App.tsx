@@ -921,12 +921,16 @@ function AppContent() {
                 <AlertTitle>Validation Errors ({validationErrors.length})</AlertTitle>
                 <AlertDescription>
                   <ul className="mt-2 space-y-1">
-                    {validationErrors.map((error, index) => (
-                      <li key={index}>
-                        <strong>{error.field}:</strong> {error.message}
-                        {error.task_id && <span className="text-muted-foreground"> (Task: {error.task_id})</span>}
-                      </li>
-                    ))}
+                    {validationErrors.map((error, index) => {
+                      const task = error.task_id ? tasks.find(t => t.id === error.task_id) : null;
+                      const taskRef = task ? `#${tasks.indexOf(task) + 1} WBS ${task.outline_number}` : null;
+                      return (
+                        <li key={index}>
+                          <strong>{error.field}:</strong> {error.message}
+                          {taskRef && <span className="text-red-400 font-medium"> (Task {taskRef}: {task?.name})</span>}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </AlertDescription>
               </Alert>
@@ -938,12 +942,16 @@ function AppContent() {
                 <AlertTitle>Validation Warnings ({validationWarnings.length})</AlertTitle>
                 <AlertDescription>
                   <ul className="mt-2 space-y-1">
-                    {validationWarnings.map((warning, index) => (
-                      <li key={index}>
-                        <strong>{warning.field}:</strong> {warning.message}
-                        {warning.task_id && <span className="text-muted-foreground"> (Task: {warning.task_id})</span>}
-                      </li>
-                    ))}
+                    {validationWarnings.map((warning, index) => {
+                      const task = warning.task_id ? tasks.find(t => t.id === warning.task_id) : null;
+                      const taskRef = task ? `#${tasks.indexOf(task) + 1} WBS ${task.outline_number}` : null;
+                      return (
+                        <li key={index}>
+                          <strong>{warning.field}:</strong> {warning.message}
+                          {taskRef && <span className="text-amber-600 font-medium"> (Task {taskRef}: {task?.name})</span>}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </AlertDescription>
               </Alert>
@@ -1077,41 +1085,79 @@ function AppContent() {
       />
 
       {/* Delete Summary Task Confirmation Dialog */}
-      {deleteConfirmDialog.isOpen && deleteConfirmDialog.task && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
-            <div className="bg-gradient-to-r from-red-500 to-orange-500 px-6 py-4">
-              <h3 className="text-white font-bold text-lg flex items-center gap-2">
-                <AlertCircle className="h-5 w-5" />
-                Delete Summary Task
-              </h3>
+      {deleteConfirmDialog.isOpen && deleteConfirmDialog.task && (() => {
+        const taskIndex = tasks.findIndex(t => t.id === deleteConfirmDialog.task?.id);
+        const taskNum = taskIndex >= 0 ? taskIndex + 1 : '?';
+        const taskWbs = deleteConfirmDialog.task.outline_number;
+        return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold text-lg">Delete Summary Task</h3>
+                  <p className="text-slate-400 text-sm">Task #{taskNum} • WBS {taskWbs}</p>
+                </div>
+              </div>
             </div>
+
+            {/* Content */}
             <div className="p-6">
-              <p className="text-gray-700 mb-4">
-                <strong>"{deleteConfirmDialog.task.name}"</strong> is a summary task with{' '}
-                <strong className="text-red-600">{deleteConfirmDialog.childrenCount} child task{deleteConfirmDialog.childrenCount !== 1 ? 's' : ''}</strong>.
-              </p>
-              <p className="text-gray-600 mb-6 text-sm">
-                What would you like to do?
-              </p>
+              {/* Task Info Card */}
+              <div className="bg-slate-50 rounded-xl p-4 mb-5 border border-slate-200">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <FolderOpen className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 truncate">{deleteConfirmDialog.task.name}</p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Contains <span className="font-bold text-red-600">{deleteConfirmDialog.childrenCount}</span> child task{deleteConfirmDialog.childrenCount !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-slate-600 mb-5 text-sm font-medium">Choose an action:</p>
+
+              {/* Action Buttons */}
               <div className="space-y-3">
                 <button
                   onClick={() => handleConfirmDelete('ungroup')}
-                  className="w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-400 rounded-xl text-left transition-all"
+                  className="w-full px-5 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-2 border-blue-200 hover:border-blue-400 rounded-xl text-left transition-all group"
                 >
-                  <div className="font-semibold text-blue-700">Ungroup (Keep Children)</div>
-                  <div className="text-sm text-blue-600">Remove the summary task but promote children up one level</div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 group-hover:bg-blue-200 flex items-center justify-center transition-colors">
+                      <ChevronDown className="h-5 w-5 text-blue-600 rotate-180" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-blue-800">Ungroup (Keep Children)</div>
+                      <div className="text-sm text-blue-600">Promote {deleteConfirmDialog.childrenCount} children up one level</div>
+                    </div>
+                  </div>
                 </button>
+
                 <button
                   onClick={() => handleConfirmDelete('delete-all')}
-                  className="w-full px-4 py-3 bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-400 rounded-xl text-left transition-all"
+                  className="w-full px-5 py-4 bg-gradient-to-r from-red-50 to-orange-50 hover:from-red-100 hover:to-orange-100 border-2 border-red-200 hover:border-red-400 rounded-xl text-left transition-all group"
                 >
-                  <div className="font-semibold text-red-700">Delete All</div>
-                  <div className="text-sm text-red-600">Delete the summary task AND all {deleteConfirmDialog.childrenCount} children</div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-red-100 group-hover:bg-red-200 flex items-center justify-center transition-colors">
+                      <AlertCircle className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-red-800">Delete All ({deleteConfirmDialog.childrenCount + 1} tasks)</div>
+                      <div className="text-sm text-red-600">Permanently remove summary and all children</div>
+                    </div>
+                  </div>
                 </button>
                 <button
                   onClick={() => setDeleteConfirmDialog({ isOpen: false, task: null, childrenCount: 0 })}
-                  className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-xl text-gray-700 font-medium transition-all"
+                  className="w-full px-4 py-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-700 font-semibold transition-all mt-2"
                 >
                   Cancel
                 </button>
@@ -1119,7 +1165,8 @@ function AppContent() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
     </div>
   );

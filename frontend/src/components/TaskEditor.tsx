@@ -119,11 +119,15 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
 
   const handleDelete = () => {
     if (!task || !onDelete) return;
-    const confirmMessage = `Are you sure you want to delete task "${task.name}" (${task.outline_number})?\n\nThis action cannot be undone.`;
-    if (window.confirm(confirmMessage)) {
-      onDelete(task.id);
-      onClose();
+    // For non-summary tasks, confirm directly. For summary tasks, App.tsx handles the dialog.
+    if (!task.summary) {
+      const confirmMessage = `Are you sure you want to delete task "${task.name}" (${task.outline_number})?\n\nThis action cannot be undone.`;
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
     }
+    onDelete(task.id);
+    onClose();
   };
 
   if (!isOpen) return null;
