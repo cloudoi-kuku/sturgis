@@ -767,31 +767,53 @@ function AppContent() {
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
-                  <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
                     <User className="h-4 w-4 text-white" />
                   </div>
-                  <span className="max-w-[120px] truncate">{user?.name || 'User'}</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                  <span className="max-w-[120px] truncate text-white">{user?.name || 'User'}</span>
+                  <ChevronDown className={`h-4 w-4 text-slate-300 transition-transform flex-shrink-0 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isUserMenuOpen && (
                   <>
                     <div
-                      className="fixed inset-0 z-40"
+                      className="fixed inset-0"
+                      style={{ zIndex: 9998 }}
                       onClick={() => setIsUserMenuOpen(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-xl border border-slate-200 z-50 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-slate-100">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{user?.name}</p>
-                        <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                    <div 
+                      className="absolute right-0 mt-2 w-56 rounded-xl shadow-xl overflow-hidden"
+                      style={{ 
+                        zIndex: 9999,
+                        backgroundColor: 'white',
+                        border: '1px solid #e2e8f0'
+                      }}
+                    >
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', backgroundColor: 'white' }}>
+                        <p style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</p>
+                        <p style={{ fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</p>
                       </div>
-                      <div className="py-1">
+                      <div style={{ padding: '4px 0', backgroundColor: 'white' }}>
                         <button
                           onClick={() => {
                             setIsUserMenuOpen(false);
                             logout();
                             window.location.href = '/';
                           }}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '10px 16px',
+                            fontSize: '14px',
+                            color: '#dc2626',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            textAlign: 'left'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
                           <LogOut className="h-4 w-4" />
                           Sign out
