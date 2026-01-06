@@ -37,7 +37,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
   onDelete,
   existingTasks,
 }) => {
-  const [formData, setFormData] = useState<TaskCreate>({
+  const [formData, setFormData] = useState<TaskCreate & { start_date?: string; finish_date?: string }>({
     name: '',
     outline_number: '',
     duration: 'PT8H0M0S',
@@ -47,6 +47,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     predecessors: [],
     constraint_type: ConstraintType.AS_SOON_AS_POSSIBLE,
     constraint_date: undefined,
+    start_date: undefined,
+    finish_date: undefined,
   });
 
   const [durationDays, setDurationDays] = useState<number>(1);
@@ -72,6 +74,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         predecessors: task.predecessors,
         constraint_type: task.constraint_type ?? ConstraintType.AS_SOON_AS_POSSIBLE,
         constraint_date: task.constraint_date,
+        start_date: task.start_date,
+        finish_date: task.finish_date,
       });
       setDurationDays(durationToDays(task.duration));
     } else {
@@ -425,6 +429,58 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                         <p style={helperStyle}>Required for this constraint type</p>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Task Dates Section - Only show when editing existing task */}
+            {task && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingTop: '16px' }}>
+                <span style={{ ...labelStyle, marginBottom: 0 }}>Task Dates</span>
+                <div style={{ padding: '24px', backgroundColor: isCurrentTaskSummary ? '#fffbeb' : '#f8fafc', border: `1px solid ${isCurrentTaskSummary ? '#fde68a' : '#e2e8f0'}`, borderRadius: '8px' }}>
+                  {isCurrentTaskSummary && (
+                    <p style={{ fontSize: '12px', color: '#92400e', marginBottom: '16px' }}>
+                      Summary task dates are calculated from child tasks and cannot be edited directly.
+                    </p>
+                  )}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Start Date</label>
+                      <input
+                        type="date"
+                        value={formData.start_date ? formData.start_date.split('T')[0] : ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value) {
+                            setFormData({ ...formData, start_date: value + 'T08:00:00' });
+                          } else {
+                            setFormData({ ...formData, start_date: undefined });
+                          }
+                        }}
+                        disabled={isCurrentTaskSummary}
+                        style={isCurrentTaskSummary ? inputDisabledStyle : { ...inputStyle, height: '48px' }}
+                      />
+                      <p style={helperStyle}>{isCurrentTaskSummary ? 'Auto-calculated from children' : 'When the task begins'}</p>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Finish Date</label>
+                      <input
+                        type="date"
+                        value={formData.finish_date ? formData.finish_date.split('T')[0] : ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value) {
+                            setFormData({ ...formData, finish_date: value + 'T17:00:00' });
+                          } else {
+                            setFormData({ ...formData, finish_date: undefined });
+                          }
+                        }}
+                        disabled={isCurrentTaskSummary}
+                        style={isCurrentTaskSummary ? inputDisabledStyle : { ...inputStyle, height: '48px' }}
+                      />
+                      <p style={helperStyle}>{isCurrentTaskSummary ? 'Auto-calculated from children' : 'When the task ends'}</p>
+                    </div>
                   </div>
                 </div>
               </div>

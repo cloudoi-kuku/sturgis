@@ -188,6 +188,8 @@ export type TaskUpdate = {
   predecessors?: Predecessor[];
   constraint_type?: number;  // 0-7 (see ConstraintType enum)
   constraint_date?: string;  // ISO 8601 date (required for types 2-7)
+  start_date?: string;
+  finish_date?: string;
 }
 
 export type ProjectMetadata = {

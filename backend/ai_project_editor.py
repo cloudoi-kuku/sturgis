@@ -465,6 +465,12 @@ class AIProjectEditor:
         if target_in_new and position == "under":
             target_in_new["summary"] = True
 
+        # Note: Automatic date recalculation disabled for performance
+        # Users can manually edit task dates after moving via the task editor
+        # To enable auto-recalc, uncomment the lines below:
+        # moved_outlines = [change["new_outline"] for change in changes]
+        # project = self.recalculate_dates(project, moved_outlines)
+
         return {
             "success": True,
             "message": f"Moved task '{source_task['name']}' and {len(tasks_to_move)-1} children to {position} {target}",
@@ -1384,6 +1390,176 @@ class AIProjectEditor:
             })
 
         return predecessors
+
+    # =========================================================================
+    # DATE RECALCULATION
+    # =========================================================================
+
+    def recalculate_dates(self, project: Dict, moved_task_outlines: List[str] = None) -> Dict:
+        """
+        Recalculate task dates after a move operation.
+
+        For moved tasks:
+        - Clear hard constraints (allow dates to be recalculated)
+        - Calculate start_date based on predecessors
+        - Calculate finish_date based on duration
+
+        For summary tasks:
+        - Roll up dates from children (min start, max finish)
+        """
+        from datetime import datetime, timedelta
+
+        tasks = project.get("tasks", [])
+        if not tasks:
+            return project
+
+        # Get project start date as fallback
+        project_start_str = project.get("start_date", "")
+        try:
+            project_start = datetime.fromisoformat(project_start_str.replace('Z', '+00:00').split('T')[0]) if project_start_str else datetime.now()
+        except:
+            project_start = datetime.now()
+
+        # Build task lookup
+        task_map = {t["outline_number"]: t for t in tasks}
+
+        # Clear ALL constraints for moved tasks so dates can be recalculated
+        if moved_task_outlines:
+            for outline in moved_task_outlines:
+                if outline in task_map:
+                    task = task_map[outline]
+                    task["constraint_type"] = 0  # As Soon As Possible
+                    task["constraint_date"] = None
+                    print(f"[Date Recalc] Cleared constraints for moved task {outline}: {task.get('name', 'Unknown')}")
+
+        # First pass: Calculate dates for non-summary tasks based on predecessors
+        processed = set()
+        max_iterations = len(tasks) * 2
+        iteration = 0
+
+        while len(processed) < len(tasks) and iteration < max_iterations:
+            iteration += 1
+            for task in tasks:
+                outline = task["outline_number"]
+                if outline in processed:
+                    continue
+
+                if task.get("summary"):
+                    continue
+
+                predecessors = task.get("predecessors", [])
+                all_preds_processed = all(
+                    p.get("outline_number") in processed or p.get("outline_number") not in task_map
+                    for p in predecessors
+                )
+
+                if not all_preds_processed and predecessors:
+                    continue
+
+                start_date = project_start
+
+                for pred in predecessors:
+                    pred_outline = pred.get("outline_number")
+                    if pred_outline in task_map:
+                        pred_task = task_map[pred_outline]
+                        pred_finish_str = pred_task.get("finish_date", "")
+                        if pred_finish_str:
+                            try:
+                                pred_finish = datetime.fromisoformat(pred_finish_str.replace('Z', '+00:00').split('T')[0])
+                                lag_days = pred.get("lag", 0)
+                                if isinstance(lag_days, str):
+                                    import re
+                                    match = re.search(r'PT(\d+)H', lag_days)
+                                    if match:
+                                        lag_days = int(match.group(1)) / 8
+                                    else:
+                                        lag_days = 0
+                                pred_finish = pred_finish + timedelta(days=int(lag_days))
+                                if pred_finish > start_date:
+                                    start_date = pred_finish
+                            except:
+                                pass
+
+                duration_str = task.get("duration", "PT8H0M0S")
+                duration_days = self._parse_duration_to_days(duration_str)
+                finish_date = start_date + timedelta(days=max(duration_days, 0))
+
+                old_start = task.get("start_date")
+                task["start_date"] = start_date.strftime("%Y-%m-%dT08:00:00")
+                task["finish_date"] = finish_date.strftime("%Y-%m-%dT17:00:00")
+
+                if outline in (moved_task_outlines or []):
+                    old_start_str = old_start[:10] if old_start else 'None'
+                    print(f"[Date Recalc] Task {outline} '{task.get('name', '')[:30]}': {old_start_str} -> {task['start_date'][:10]}")
+
+                processed.add(outline)
+
+        # Second pass: Calculate dates for summary tasks (roll up from children)
+        summary_tasks = [t for t in tasks if t.get("summary")]
+        summary_tasks.sort(key=lambda t: -t.get("outline_level", 0))
+
+        for summary in summary_tasks:
+            summary_outline = summary["outline_number"]
+            children = [
+                t for t in tasks
+                if t["outline_number"].startswith(summary_outline + ".")
+                and t["outline_number"] != summary_outline
+            ]
+
+            if not children:
+                continue
+
+            min_start = None
+            max_finish = None
+
+            for child in children:
+                child_start_str = child.get("start_date", "")
+                child_finish_str = child.get("finish_date", "")
+
+                if child_start_str:
+                    try:
+                        child_start = datetime.fromisoformat(child_start_str.replace('Z', '+00:00').split('T')[0])
+                        if min_start is None or child_start < min_start:
+                            min_start = child_start
+                    except:
+                        pass
+
+                if child_finish_str:
+                    try:
+                        child_finish = datetime.fromisoformat(child_finish_str.replace('Z', '+00:00').split('T')[0])
+                        if max_finish is None or child_finish > max_finish:
+                            max_finish = child_finish
+                    except:
+                        pass
+
+            old_start = summary.get("start_date", "None")
+            if min_start:
+                summary["start_date"] = min_start.strftime("%Y-%m-%dT08:00:00")
+            if max_finish:
+                summary["finish_date"] = max_finish.strftime("%Y-%m-%dT17:00:00")
+
+            if min_start and max_finish:
+                duration_days = (max_finish - min_start).days
+                summary["duration"] = f"PT{duration_days * 8}H0M0S"
+                old_start_str = old_start[:10] if old_start and old_start != 'None' else 'None'
+                new_start_str = summary.get('start_date', '')[:10] if summary.get('start_date') else 'None'
+                print(f"[Date Recalc] Summary {summary_outline} '{summary.get('name', '')[:30]}': {old_start_str} -> {new_start_str}")
+
+        print(f"[Date Recalc] Completed: {len(processed)} non-summary tasks, {len(summary_tasks)} summary tasks")
+        return project
+
+    def _parse_duration_to_days(self, duration_str: str) -> float:
+        """Parse ISO 8601 duration string to days"""
+        if not duration_str:
+            return 0
+        import re
+        match = re.search(r'PT(\d+)H', duration_str)
+        if match:
+            return int(match.group(1)) / 8
+        match = re.search(r'P(\d+)D', duration_str)
+        if match:
+            return int(match.group(1))
+        return 0
 
 
 # =========================================================================

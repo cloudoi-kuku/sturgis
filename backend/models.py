@@ -73,6 +73,8 @@ class TaskUpdate(BaseModel):
     predecessors: Optional[List[Predecessor]] = None
     constraint_type: Optional[int] = Field(default=None, ge=0, le=7)
     constraint_date: Optional[str] = None
+    start_date: Optional[str] = None
+    finish_date: Optional[str] = None
 
 
 class Task(TaskBase):
