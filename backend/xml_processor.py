@@ -17,19 +17,19 @@ class MSProjectXMLProcessor:
         """Parse MS Project XML and extract project data"""
         self.xml_string = xml_content
         self.xml_root = ET.fromstring(xml_content)
-        
+
         # Extract project metadata
         name_elem = self.xml_root.find('msproj:Name', self.NS)
         start_date_elem = self.xml_root.find('msproj:StartDate', self.NS)
         status_date_elem = self.xml_root.find('msproj:StatusDate', self.NS)
-        
+
         project_data = {
             "name": name_elem.text if name_elem is not None else "Untitled Project",
             "start_date": start_date_elem.text if start_date_elem is not None else "",
             "status_date": status_date_elem.text if status_date_elem is not None else "",
             "tasks": []
         }
-        
+
         # Extract tasks
         tasks_elem = self.xml_root.find('msproj:Tasks', self.NS)
         if tasks_elem is not None:
@@ -37,8 +37,101 @@ class MSProjectXMLProcessor:
                 task = self._parse_task_element(task_elem)
                 if task:
                     project_data["tasks"].append(task)
-        
+
+        # Skip project summary task (outline_level=0 or outline_number="0") and renumber remaining tasks
+        # This keeps the WBS clean with unique top-level numbers starting from 1
+        project_data["tasks"] = self._skip_project_summary_and_renumber(project_data["tasks"])
+
         return project_data
+
+    def _skip_project_summary_and_renumber(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Skip project summary tasks and renumber remaining tasks.
+        Handles nested project summaries (e.g., task "0" and task "1" both being project summaries).
+        Promotes children to become top-level tasks with unique WBS numbers.
+        """
+        if not tasks:
+            return tasks
+
+        result_tasks = tasks.copy()
+        iteration = 0
+        max_iterations = 5  # Safety limit
+
+        while iteration < max_iterations:
+            iteration += 1
+            project_summary_task = None
+            project_summary_outline = None
+
+            # First, check for task with outline_level=0, outline_number="0", or UID="0"
+            for task in result_tasks:
+                outline_level = task.get("outline_level", 1)
+                outline_number = task.get("outline_number", "")
+                uid = str(task.get("uid", ""))
+
+                if outline_level == 0 or outline_number == "0" or uid == "0":
+                    project_summary_task = task
+                    project_summary_outline = outline_number
+                    break
+
+            # If no level-0 summary found, check if there's a single top-level task with children
+            if not project_summary_task:
+                # Find the minimum outline level in the remaining tasks
+                min_level = min((t.get("outline_level", 1) for t in result_tasks), default=1)
+                top_level_tasks = [t for t in result_tasks if t.get("outline_level", 1) == min_level]
+
+                if len(top_level_tasks) == 1:
+                    potential_summary = top_level_tasks[0]
+                    potential_outline = potential_summary.get("outline_number", "")
+
+                    # Check if it has children (other tasks start with its outline number + ".")
+                    has_children = any(
+                        t.get("outline_number", "").startswith(potential_outline + ".")
+                        for t in result_tasks if t != potential_summary
+                    )
+
+                    if has_children:
+                        project_summary_task = potential_summary
+                        project_summary_outline = potential_outline
+
+            if not project_summary_task:
+                # No more project summaries to skip
+                break
+
+            print(f"[XML Import] Iteration {iteration}: Skipping project summary task: '{project_summary_task.get('name')}' (outline: {project_summary_outline})")
+
+            # Filter out the project summary task
+            result_tasks = [t for t in result_tasks if t != project_summary_task]
+
+            # Renumber tasks - strip the project summary's outline prefix
+            prefix = project_summary_outline + "." if project_summary_outline else ""
+
+            # Build mapping from old outline numbers to new ones
+            outline_mapping = {}
+
+            for task in result_tasks:
+                old_outline = task.get("outline_number", "")
+
+                if prefix and old_outline.startswith(prefix):
+                    # Remove the prefix to promote the task
+                    new_outline = old_outline[len(prefix):]
+                else:
+                    new_outline = old_outline
+
+                outline_mapping[old_outline] = new_outline
+                task["outline_number"] = new_outline
+                task["outline_level"] = len(new_outline.split('.')) if new_outline else 0
+
+            # Update predecessor references to use new outline numbers
+            for task in result_tasks:
+                if "predecessors" in task and task["predecessors"]:
+                    for pred in task["predecessors"]:
+                        old_pred_outline = pred.get("outline_number", "")
+                        if old_pred_outline in outline_mapping:
+                            pred["outline_number"] = outline_mapping[old_pred_outline]
+
+        print(f"[XML Import] Final: {len(result_tasks)} tasks after removing {iteration} project summary level(s)")
+
+        return result_tasks
     
     def _parse_task_element(self, task_elem: ET.Element) -> Optional[Dict[str, Any]]:
         """Parse a single task element"""
