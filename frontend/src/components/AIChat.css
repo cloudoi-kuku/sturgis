@@ -336,6 +336,74 @@
   transform: translateY(0) scale(0.98);
 }
 
+/* XML Upload Button */
+.ai-chat-upload-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  width: 44px;
+  height: 48px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ai-chat-upload-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.ai-chat-upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* XML File Indicator */
+.ai-chat-xml-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin: 0 1.5rem;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.ai-chat-xml-indicator svg:first-child {
+  color: #3b82f6;
+}
+
+.ai-chat-xml-indicator span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-chat-xml-indicator button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.ai-chat-xml-indicator button:hover {
+  color: #ef4444;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .ai-chat-container {
@@ -366,5 +434,9 @@
   .ai-chat-message-text {
     font-size: 0.875rem;
     padding: 0.75rem 1rem;
+  }
+
+  .ai-chat-xml-indicator {
+    margin: 0 1rem;
   }
 }

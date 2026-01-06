@@ -127,6 +127,8 @@ class TaskCategorizationRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     project_id: Optional[str] = None  # Specific project this chat is for
+    xml_content: Optional[str] = None  # XML content from uploaded file
+    xml_filename: Optional[str] = None  # Name of the uploaded XML file
 
 class GenerateProjectRequest(BaseModel):
     """Request to generate a complete project from description"""

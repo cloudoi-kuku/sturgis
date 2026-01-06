@@ -1080,6 +1080,141 @@ async def categorize_task(request: TaskCategorizationRequest):
 # AI CHAT HELPER FUNCTIONS
 # ============================================================================
 
+async def _handle_xml_chat(request) -> Dict:
+    """
+    Handle chat messages when XML content is provided.
+    Allows users to ask for modifications before creating a project.
+    """
+    global current_project, current_project_id
+
+    message_lower = request.message.lower().strip()
+    xml_content = request.xml_content
+    xml_filename = request.xml_filename or "uploaded.xml"
+
+    # Parse the XML to understand its structure
+    try:
+        parsed_data = xml_processor.parse_xml(xml_content)
+        task_count = len(parsed_data.get("tasks", []))
+        project_name = parsed_data.get("name", "Imported Project")
+        summary_tasks = len([t for t in parsed_data.get("tasks", []) if t.get("summary")])
+        regular_tasks = task_count - summary_tasks
+    except Exception as e:
+        return {
+            "response": f"Error parsing XML file: {str(e)}. Please make sure it's a valid MS Project XML file.",
+            "command_executed": False
+        }
+
+    # Check if user wants to create/import the project
+    create_keywords = ['create', 'import', 'load', 'use', 'open', 'yes', 'proceed', 'do it', 'go ahead', 'make']
+    if any(keyword in message_lower for keyword in create_keywords):
+        try:
+            # Get current user if authenticated
+            user_id = None
+
+            # Create project in database
+            project_id = db.create_project(
+                name=project_name,
+                start_date=parsed_data.get("start_date", datetime.now().strftime("%Y-%m-%d")),
+                status_date=parsed_data.get("status_date", datetime.now().strftime("%Y-%m-%d")),
+                user_id=user_id
+            )
+
+            print(f"[XML Chat] Created project: {project_name} (ID: {project_id})")
+
+            # Add tasks to database
+            tasks = parsed_data.get("tasks", [])
+            if tasks:
+                import uuid
+                for task in tasks:
+                    # Always generate new unique IDs to avoid conflicts
+                    task["id"] = str(uuid.uuid4())
+                    task["uid"] = task["id"]
+                    task["project_id"] = project_id
+
+                db.bulk_create_tasks(project_id, tasks)
+
+            # Store XML template
+            db.save_xml_template(project_id, xml_content)
+
+            # Switch to new project
+            db.switch_project(project_id)
+
+            # Update in-memory state
+            current_project = parsed_data
+            current_project_id = project_id
+
+            # Clear XML processor state and reload
+            xml_processor.xml_root = None
+            load_project_from_db(project_id)
+
+            response_json = {
+                "type": "xml_project_created",
+                "message": f"✅ Successfully created project \"{project_name}\" from {xml_filename}!\n\n📊 **Project Summary:**\n• {task_count} total tasks\n• {summary_tasks} summary tasks\n• {regular_tasks} work tasks\n\nThe page will refresh to show your new project."
+            }
+
+            return {
+                "response": json.dumps(response_json),
+                "command_executed": True,
+                "changes": [{"type": "project_created", "project_id": project_id, "task_count": task_count}]
+            }
+
+        except Exception as e:
+            print(f"[XML Chat] Error creating project: {e}")
+            return {
+                "response": f"Error creating project: {str(e)}",
+                "command_executed": False
+            }
+
+    # Check if user wants to analyze the XML
+    analyze_keywords = ['analyze', 'what', 'show', 'tell', 'describe', 'summary', 'overview', 'structure']
+    if any(keyword in message_lower for keyword in analyze_keywords):
+        # Provide analysis of the XML structure
+        tasks = parsed_data.get("tasks", [])
+
+        # Get top-level tasks (outline level 1 or minimum level)
+        min_level = min((t.get("outline_level", 1) for t in tasks), default=1)
+        top_level = [t for t in tasks if t.get("outline_level", 1) == min_level]
+
+        response = f"📄 **Analysis of {xml_filename}:**\n\n"
+        response += f"**Project Name:** {project_name}\n"
+        response += f"**Start Date:** {parsed_data.get('start_date', 'Not specified')}\n\n"
+        response += f"**Task Breakdown:**\n"
+        response += f"• Total tasks: {task_count}\n"
+        response += f"• Summary tasks: {summary_tasks}\n"
+        response += f"• Work tasks: {regular_tasks}\n\n"
+
+        if top_level:
+            response += f"**Top-Level Structure ({len(top_level)} items):**\n"
+            for i, task in enumerate(top_level[:10]):  # Show first 10
+                task_type = "📁" if task.get("summary") else "📋"
+                response += f"• {task_type} {task.get('outline_number', '?')}: {task.get('name', 'Unnamed')}\n"
+            if len(top_level) > 10:
+                response += f"• ... and {len(top_level) - 10} more\n"
+
+        response += "\n**What would you like to do?**\n"
+        response += "• Say 'create project' to import it\n"
+        response += "• Ask me to make modifications before importing"
+
+        return {
+            "response": response,
+            "command_executed": False
+        }
+
+    # Default response - explain what's available
+    response = f"I've loaded the XML file \"{xml_filename}\" with:\n"
+    response += f"• **Project:** {project_name}\n"
+    response += f"• **Tasks:** {task_count} total ({summary_tasks} summary, {regular_tasks} work)\n\n"
+    response += "**What would you like to do?**\n"
+    response += "• Say **'create project'** or **'import'** to create a project from this XML\n"
+    response += "• Say **'analyze'** or **'show structure'** to see the task breakdown\n"
+    response += "• Ask any questions about the schedule"
+
+    return {
+        "response": response,
+        "command_executed": False
+    }
+
+
 async def _handle_suggestion_request(message: str, project: Dict, project_id: str) -> Dict:
     """Handle requests for project suggestions/analysis via chat"""
     tasks = project.get("tasks", [])
@@ -1228,6 +1363,7 @@ async def chat_with_ai(request: ChatRequest):
     - Basic commands: set duration, set lag, set start date, etc.
     - Project editing: move task, insert task, delete task, merge tasks, etc.
     - Suggestions: "suggest improvements", "what's out of sequence?", etc.
+    - XML import: upload XML and create project with AI modifications
 
     If project_id is provided, uses that specific project.
     Otherwise, uses the currently active project.
@@ -1235,6 +1371,10 @@ async def chat_with_ai(request: ChatRequest):
     global current_project, current_project_id
 
     try:
+        # Check if XML content is provided - handle XML import flow
+        if request.xml_content:
+            return await _handle_xml_chat(request)
+
         # Determine which project to use
         target_project = current_project
         target_project_id = current_project_id

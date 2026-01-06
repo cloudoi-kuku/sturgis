@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, X, Trash2, Loader } from 'lucide-react';
+import { Send, X, Trash2, Loader, Upload, FileText, XCircle } from 'lucide-react';
 import './AIChat.css';
 import '../ui-overrides.css';
 import { apiClient } from '../api/client';
@@ -10,6 +10,7 @@ interface Message {
   timestamp: Date;
   commandExecuted?: boolean;
   changes?: any[];
+  xmlFileName?: string;
 }
 
 interface AIChatProps {
@@ -22,13 +23,15 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: `Hi! I'm your construction project AI assistant${projectId ? ' for this project' : ''}. I can help you:\n\n🏗️ **Generate projects:**\n• 'Create a 3-bedroom residential home with garage'\n• 'Generate a 10,000 sq ft office renovation'\n\n✏️ **Edit project structure:**\n• 'Move task 1.2 after 1.3' or 'Move task 1.2 under 2'\n• 'Insert task \"Site Prep\" after 1.1'\n• 'Delete task 1.4'\n• 'Merge tasks 1.2 and 1.3'\n• 'Split task 1.5 into 3 parts'\n\n⏱️ **Modify durations & dates:**\n• 'Change task 1.2 duration to 10 days'\n• 'Set lag for task 2.3 to 5 days'\n• 'Set project start date to 2024-01-15'\n\n📋 **Get suggestions:**\n• 'Suggest improvements'\n• 'What tasks are out of sequence?'\n• 'Check for dependency issues'\n\n💡 **Ask questions:**\n• 'What's the critical path?'\n• 'How long will this project take?'\n\nWhat would you like to do?`,
+      content: `Hi! I'm your construction project AI assistant${projectId ? ' for this project' : ''}. I can help you:\n\n🏗️ **Generate projects:**\n• 'Create a 3-bedroom residential home with garage'\n• 'Generate a 10,000 sq ft office renovation'\n\n📄 **Import & Modify XML:**\n• Click the upload button to import an MS Project XML\n• Then ask me to modify it: 'Remove the project summary task' or 'Change all durations by 20%'\n\n✏️ **Edit project structure:**\n• 'Move task 1.2 after 1.3' or 'Move task 1.2 under 2'\n• 'Insert task \"Site Prep\" after 1.1'\n• 'Delete task 1.4'\n\n⏱️ **Modify durations & dates:**\n• 'Change task 1.2 duration to 10 days'\n• 'Set lag for task 2.3 to 5 days'\n• 'Set project start date to 2024-01-15'\n\n📋 **Get suggestions:**\n• 'Suggest improvements'\n• 'What tasks are out of sequence?'\n\nWhat would you like to do?`,
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadedXml, setUploadedXml] = useState<{ name: string; content: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -37,6 +40,64 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.xml')) {
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: "Please upload an MS Project XML file (.xml extension).",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+
+    try {
+      const content = await file.text();
+      setUploadedXml({ name: file.name, content });
+
+      const uploadMessage: Message = {
+        role: 'user',
+        content: `Uploaded XML file: ${file.name}`,
+        timestamp: new Date(),
+        xmlFileName: file.name
+      };
+      setMessages(prev => [...prev, uploadMessage]);
+
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: `I've received the XML file "${file.name}". What would you like me to do with it?\n\nYou can ask me to:\n• **Create a project** from this XML\n• **Analyze** the schedule structure\n• **Modify** tasks, durations, or dependencies\n• **Remove the project summary** and renumber tasks\n• Any other modifications before importing`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error reading file:', error);
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: "Error reading the XML file. Please make sure it's a valid file.",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const clearUploadedXml = () => {
+    setUploadedXml(null);
+    const message: Message = {
+      role: 'assistant',
+      content: "XML file cleared. You can upload a new file or continue chatting.",
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, message]);
+  };
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -52,20 +113,43 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
     setIsLoading(true);
 
     try {
-      const response = await apiClient.post('/ai/chat', {
+      // If we have an uploaded XML, send it along with the message
+      const requestData: any = {
         message: input,
-        project_id: projectId  // Send the specific project ID
-      });
+        project_id: projectId
+      };
+
+      if (uploadedXml) {
+        requestData.xml_content = uploadedXml.content;
+        requestData.xml_filename = uploadedXml.name;
+      }
+
+      const response = await apiClient.post('/ai/chat', requestData);
 
       const data = response.data;
 
-      // Check if the response is a project generation request
+      // Check if the response is a project generation request or XML import
       let responseContent = data.response;
       let isProjectGeneration = false;
 
       try {
         const parsedResponse = JSON.parse(data.response);
-        if (parsedResponse.type === 'project_generation') {
+
+        // Handle XML import with project creation
+        if (parsedResponse.type === 'xml_project_created') {
+          isProjectGeneration = true;
+          responseContent = parsedResponse.message;
+
+          // Clear the uploaded XML since project was created
+          setUploadedXml(null);
+
+          // Refresh the page to show the new project
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        }
+        // Handle regular project generation
+        else if (parsedResponse.type === 'project_generation') {
           isProjectGeneration = true;
           responseContent = parsedResponse.message;
 
@@ -133,13 +217,6 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -197,13 +274,48 @@ export const AIChat: React.FC<AIChatProps> = ({ isOpen, onClose, projectId }) =>
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Uploaded XML indicator */}
+        {uploadedXml && (
+          <div className="ai-chat-xml-indicator">
+            <FileText size={16} />
+            <span>{uploadedXml.name}</span>
+            <button onClick={clearUploadedXml} title="Remove XML">
+              <XCircle size={16} />
+            </button>
+          </div>
+        )}
+
         <div className="ai-chat-input-container">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xml"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+          />
+
+          {/* Upload button */}
+          <button
+            className="ai-chat-upload-btn"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            title="Upload MS Project XML"
+          >
+            <Upload size={18} />
+          </button>
+
           <textarea
             className="ai-chat-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask about task durations, dependencies, or project planning..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder={uploadedXml ? "What would you like to do with this XML?" : "Ask about tasks, or upload an XML file..."}
             rows={2}
             disabled={isLoading}
           />
