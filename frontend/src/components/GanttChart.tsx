@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useCallback } from 'react';
 import type { Task, CriticalPathResult } from '../api/client';
 import { getCriticalPath, moveTask } from '../api/client';
 import { format, parseISO, addDays, differenceInDays, startOfWeek, addWeeks, addMonths, startOfMonth, eachDayOfInterval, getDay } from 'date-fns';
-import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch, ChevronsDownUp, ChevronsUpDown, Filter, GripVertical } from 'lucide-react';
+import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch, ChevronsDownUp, ChevronsUpDown, Filter, GripVertical, Plus, MoreVertical, Trash2, Edit3, ArrowUp, ArrowDown, CornerDownRight } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -26,6 +26,8 @@ interface GanttChartProps {
   onTaskClick: (task: Task) => void;
   onTaskEdit: (task: Task) => void;
   onTasksChanged?: () => void;
+  onQuickAddTask?: (position: 'before' | 'after' | 'child', referenceTask: Task) => void;
+  onDeleteTask?: (task: Task) => void;
 }
 
 // Sortable Task Row Component
@@ -46,6 +48,8 @@ interface SortableTaskRowProps {
   isDragging?: boolean;
   isOver?: boolean;
   dropPosition?: 'before' | 'after' | 'under' | null;
+  onContextMenu?: (e: React.MouseEvent, task: Task) => void;
+  onQuickAdd?: (position: 'after' | 'child', task: Task) => void;
 }
 
 // Sortable Task Row Component
@@ -66,6 +70,8 @@ const SortableTaskRow: React.FC<SortableTaskRowProps> = ({
   isDragging,
   isOver,
   dropPosition,
+  onContextMenu,
+  onQuickAdd,
 }) => {
   const {
     attributes,
@@ -87,6 +93,7 @@ const SortableTaskRow: React.FC<SortableTaskRowProps> = ({
       style={style}
       className={`gantt-task-row ${task.summary ? 'summary' : ''} ${task.milestone ? 'milestone-row' : ''} ${isCritical ? 'critical-path' : ''} ${isDragging ? 'dragging' : ''} ${isOver ? `drop-target drop-${dropPosition}` : ''}`}
       onClick={() => onTaskClick(task)}
+      onContextMenu={(e) => onContextMenu?.(e, task)}
     >
       <div className="gantt-task-drag" {...attributes} {...listeners}>
         <GripVertical size={14} />
@@ -118,7 +125,8 @@ const SortableTaskRow: React.FC<SortableTaskRowProps> = ({
         {task.summary && <span className="summary-badge">Summary</span>}
       </div>
       <div className="gantt-task-start">
-        {calculatedStartDate ? formatDate(calculatedStartDate.toISOString()) : '-'}
+        {task.start_date ? formatDate(task.start_date) :
+         (calculatedStartDate ? formatDate(calculatedStartDate.toISOString()) : '-')}
       </div>
       <div className="gantt-task-duration">
         {task.summary ? (() => {
@@ -130,14 +138,38 @@ const SortableTaskRow: React.FC<SortableTaskRowProps> = ({
         })() : formatDuration(task.duration)}
       </div>
       <div className="gantt-task-finish">
-        {calculatedStartDate ? (() => {
+        {task.finish_date ? formatDate(task.finish_date) :
+         (calculatedStartDate ? (() => {
           const duration = task.summary ? calculateSummaryDuration(task) : parseDuration(task.duration);
           const finishDate = addDays(calculatedStartDate, duration);
           return formatDate(finishDate.toISOString());
-        })() : '-'}
+        })() : '-')}
       </div>
       <div className="gantt-task-predecessors" title={formatPredecessors(task.predecessors)}>
         {formatPredecessors(task.predecessors)}
+      </div>
+      {/* Quick action buttons - visible on hover */}
+      <div className="gantt-task-actions">
+        <button
+          className="task-action-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onQuickAdd?.('after', task);
+          }}
+          title="Add task after"
+        >
+          <Plus size={14} />
+        </button>
+        <button
+          className="task-action-btn task-action-child"
+          onClick={(e) => {
+            e.stopPropagation();
+            onQuickAdd?.('child', task);
+          }}
+          title="Add child task"
+        >
+          <CornerDownRight size={14} />
+        </button>
       </div>
     </div>
   );
@@ -160,7 +192,16 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onTaskClick,
   onTaskEdit,
   onTasksChanged,
+  onQuickAddTask,
+  onDeleteTask,
 }) => {
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    task: Task;
+  } | null>(null);
+
   // Start with all summary tasks expanded by default
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(() => {
     const summaryTaskIds = new Set<string>();
@@ -181,6 +222,30 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const [showBaselines, setShowBaselines] = useState<boolean>(true);
   const [selectedBaselineNumber, setSelectedBaselineNumber] = useState<number>(0);
   const [summaryFilter, setSummaryFilter] = useState<string>('all'); // 'all' or outline_number of summary task
+
+  // Context menu handlers
+  const handleContextMenu = useCallback((e: React.MouseEvent, task: Task) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, task });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  // Quick add handler
+  const handleQuickAdd = useCallback((position: 'after' | 'child', task: Task) => {
+    onQuickAddTask?.(position, task);
+  }, [onQuickAddTask]);
+
+  // Close context menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = () => closeContextMenu();
+    if (contextMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [contextMenu, closeContextMenu]);
 
   // Refs for synchronized scrolling
   const taskListRef = useRef<HTMLDivElement>(null);
@@ -588,9 +653,20 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     });
 
     sortedForCalc.forEach(task => {
+      // PRIORITY: Use task.start_date from API if available (calculated by backend)
+      if (task.start_date) {
+        try {
+          const apiStartDate = parseISO(task.start_date);
+          taskDates.set(task.id, apiStartDate);
+          return; // Use API date, skip calculation
+        } catch {
+          // Fall through to calculation if parse fails
+        }
+      }
+
+      // Fallback: Calculate start based on predecessors
       let taskStartDate = startDate;
 
-      // If task has predecessors, calculate start based on them
       if (task.predecessors && task.predecessors.length > 0) {
         let latestPredecessorEnd = startDate;
 
@@ -1077,6 +1153,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       isDragging={activeId === task.id}
                       isOver={overId === task.id}
                       dropPosition={overId === task.id ? dropPosition : null}
+                      onContextMenu={handleContextMenu}
+                      onQuickAdd={handleQuickAdd}
                     />
                   );
                 })}
@@ -1408,6 +1486,71 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         </div>
       </div>
 
+      {/* Right-click Context Menu */}
+      {contextMenu && (
+        <div
+          className="gantt-context-menu"
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            zIndex: 1000,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="context-menu-item"
+            onClick={() => {
+              onQuickAddTask?.('before', contextMenu.task);
+              closeContextMenu();
+            }}
+          >
+            <ArrowUp size={14} />
+            <span>Add Task Before</span>
+          </button>
+          <button
+            className="context-menu-item"
+            onClick={() => {
+              onQuickAddTask?.('after', contextMenu.task);
+              closeContextMenu();
+            }}
+          >
+            <ArrowDown size={14} />
+            <span>Add Task After</span>
+          </button>
+          <button
+            className="context-menu-item"
+            onClick={() => {
+              onQuickAddTask?.('child', contextMenu.task);
+              closeContextMenu();
+            }}
+          >
+            <CornerDownRight size={14} />
+            <span>Add Child Task</span>
+          </button>
+          <div className="context-menu-divider" />
+          <button
+            className="context-menu-item"
+            onClick={() => {
+              onTaskEdit(contextMenu.task);
+              closeContextMenu();
+            }}
+          >
+            <Edit3 size={14} />
+            <span>Edit Task</span>
+          </button>
+          <button
+            className="context-menu-item delete"
+            onClick={() => {
+              onDeleteTask?.(contextMenu.task);
+              closeContextMenu();
+            }}
+          >
+            <Trash2 size={14} />
+            <span>Delete Task</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

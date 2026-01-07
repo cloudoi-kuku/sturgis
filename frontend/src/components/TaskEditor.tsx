@@ -11,6 +11,10 @@ interface TaskEditorProps {
   onSave: (task: TaskCreate | TaskUpdate) => void;
   onDelete?: (taskId: string) => void;
   existingTasks: Task[];
+  quickAddContext?: {
+    position: 'before' | 'after' | 'child';
+    referenceTask: Task;
+  } | null;
 }
 
 // Helper function to convert ISO 8601 duration to days
@@ -36,6 +40,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
   onSave,
   onDelete,
   existingTasks,
+  quickAddContext,
 }) => {
   const [formData, setFormData] = useState<TaskCreate & { start_date?: string; finish_date?: string }>({
     name: '',
@@ -62,6 +67,45 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
 
   const isCurrentTaskSummary = task ? isSummaryTask(task.outline_number) : false;
 
+  // Calculate the outline number based on position
+  // Backend now supports auto-renumbering, so we can suggest exact positions
+  const calculateOutlineNumber = (position: 'before' | 'after' | 'child', refTask: Task, tasks: Task[]): string => {
+    const refOutline = refTask.outline_number;
+    const outlineParts = refOutline.split('.');
+
+    if (position === 'child') {
+      // Add as child: find the next available child number under this task
+      const childPrefix = refOutline + '.';
+      const directChildren = tasks
+        .filter(t => {
+          if (!t.outline_number.startsWith(childPrefix)) return false;
+          // Only direct children (no additional dots after prefix)
+          const remainder = t.outline_number.substring(childPrefix.length);
+          return !remainder.includes('.');
+        })
+        .map(t => {
+          const remainder = t.outline_number.substring(childPrefix.length);
+          return parseInt(remainder, 10);
+        })
+        .filter(n => !isNaN(n));
+
+      const nextChildNum = directChildren.length > 0 ? Math.max(...directChildren) + 1 : 1;
+      return `${refOutline}.${nextChildNum}`;
+    } else if (position === 'before') {
+      // Insert BEFORE: use the same outline number as reference task
+      // Backend will automatically shift the existing task and siblings after it
+      return refOutline;
+    } else {
+      // Insert AFTER: use reference task's number + 1
+      // Backend will automatically shift if that number already exists
+      const parentParts = outlineParts.slice(0, -1);
+      const parentOutline = parentParts.join('.');
+      const currentNum = parseInt(outlineParts[outlineParts.length - 1], 10);
+      const nextNum = currentNum + 1;
+      return parentOutline ? `${parentOutline}.${nextNum}` : `${nextNum}`;
+    }
+  };
+
   useEffect(() => {
     if (task) {
       setFormData({
@@ -78,6 +122,41 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         finish_date: task.finish_date,
       });
       setDurationDays(durationToDays(task.duration));
+    } else if (quickAddContext) {
+      // Quick add mode - calculate suggested outline number
+      const suggestedOutline = calculateOutlineNumber(
+        quickAddContext.position,
+        quickAddContext.referenceTask,
+        existingTasks
+      );
+
+      console.log('Quick add context:', {
+        position: quickAddContext.position,
+        refTask: quickAddContext.referenceTask.outline_number,
+        suggestedOutline,
+        existingTaskCount: existingTasks.length
+      });
+
+      // Set up predecessors based on position:
+      // - "after": Add reference task as FS predecessor (new task depends on reference)
+      // - "before": No predecessor (reference task will depend on new task)
+      // - "child": No automatic predecessor
+      const predecessors: Predecessor[] = quickAddContext.position === 'after'
+        ? [{ outline_number: quickAddContext.referenceTask.outline_number, type: 1, lag: 0, lag_format: 7 }]
+        : [];
+
+      setFormData({
+        name: '',
+        outline_number: suggestedOutline,
+        duration: 'PT8H0M0S',
+        value: '',
+        milestone: false,
+        percent_complete: 0,
+        predecessors,
+        constraint_type: ConstraintType.AS_SOON_AS_POSSIBLE,
+        constraint_date: undefined,
+      });
+      setDurationDays(1);
     } else {
       setFormData({
         name: '',
@@ -92,7 +171,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
       });
       setDurationDays(1);
     }
-  }, [task, isOpen]);
+  }, [task, isOpen, quickAddContext, existingTasks]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,7 +303,9 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         {/* Header */}
         <div style={{ padding: '24px 32px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
           <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#0f172a', margin: 0 }}>
-            {task ? 'Edit Task' : 'Create New Task'}
+            {task ? 'Edit Task' : quickAddContext
+              ? `Add Task ${quickAddContext.position === 'child' ? 'Under' : quickAddContext.position === 'after' ? 'After' : 'Before'} "${quickAddContext.referenceTask.name.substring(0, 30)}${quickAddContext.referenceTask.name.length > 30 ? '...' : ''}"`
+              : 'Create New Task'}
           </h2>
         </div>
 

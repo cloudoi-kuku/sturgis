@@ -301,11 +301,24 @@ class MSProjectXMLProcessor:
         return None
     
     def add_task(self, project_data: Dict[str, Any], task_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Add a new task to the project"""
+        """Add a new task to the project with auto-renumbering if needed.
+
+        If the requested outline_number already exists, this will shift existing tasks
+        to make room for the new task at the requested position.
+        """
         import uuid
 
+        requested_outline = task_data["outline_number"]
+        tasks = project_data["tasks"]
+
+        # Check if outline_number already exists
+        existing_task = next((t for t in tasks if t["outline_number"] == requested_outline), None)
+
+        if existing_task:
+            # Need to shift existing tasks to make room
+            self._shift_tasks_for_insert(tasks, requested_outline)
+
         # Always use UUIDs for new tasks to avoid database ID collisions
-        # This ensures that tasks from different projects never have conflicting IDs
         new_id = str(uuid.uuid4())
         new_uid = str(uuid.uuid4())
 
@@ -326,6 +339,73 @@ class MSProjectXMLProcessor:
 
         # Return the updated task (with potentially updated summary status)
         return next((t for t in project_data["tasks"] if t["id"] == new_id), new_task)
+
+    def _shift_tasks_for_insert(self, tasks: List[Dict[str, Any]], insert_outline: str) -> None:
+        """Shift tasks at and after the insert position to make room for a new task.
+
+        This shifts the task at insert_outline and all siblings after it (including their children)
+        by incrementing their outline numbers.
+        """
+        parts = insert_outline.split(".")
+        insert_num = int(parts[-1])
+        parent = ".".join(parts[:-1]) if len(parts) > 1 else ""
+        level = len(parts)
+
+        # Find all sibling outline numbers at the same level that need to shift
+        siblings_to_shift = set()
+        for task in tasks:
+            task_parts = task["outline_number"].split(".")
+            task_parent = ".".join(task_parts[:-1]) if len(task_parts) > 1 else ""
+
+            # Must be same parent and same level
+            if task_parent == parent and len(task_parts) == level:
+                task_num = int(task_parts[-1])
+                if task_num >= insert_num:
+                    siblings_to_shift.add(task["outline_number"])
+
+        # Build old -> new outline mapping
+        outline_mapping = {}
+
+        # Shift siblings and all their descendants
+        for task in tasks:
+            outline = task["outline_number"]
+
+            # Check if this task is a sibling to shift or a descendant of one
+            for sibling in siblings_to_shift:
+                if outline == sibling or outline.startswith(sibling + "."):
+                    # Calculate new outline by incrementing the sibling number
+                    sibling_parts = sibling.split(".")
+                    old_num = int(sibling_parts[-1])
+                    new_num = old_num + 1
+
+                    if parent:
+                        new_sibling = f"{parent}.{new_num}"
+                    else:
+                        new_sibling = str(new_num)
+
+                    # Apply the shift
+                    if outline == sibling:
+                        old_outline = outline
+                        task["outline_number"] = new_sibling
+                        outline_mapping[old_outline] = new_sibling
+                    else:
+                        # Descendant - replace prefix
+                        old_outline = outline
+                        task["outline_number"] = new_sibling + outline[len(sibling):]
+                        outline_mapping[old_outline] = task["outline_number"]
+
+                    # Update outline_level if changed
+                    task["outline_level"] = len(task["outline_number"].split("."))
+                    break
+
+        # Update predecessor references to point to new outline numbers
+        if outline_mapping:
+            for task in tasks:
+                if "predecessors" in task and task["predecessors"]:
+                    for pred in task["predecessors"]:
+                        old_pred_outline = pred.get("outline_number", "")
+                        if old_pred_outline in outline_mapping:
+                            pred["outline_number"] = outline_mapping[old_pred_outline]
 
     def update_task(self, project_data: Dict[str, Any], task_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update an existing task"""
@@ -398,13 +478,15 @@ class MSProjectXMLProcessor:
         """
         Automatically detect summary tasks and calculate their properties based on children.
         A task is a summary task if other tasks have outline numbers that start with its outline number.
+        Summary task dates are calculated as: start = min(children starts), finish = max(children finishes)
         IMPORTANT: This function preserves the original task order - do NOT sort!
         MS Project uses OutlineNumber to determine hierarchy, not task order in the file.
         """
-        # Build a set of all outline numbers for faster lookup
-        all_outlines = {task["outline_number"] for task in tasks}
+        # Build a lookup by outline number for faster access
+        task_by_outline = {task["outline_number"]: task for task in tasks}
+        all_outlines = set(task_by_outline.keys())
 
-        # Identify which tasks are summary tasks
+        # First pass: Identify which tasks are summary tasks
         for task in tasks:
             outline = task["outline_number"]
             has_children = False
@@ -422,6 +504,33 @@ class MSProjectXMLProcessor:
             # Summary tasks cannot be milestones
             if has_children:
                 task["milestone"] = False
+
+        # Second pass: Calculate summary task dates from children (bottom-up)
+        # Sort by outline level descending so we process deepest summary tasks first
+        sorted_outlines = sorted(all_outlines, key=lambda x: (-len(x.split('.')), x))
+
+        for outline in sorted_outlines:
+            task = task_by_outline[outline]
+            if not task.get("summary"):
+                continue
+
+            # Find all direct and indirect children
+            child_starts = []
+            child_finishes = []
+
+            for child_outline in all_outlines:
+                if child_outline.startswith(outline + ".") and child_outline != outline:
+                    child = task_by_outline[child_outline]
+                    if child.get("start_date"):
+                        child_starts.append(child["start_date"])
+                    if child.get("finish_date"):
+                        child_finishes.append(child["finish_date"])
+
+            # Set summary task dates from children (min start, max finish)
+            if child_starts:
+                task["start_date"] = min(child_starts)
+            if child_finishes:
+                task["finish_date"] = max(child_finishes)
 
         # Return tasks in original order - do NOT sort!
         return tasks

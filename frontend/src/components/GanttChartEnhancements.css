@@ -619,3 +619,153 @@
   animation: spin 0.6s linear infinite;
   transform: translateY(-50%);
 }
+
+/* =====================================================
+   QUICK ACTION BUTTONS (Hover Icons)
+   ===================================================== */
+
+.gantt-task-actions {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 5;
+}
+
+.gantt-task-row:hover .gantt-task-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.task-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.task-action-btn:hover {
+  background: #f8fafc;
+  border-color: #6366f1;
+  color: #6366f1;
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
+}
+
+.task-action-btn:active {
+  transform: scale(0.95);
+}
+
+.task-action-btn.task-action-child {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #16a34a;
+}
+
+.task-action-btn.task-action-child:hover {
+  background: #dcfce7;
+  border-color: #22c55e;
+  color: #15803d;
+}
+
+/* =====================================================
+   CONTEXT MENU (Right-Click Menu)
+   ===================================================== */
+
+.gantt-context-menu {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 6px;
+  min-width: 180px;
+  animation: contextMenuFadeIn 0.15s ease;
+}
+
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.context-menu-item:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.context-menu-item:active {
+  background: #e2e8f0;
+}
+
+.context-menu-item svg {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.context-menu-item:hover svg {
+  color: #6366f1;
+}
+
+.context-menu-item.delete {
+  color: #dc2626;
+}
+
+.context-menu-item.delete:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.context-menu-item.delete svg {
+  color: #dc2626;
+}
+
+.context-menu-item.delete:hover svg {
+  color: #b91c1c;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 6px 0;
+}
+
+/* Ensure task row has position relative for action buttons */
+.gantt-task-row {
+  position: relative;
+}

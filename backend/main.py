@@ -638,12 +638,29 @@ async def get_tasks():
     # MANUAL SAVE MODE: Return in-memory state (may have unsaved changes)
     if current_project and current_project.get("tasks"):
         tasks = current_project["tasks"]
-        # Ensure summary tasks are calculated
+
+        # Auto-calculate dates if tasks are missing dates (common for AI-generated projects)
+        tasks_without_dates = [t for t in tasks if not t.get("start_date") and not t.get("summary")]
+        if tasks_without_dates:
+            # Calculate dates based on dependencies
+            current_project = ai_project_editor.recalculate_dates(current_project)
+            tasks = current_project["tasks"]
+
+        # Ensure summary tasks are calculated (roll up from children)
         tasks = xml_processor._calculate_summary_tasks(tasks)
+        current_project["tasks"] = tasks
         return {"tasks": tasks}
 
     # Fallback: Load from database if no in-memory state
     tasks = db.get_tasks(project_data['id'])
+
+    # Auto-calculate dates if tasks are missing dates
+    tasks_without_dates = [t for t in tasks if not t.get("start_date") and not t.get("summary")]
+    if tasks_without_dates and current_project:
+        current_project["tasks"] = tasks
+        current_project = ai_project_editor.recalculate_dates(current_project)
+        tasks = current_project["tasks"]
+
     tasks = xml_processor._calculate_summary_tasks(tasks)
 
     if current_project:
@@ -948,6 +965,50 @@ async def move_task(task_id: str, request: MoveTaskRequest):
         changes=changes,
         tasks_affected=len(changes)
     )
+
+
+@app.post("/api/project/recalculate-dates")
+async def recalculate_project_dates():
+    """
+    Recalculate all task dates based on:
+    - Project start date
+    - Task durations
+    - Predecessor dependencies (Finish-to-Start)
+    - Summary task roll-up (min start, max finish from children)
+
+    This is useful for:
+    - AI-generated projects that don't have dates
+    - Projects imported without scheduled dates
+    - After moving tasks to recalculate the schedule
+    """
+    global current_project, current_project_id
+
+    if not current_project or not current_project_id:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    try:
+        # Count tasks before
+        tasks_before = len(current_project.get("tasks", []))
+        tasks_without_dates = len([t for t in current_project.get("tasks", []) if not t.get("start_date")])
+
+        # Recalculate all dates
+        current_project = ai_project_editor.recalculate_dates(current_project)
+
+        # Count tasks with dates after
+        tasks_with_dates_after = len([t for t in current_project.get("tasks", []) if t.get("start_date")])
+
+        return {
+            "success": True,
+            "message": f"Recalculated dates for {tasks_with_dates_after} tasks",
+            "tasks_total": tasks_before,
+            "tasks_updated": tasks_with_dates_after,
+            "tasks_previously_without_dates": tasks_without_dates
+        }
+    except Exception as e:
+        print(f"Error recalculating dates: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error recalculating dates: {str(e)}")
 
 
 @app.post("/api/validate")

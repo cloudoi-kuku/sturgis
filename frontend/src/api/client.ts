@@ -269,6 +269,20 @@ export const saveProject = async (): Promise<SaveProjectResponse> => {
   return response.data;
 };
 
+// Recalculate all task dates based on dependencies and durations
+export type RecalculateDatesResponse = {
+  success: boolean;
+  message: string;
+  tasks_total: number;
+  tasks_updated: number;
+  tasks_previously_without_dates: number;
+};
+
+export const recalculateDates = async (): Promise<RecalculateDatesResponse> => {
+  const response = await apiClient.post('/project/recalculate-dates');
+  return response.data;
+};
+
 export const getTasks = async (): Promise<{ tasks: Task[] }> => {
   const response = await apiClient.get('/tasks');
   return response.data;

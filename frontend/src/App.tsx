@@ -26,13 +26,14 @@ import {
   getCalendar,
   updateCalendar,
   saveProject,
+  recalculateDates,
 } from './api/client';
 import type {
   Task,
   TaskCreate,
   TaskUpdate,
 } from './api/client';
-import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle, Save, Cloud, LogOut, User, ChevronDown } from 'lucide-react';
+import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle, Save, Cloud, LogOut, User, ChevronDown, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { parseISO, addDays, differenceInDays, format } from 'date-fns';
@@ -63,11 +64,16 @@ function AppContent() {
   const [validationWarnings, setValidationWarnings] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
   const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
     isOpen: boolean;
     task: Task | null;
     childrenCount: number;
   }>({ isOpen: false, task: null, childrenCount: 0 });
+  const [quickAddContext, setQuickAddContext] = useState<{
+    position: 'before' | 'after' | 'child';
+    referenceTask: Task;
+  } | null>(null);
   const queryClientInstance = useQueryClient();
 
   // Warn user about unsaved changes when leaving
@@ -209,6 +215,31 @@ function AppContent() {
     }
   };
 
+  const handleRecalculateDates = async () => {
+    if (!metadata) {
+      alert('No project loaded');
+      return;
+    }
+
+    setIsRecalculating(true);
+    try {
+      const result = await recalculateDates();
+      if (result.success) {
+        // Refresh tasks to show updated dates
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        setHasUnsavedChanges(true);
+        alert(`Dates recalculated for ${result.tasks_updated} tasks based on dependencies.\n\nClick Save to persist changes.`);
+      } else {
+        alert(`Recalculation failed: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Recalculate dates error:', error);
+      alert(`Error recalculating dates: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
   // Handlers
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     console.log('=== File upload triggered ===');
@@ -235,7 +266,20 @@ function AppContent() {
 
   const handleCreateTask = () => {
     setSelectedTask(undefined);
+    setQuickAddContext(null);
     setIsEditorOpen(true);
+  };
+
+  // Quick add task from context menu or hover buttons
+  const handleQuickAddTask = (position: 'before' | 'after' | 'child', referenceTask: Task) => {
+    setSelectedTask(undefined);
+    setQuickAddContext({ position, referenceTask });
+    setIsEditorOpen(true);
+  };
+
+  // Delete task from context menu (accepts Task instead of taskId)
+  const handleDeleteTaskFromMenu = (task: Task) => {
+    handleDeleteTask(task.id);
   };
 
   const handleEditTask = (task: Task) => {
@@ -865,6 +909,20 @@ function AppContent() {
               >
                 <Calendar className="h-4 w-4" />
               </button>
+              {/* Recalculate Dates Button */}
+              <button
+                onClick={handleRecalculateDates}
+                disabled={isRecalculating}
+                title="Recalculate Dates (based on dependencies)"
+                style={{ padding: '10px' }}
+                className="text-orange-500 hover:text-orange-700 hover:bg-orange-50 rounded-lg border border-orange-200 hover:border-orange-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isRecalculating ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+              </button>
               {/* Manual Save Button - prominent when unsaved changes exist */}
               <button
                 onClick={handleSave}
@@ -1002,6 +1060,8 @@ function AppContent() {
             onTaskClick={handleEditTask}
             onTaskEdit={handleEditTask}
             onTasksChanged={handleProjectChanged}
+            onQuickAddTask={handleQuickAddTask}
+            onDeleteTask={handleDeleteTaskFromMenu}
           />
         )}
 
@@ -1034,10 +1094,12 @@ function AppContent() {
         onClose={() => {
           setIsEditorOpen(false);
           setSelectedTask(undefined);
+          setQuickAddContext(null);
         }}
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
         existingTasks={tasks}
+        quickAddContext={quickAddContext}
       />
 
       <ProjectMetadataEditor
