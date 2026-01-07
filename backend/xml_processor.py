@@ -192,20 +192,23 @@ class MSProjectXMLProcessor:
                     pred_outline = self._find_outline_by_uid(pred_uid_elem.text)
                     if pred_outline:
                         # Parse lag value from XML
-                        lag_value = int(pred_lag_elem.text) if pred_lag_elem is not None else 0
+                        # IMPORTANT: MS Project XML ALWAYS stores LinkLag in tenth-minutes
+                        # regardless of LagFormat. LagFormat only affects display.
+                        # 48000 tenth-minutes = 4800 minutes = 80 hours = 10 days (8hr/day)
+                        raw_lag = int(pred_lag_elem.text) if pred_lag_elem is not None else 0
                         lag_format = int(pred_lag_format_elem.text) if pred_lag_format_elem is not None else 7
 
-                        # IMPORTANT: MS Project stores lag in different units based on LagFormat:
-                        # Format 3 = Minutes (need to keep as-is, 480 min = 1 day)
-                        # Format 7 = Days (stored directly as days, NOT minutes)
-                        # Format 8 = Elapsed Days (stored directly as days)
-                        # We store everything internally in the same format as MS Project XML
+                        # Convert tenth-minutes to days for internal storage
+                        # Formula: tenth-minutes / 10 / 60 / 8 = days (8-hour workday)
+                        # Simplified: tenth-minutes / 4800 = days
+                        lag_in_days = raw_lag / 4800.0 if raw_lag != 0 else 0
 
+                        # Store internally as days with lag_format=7
                         predecessors.append({
                             "outline_number": pred_outline,
                             "type": int(pred_type_elem.text) if pred_type_elem is not None else 1,
-                            "lag": lag_value,
-                            "lag_format": lag_format
+                            "lag": lag_in_days,
+                            "lag_format": 7  # Always store as days internally
                         })
 
             # Extract task constraints (MS Project compatible)
@@ -714,8 +717,13 @@ class MSProjectXMLProcessor:
                 create_elem(link, 'PredecessorUID', mapped_pred_uid)
                 create_elem(link, 'Type', pred.get("type", 1))
                 create_elem(link, 'CrossProject', '0')
-                create_elem(link, 'LinkLag', pred.get("lag", 0))
-                create_elem(link, 'LagFormat', pred.get("lag_format", 7))
+                # Convert lag from days back to tenth-minutes for MS Project XML
+                # Formula: days * 8 * 60 * 10 = tenth-minutes
+                # Simplified: days * 4800 = tenth-minutes
+                lag_in_days = pred.get("lag", 0)
+                lag_tenth_minutes = int(lag_in_days * 4800) if lag_in_days else 0
+                create_elem(link, 'LinkLag', lag_tenth_minutes)
+                create_elem(link, 'LagFormat', 7)  # Always export as days format
 
         # Baselines (MS Project supports up to 11 baselines: 0-10)
         for baseline in task_data.get("baselines", []):
