@@ -159,15 +159,12 @@ function AppContent() {
 
   const updateMetadataMutation = useMutation({
     mutationFn: updateProjectMetadata,
-    onSuccess: async () => {
-      // Recalculate all task dates when project metadata changes (especially start date)
-      try {
-        const result = await recalculateDates();
-        console.log('Dates recalculated:', result);
-      } catch (error) {
-        console.error('Failed to recalculate dates:', error);
+    onSuccess: async (response) => {
+      // Backend automatically recalculates task dates when start_date changes
+      if (response.dates_recalculated) {
+        console.log('Task dates were automatically recalculated by backend');
       }
-      // Refetch both metadata and tasks to ensure UI is updated with recalculated dates
+      // Refetch both metadata and tasks to ensure UI is updated
       await Promise.all([
         queryClientInstance.refetchQueries({ queryKey: ['metadata'] }),
         queryClientInstance.refetchQueries({ queryKey: ['tasks'] }),

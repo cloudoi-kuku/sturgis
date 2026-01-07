@@ -559,11 +559,15 @@ async def get_project_metadata(current_user: Optional[dict] = Depends(get_option
 
 @app.put("/api/project/metadata")
 async def update_project_metadata(metadata: ProjectMetadata):
-    """Update project metadata"""
+    """Update project metadata. Automatically recalculates task dates if start_date changes."""
     global current_project
 
     if not current_project or not current_project_id:
         raise HTTPException(status_code=404, detail="No project loaded")
+
+    # Check if start_date is changing
+    old_start_date = current_project.get("start_date", "")
+    start_date_changed = old_start_date != metadata.start_date
 
     # Update in database
     db.update_project_metadata(
@@ -578,7 +582,14 @@ async def update_project_metadata(metadata: ProjectMetadata):
     current_project["start_date"] = metadata.start_date
     current_project["status_date"] = metadata.status_date
 
-    return {"success": True, "metadata": metadata}
+    # If start_date changed, automatically recalculate all task dates
+    # This happens atomically before response is returned
+    if start_date_changed:
+        print(f"[Metadata Update] Start date changed from {old_start_date} to {metadata.start_date}, recalculating task dates...")
+        current_project = ai_project_editor.recalculate_dates(current_project)
+        print(f"[Metadata Update] Task dates recalculated for {len(current_project.get('tasks', []))} tasks")
+
+    return {"success": True, "metadata": metadata, "dates_recalculated": start_date_changed}
 
 
 @app.post("/api/project/save")
