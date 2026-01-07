@@ -190,6 +190,18 @@ class DatabaseService:
                 )
             """)
 
+            # User active projects table - tracks which project each user has active
+            # This allows multiple users to have different active projects simultaneously
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_active_projects (
+                    user_id TEXT PRIMARY KEY,
+                    project_id TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+                )
+            """)
+
             # Create indexes for better performance
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_outline ON tasks(project_id, outline_number)")
@@ -212,17 +224,22 @@ class DatabaseService:
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
-            # Deactivate all other projects for this user (or all if no user)
-            if user_id:
-                cursor.execute("UPDATE projects SET is_active = 0 WHERE user_id = ? OR user_id IS NULL", (user_id,))
-            else:
-                cursor.execute("UPDATE projects SET is_active = 0")
-
-            # Insert new project
+            # Insert new project (don't modify is_active globally anymore)
             cursor.execute("""
                 INSERT INTO projects (id, name, start_date, status_date, created_at, updated_at, is_active, xml_template, user_id, is_shared)
-                VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
             """, (project_id, name, start_date, status_date, now, now, xml_template, user_id, 1 if is_shared else 0))
+
+            # Set this as the user's active project using per-user tracking
+            if user_id:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO user_active_projects (user_id, project_id, updated_at)
+                    VALUES (?, ?, ?)
+                """, (user_id, project_id, now))
+            else:
+                # Legacy behavior for non-authenticated users
+                cursor.execute("UPDATE projects SET is_active = 0")
+                cursor.execute("UPDATE projects SET is_active = 1 WHERE id = ?", (project_id,))
 
         return project_id
     
@@ -241,28 +258,44 @@ class DatabaseService:
         """Get the currently active project for a user.
 
         Args:
-            user_id: Optional user ID to filter by. If None, returns any active project.
+            user_id: Optional user ID to filter by. If None, falls back to legacy behavior.
 
         Returns:
             The active project for the user, or None if no active project exists.
         """
         with self.get_connection() as conn:
             cursor = conn.cursor()
+
             if user_id:
-                # Get active project that belongs to user OR is shared
+                # First check user_active_projects table for this user's active project
+                cursor.execute("""
+                    SELECT p.* FROM projects p
+                    JOIN user_active_projects uap ON p.id = uap.project_id
+                    WHERE uap.user_id = ?
+                """, (user_id,))
+                row = cursor.fetchone()
+
+                if row:
+                    return dict(row)
+
+                # Fall back: no active project set for this user
+                # Return their most recently updated project they have access to
                 cursor.execute("""
                     SELECT * FROM projects
-                    WHERE is_active = 1 AND (user_id = ? OR user_id IS NULL OR is_shared = 1)
-                    ORDER BY
-                        CASE WHEN user_id = ? THEN 0 ELSE 1 END
+                    WHERE user_id = ? OR user_id IS NULL OR is_shared = 1
+                    ORDER BY updated_at DESC
                     LIMIT 1
-                """, (user_id, user_id))
+                """, (user_id,))
+                row = cursor.fetchone()
+                if row:
+                    return dict(row)
             else:
+                # Legacy behavior for non-authenticated users: use is_active flag
                 cursor.execute("SELECT * FROM projects WHERE is_active = 1 LIMIT 1")
-            row = cursor.fetchone()
+                row = cursor.fetchone()
+                if row:
+                    return dict(row)
 
-            if row:
-                return dict(row)
         return None
 
     def list_projects(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -361,6 +394,7 @@ class DatabaseService:
         """
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            now = datetime.now().isoformat()
 
             # Check if project exists and user has access
             if user_id:
@@ -374,15 +408,21 @@ class DatabaseService:
             if not cursor.fetchone():
                 return False
 
-            # Deactivate all projects for this user (or all if no user)
             if user_id:
-                cursor.execute("UPDATE projects SET is_active = 0 WHERE user_id = ? OR user_id IS NULL", (user_id,))
+                # Use per-user active project tracking
+                # Insert or replace the user's active project
+                cursor.execute("""
+                    INSERT OR REPLACE INTO user_active_projects (user_id, project_id, updated_at)
+                    VALUES (?, ?, ?)
+                """, (user_id, project_id, now))
             else:
+                # Legacy behavior for non-authenticated users: use is_active flag
                 cursor.execute("UPDATE projects SET is_active = 0")
+                cursor.execute("UPDATE projects SET is_active = 1, updated_at = ? WHERE id = ?",
+                             (now, project_id))
 
-            # Activate the selected project
-            cursor.execute("UPDATE projects SET is_active = 1, updated_at = ? WHERE id = ?",
-                         (datetime.now().isoformat(), project_id))
+            # Update project's updated_at timestamp
+            cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?", (now, project_id))
 
             return True
 

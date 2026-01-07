@@ -222,13 +222,13 @@ def save_project_to_db():
             print(f"Error saving project to database: {e}")
 
 
-def load_project_from_db(project_id: Optional[str] = None):
+def load_project_from_db(project_id: Optional[str] = None, user_id: Optional[str] = None):
     """Load project from database"""
     global current_project, current_project_id
 
-    # If no project_id specified, load the active project
+    # If no project_id specified, load the active project for this user
     if project_id is None:
-        project_data = db.get_active_project()
+        project_data = db.get_active_project(user_id)
         if project_data:
             project_id = project_data['id']
 
@@ -261,8 +261,8 @@ def load_project_from_db(project_id: Optional[str] = None):
             else:
                 xml_processor.xml_root = None
 
-            # Switch to this project
-            db.switch_project(project_id)
+            # Switch to this project for this user
+            db.switch_project(project_id, user_id=user_id)
 
             print(f"Loaded project from database: {current_project.get('name', 'Unknown')} (ID: {project_id})")
             return True
@@ -532,12 +532,13 @@ async def upload_project(
 
 
 @app.get("/api/project/metadata")
-async def get_project_metadata():
+async def get_project_metadata(current_user: Optional[dict] = Depends(get_optional_user)):
     """Get current project metadata - always reads from database for consistency"""
     global current_project, current_project_id
 
-    # Always fetch from database to ensure consistency across workers
-    project_data = db.get_active_project()
+    # Get active project for THIS USER (not globally)
+    user_id = current_user.get("id") if current_user else None
+    project_data = db.get_active_project(user_id)
     if not project_data:
         raise HTTPException(status_code=404, detail="No project loaded")
 
@@ -622,12 +623,13 @@ async def save_project():
 
 
 @app.get("/api/tasks")
-async def get_tasks():
+async def get_tasks(current_user: Optional[dict] = Depends(get_optional_user)):
     """Get all tasks in the current project - returns in-memory state for manual save mode"""
     global current_project, current_project_id
 
-    # Check active project from database
-    project_data = db.get_active_project()
+    # Check active project for THIS USER from database
+    user_id = current_user.get("id") if current_user else None
+    project_data = db.get_active_project(user_id)
     if not project_data:
         raise HTTPException(status_code=404, detail="No project loaded")
 
@@ -844,7 +846,7 @@ class MoveTaskResponse(BaseModel):
 
 
 @app.post("/api/tasks/{task_id}/move", response_model=MoveTaskResponse)
-async def move_task(task_id: str, request: MoveTaskRequest):
+async def move_task(task_id: str, request: MoveTaskRequest, current_user: Optional[dict] = Depends(get_optional_user)):
     """
     Move a task (and all its children) to a new position in the hierarchy.
 
@@ -868,8 +870,9 @@ async def move_task(task_id: str, request: MoveTaskRequest):
             detail="Position must be 'under', 'before', or 'after'"
         )
 
-    # Ensure we have fresh data from database
-    project_data = db.get_active_project()
+    # Ensure we have fresh data from database for THIS USER
+    user_id = current_user.get("id") if current_user else None
+    project_data = db.get_active_project(user_id)
     if not project_data:
         raise HTTPException(status_code=404, detail="No project loaded")
 
@@ -1141,7 +1144,7 @@ async def categorize_task(request: TaskCategorizationRequest):
 # AI CHAT HELPER FUNCTIONS
 # ============================================================================
 
-async def _handle_xml_chat(request) -> Dict:
+async def _handle_xml_chat(request, user_id: Optional[str] = None) -> Dict:
     """
     Handle chat messages when XML content is provided.
     Allows users to ask for modifications before creating a project.
@@ -1169,10 +1172,7 @@ async def _handle_xml_chat(request) -> Dict:
     create_keywords = ['create', 'import', 'load', 'use', 'open', 'yes', 'proceed', 'do it', 'go ahead', 'make']
     if any(keyword in message_lower for keyword in create_keywords):
         try:
-            # Get current user if authenticated
-            user_id = None
-
-            # Create project in database
+            # Create project in database with user ownership
             project_id = db.create_project(
                 name=project_name,
                 start_date=parsed_data.get("start_date", datetime.now().strftime("%Y-%m-%d")),
@@ -1197,8 +1197,8 @@ async def _handle_xml_chat(request) -> Dict:
             # Store XML template
             db.save_xml_template(project_id, xml_content)
 
-            # Switch to new project
-            db.switch_project(project_id)
+            # Switch to new project for this user
+            db.switch_project(project_id, user_id=user_id)
 
             # Update in-memory state
             current_project = parsed_data
@@ -1206,7 +1206,7 @@ async def _handle_xml_chat(request) -> Dict:
 
             # Clear XML processor state and reload
             xml_processor.xml_root = None
-            load_project_from_db(project_id)
+            load_project_from_db(project_id, user_id=user_id)
 
             response_json = {
                 "type": "xml_project_created",
@@ -1414,7 +1414,7 @@ async def _handle_editor_command(command: Dict, project: Dict, project_id: str, 
 
 
 @app.post("/api/ai/chat")
-async def chat_with_ai(request: ChatRequest):
+async def chat_with_ai(request: ChatRequest, current_user: Optional[dict] = Depends(get_optional_user)):
     """
     Conversational AI chat for construction project assistance with command execution
     Can answer questions AND modify tasks/project based on natural language commands
@@ -1431,10 +1431,13 @@ async def chat_with_ai(request: ChatRequest):
     """
     global current_project, current_project_id
 
+    # Get user_id for per-user project tracking
+    user_id = current_user.get("id") if current_user else None
+
     try:
         # Check if XML content is provided - handle XML import flow
         if request.xml_content:
-            return await _handle_xml_chat(request)
+            return await _handle_xml_chat(request, user_id)
 
         # Determine which project to use
         target_project = current_project
@@ -1644,9 +1647,8 @@ async def generate_project_from_description(
         if populate_existing:
             db.update_project_metadata(project_id, project_name, start_date, start_date)
 
-        # IMPORTANT: Switch to the new/populated project in database
-        # This sets is_active=1 for this project and is_active=0 for others
-        db.switch_project(project_id)
+        # IMPORTANT: Switch to the new/populated project for this user
+        db.switch_project(project_id, user_id=user_id)
 
         # Get fresh tasks from database with all computed fields
         db_tasks = db.get_tasks(project_id)
