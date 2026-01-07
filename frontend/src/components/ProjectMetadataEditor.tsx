@@ -275,7 +275,7 @@ export const ProjectMetadataEditor: React.FC<ProjectMetadataEditorProps> = ({
               <label>Start Date</label>
               <input
                 type="datetime-local"
-                value={formData.start_date ? formData.start_date.slice(0, 16) : ''}
+                value={formData.start_date ? (formData.start_date.includes('T') ? formData.start_date.slice(0, 16) : formData.start_date + 'T08:00') : ''}
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value) {
@@ -291,7 +291,7 @@ export const ProjectMetadataEditor: React.FC<ProjectMetadataEditorProps> = ({
               <label>Status Date</label>
               <input
                 type="datetime-local"
-                value={formData.status_date ? formData.status_date.slice(0, 16) : ''}
+                value={formData.status_date ? (formData.status_date.includes('T') ? formData.status_date.slice(0, 16) : formData.status_date + 'T08:00') : ''}
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value) {
