@@ -161,6 +161,7 @@ function AppContent() {
     mutationFn: updateProjectMetadata,
     onSuccess: () => {
       queryClientInstance.invalidateQueries({ queryKey: ['metadata'] });
+      queryClientInstance.invalidateQueries({ queryKey: ['tasks'] }); // Refresh tasks as dates depend on project start date
       setIsMetadataOpen(false);
       setHasUnsavedChanges(true); // Mark as unsaved
     },
