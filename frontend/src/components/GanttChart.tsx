@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useCallback } from 'react';
 import type { Task, CriticalPathResult } from '../api/client';
 import { getCriticalPath, moveTask } from '../api/client';
 import { format, parseISO, addDays, differenceInDays, startOfWeek, addWeeks, addMonths, startOfMonth, eachDayOfInterval, getDay } from 'date-fns';
-import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch, ChevronsDownUp, ChevronsUpDown, Filter, GripVertical, Plus, MoreVertical, Trash2, Edit3, ArrowUp, ArrowDown, CornerDownRight } from 'lucide-react';
+import { ChevronRight, ChevronDown, Diamond, ZoomIn, ZoomOut, Calendar, SkipForward, GitBranch, ChevronsDownUp, ChevronsUpDown, Filter, GripVertical, Plus, Trash2, Edit3, ArrowUp, ArrowDown, CornerDownRight } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
