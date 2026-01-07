@@ -677,11 +677,29 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             const predDuration = parseDuration(predTask.duration);
             const predEnd = addDays(predStart, predDuration);
 
-            // Add lag if specified
-            // MS Project stores lag in tenths of minutes
-            // Convert: tenths of minutes -> minutes -> days
-            const lagMinutes = (pred.lag || 0) / 10;
-            const lagDays = lagMinutes / 480;
+            // Add lag if specified - convert based on lag_format
+            const lagValue = pred.lag || 0;
+            const lagFormat = pred.lag_format || 7;
+            let lagDays = 0;
+            if (lagFormat === 3) {
+              // Elapsed minutes - convert to days (8 hours * 60 minutes)
+              lagDays = lagValue / 480;
+            } else if (lagFormat === 5 || lagFormat === 6) {
+              // Hours - convert to days (8 hours per day)
+              lagDays = lagValue / 8;
+            } else if (lagFormat === 7 || lagFormat === 8) {
+              // Days - use directly
+              lagDays = lagValue;
+            } else if (lagFormat === 9 || lagFormat === 10) {
+              // Weeks - convert to days (5 working days per week)
+              lagDays = lagValue * 5;
+            } else if (lagFormat === 11 || lagFormat === 12) {
+              // Months - convert to days (20 working days per month)
+              lagDays = lagValue * 20;
+            } else {
+              // Default: treat as days
+              lagDays = lagValue;
+            }
             const predEndWithLag = addDays(predEnd, lagDays);
 
             if (predEndWithLag > latestPredecessorEnd) {
@@ -1310,8 +1328,29 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   // End point: where arrow tip will touch successor bar
                   const endX = taskStartX - entryGap;
 
-                  // Dependency type and lag
-                  const lagDays = pred.lag || 0;
+                  // Dependency type and lag - convert based on lag_format
+                  const lagValue = pred.lag || 0;
+                  const lagFormat = pred.lag_format || 7;
+                  let lagDays = 0;
+                  if (lagFormat === 3) {
+                    // Elapsed minutes - convert to days (8 hours * 60 minutes)
+                    lagDays = lagValue / 480;
+                  } else if (lagFormat === 5 || lagFormat === 6) {
+                    // Hours - convert to days (8 hours per day)
+                    lagDays = lagValue / 8;
+                  } else if (lagFormat === 7 || lagFormat === 8) {
+                    // Days - use directly
+                    lagDays = lagValue;
+                  } else if (lagFormat === 9 || lagFormat === 10) {
+                    // Weeks - convert to days (5 working days per week)
+                    lagDays = lagValue * 5;
+                  } else if (lagFormat === 11 || lagFormat === 12) {
+                    // Months - convert to days (20 working days per month)
+                    lagDays = lagValue * 20;
+                  } else {
+                    // Default: treat as days
+                    lagDays = lagValue;
+                  }
 
                   // Build path segments
                   let pathSegments: string[] = [];
@@ -1348,9 +1387,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
                   const pathD = pathSegments.join(' ');
 
-                  // Tooltip
+                  // Tooltip - format lag nicely
                   const depTypeLabel = pred.type === 1 ? 'FS' : pred.type === 2 ? 'SS' : pred.type === 3 ? 'FF' : 'SF';
-                  const lagText = lagDays !== 0 ? ` ${lagDays > 0 ? '+' : ''}${lagDays}d` : '';
+                  const lagDisplayValue = lagDays % 1 === 0 ? lagDays.toString() : lagDays.toFixed(1);
+                  const lagText = lagDays !== 0 ? ` ${lagDays > 0 ? '+' : ''}${lagDisplayValue}d` : '';
                   const tooltipText = `${predTaskPos.task.name} → ${task.name}\n${depTypeLabel}${lagText}`;
 
                   return (
@@ -1376,7 +1416,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           textAnchor="middle"
                           className="lag-label"
                         >
-                          {lagDays > 0 ? `+${lagDays}d` : `${lagDays}d`}
+                          {lagDays > 0 ? `+${lagDisplayValue}d` : `${lagDisplayValue}d`}
                         </text>
                       )}
                     </g>

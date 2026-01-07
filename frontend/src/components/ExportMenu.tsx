@@ -86,7 +86,23 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
           const predTask = taskMap.get(pred.outline_number);
           if (predTask) {
             const predDates = calculateDate(predTask);
-            const lagDays = (pred.lag || 0) / 480;
+            // Convert lag based on lag_format
+            const lagValue = pred.lag || 0;
+            const lagFormat = pred.lag_format || 7;
+            let lagDays = 0;
+            if (lagFormat === 3) {
+              lagDays = lagValue / 480; // Elapsed minutes
+            } else if (lagFormat === 5 || lagFormat === 6) {
+              lagDays = lagValue / 8; // Hours
+            } else if (lagFormat === 7 || lagFormat === 8) {
+              lagDays = lagValue; // Days
+            } else if (lagFormat === 9 || lagFormat === 10) {
+              lagDays = lagValue * 5; // Weeks
+            } else if (lagFormat === 11 || lagFormat === 12) {
+              lagDays = lagValue * 20; // Months
+            } else {
+              lagDays = lagValue;
+            }
             const predEnd = addDays(predDates.finish, lagDays);
             if (predEnd > taskStart) {
               taskStart = predEnd;
@@ -216,11 +232,30 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
           progress: task.percent_complete,
           milestone: task.milestone,
           summary: task.summary,
-          predecessors: task.predecessors?.map(p => ({
-            wbs: p.outline_number,
-            type: p.type === 1 ? 'FS' : p.type === 0 ? 'FF' : p.type === 2 ? 'SF' : 'SS',
-            lag_days: (p.lag || 0) / 480
-          })) || [],
+          predecessors: task.predecessors?.map(p => {
+            // Convert lag to days based on lag_format
+            const lagValue = p.lag || 0;
+            const lagFormat = p.lag_format || 7;
+            let lagDays = 0;
+            if (lagFormat === 3) {
+              lagDays = lagValue / 480;
+            } else if (lagFormat === 5 || lagFormat === 6) {
+              lagDays = lagValue / 8;
+            } else if (lagFormat === 7 || lagFormat === 8) {
+              lagDays = lagValue;
+            } else if (lagFormat === 9 || lagFormat === 10) {
+              lagDays = lagValue * 5;
+            } else if (lagFormat === 11 || lagFormat === 12) {
+              lagDays = lagValue * 20;
+            } else {
+              lagDays = lagValue;
+            }
+            return {
+              wbs: p.outline_number,
+              type: p.type === 1 ? 'FS' : p.type === 0 ? 'FF' : p.type === 2 ? 'SF' : 'SS',
+              lag_days: lagDays
+            };
+          }) || [],
           custom_value: task.value || null
         };
       })
