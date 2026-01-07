@@ -931,7 +931,7 @@ function AppContent() {
                   <RefreshCw className="h-4 w-4" />
                 )}
               </button>
-              {/* Manual Save Button - prominent when unsaved changes exist */}
+              {/* Manual Save Button - always visible, prominent when unsaved changes exist */}
               <button
                 onClick={handleSave}
                 disabled={isSaving || !hasUnsavedChanges}
@@ -940,7 +940,7 @@ function AppContent() {
                 className={`flex items-center rounded-lg border transition-all disabled:cursor-not-allowed ${
                   hasUnsavedChanges
                     ? 'text-white bg-green-500 hover:bg-green-600 border-green-600 animate-pulse'
-                    : 'text-slate-400 hover:text-slate-500 bg-slate-50 border-slate-200'
+                    : 'text-slate-500 bg-slate-100 border-slate-300 hover:bg-slate-200'
                 }`}
               >
                 {isSaving ? (

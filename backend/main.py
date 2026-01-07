@@ -589,6 +589,12 @@ async def update_project_metadata(metadata: ProjectMetadata):
         current_project = ai_project_editor.recalculate_dates(current_project)
         print(f"[Metadata Update] Task dates recalculated for {len(current_project.get('tasks', []))} tasks")
 
+        # Persist recalculated task dates to database immediately
+        # This ensures consistency across multiple container instances
+        for task in current_project.get("tasks", []):
+            db.update_task(task["id"], task)
+        print(f"[Metadata Update] Saved recalculated task dates to database")
+
     return {"success": True, "metadata": metadata, "dates_recalculated": start_date_changed}
 
 
