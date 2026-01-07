@@ -379,10 +379,10 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
     const pageWidth = 431.8;
     const pageHeight = 279.4;
     const margin = 12;
-    const headerHeight = 20;
-    const footerHeight = 16;
-    const rowHeight = 7;
-    const headerRowHeight = 8;
+    const headerHeight = 22;
+    const footerHeight = 18;
+    const rowHeight = 9;  // Increased from 7 for better readability
+    const headerRowHeight = 10;  // Increased from 8
 
     // Calculate pagination
     const contentStartY = headerHeight + 2;
@@ -434,41 +434,46 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
       // Sturgis logo (top left) - black logo on white background
       const logoX = margin;
       const logoY = 3;
-      const logoHeight = 10;
-      const logoWidth = logoHeight * 4.5; // Aspect ratio of Sturgis logo
+      const logoHeight = 12;  // Slightly larger logo
+
+      // Calculate logo width from actual image aspect ratio
+      let logoWidth = logoHeight * 4.5; // Fallback aspect ratio
+      if (sturgisLogoData) {
+        logoWidth = logoHeight * (sturgisLogoData.width / sturgisLogoData.height);
+      }
 
       // Add logo image if loaded
-      if (sturgisLogoBase64) {
+      if (sturgisLogoData) {
         try {
-          doc.addImage(sturgisLogoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+          doc.addImage(sturgisLogoData.base64, 'PNG', logoX, logoY, logoWidth, logoHeight);
         } catch (e) {
           // Fallback text if image fails
-          doc.setFontSize(9);
+          doc.setFontSize(11);
           doc.setTextColor(30, 41, 59);
           doc.setFont('helvetica', 'bold');
-          doc.text('STURGIS CONSTRUCTION', logoX, logoY + 7);
+          doc.text('STURGIS CONSTRUCTION', logoX, logoY + 8);
         }
       } else {
         // Fallback text if no logo
-        doc.setFontSize(9);
+        doc.setFontSize(11);
         doc.setTextColor(30, 41, 59);
         doc.setFont('helvetica', 'bold');
-        doc.text('STURGIS CONSTRUCTION', logoX, logoY + 7);
+        doc.text('STURGIS CONSTRUCTION', logoX, logoY + 8);
       }
 
       // Project title
-      doc.setFontSize(11);
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(44, 62, 80);
-      doc.text(metadata?.name || 'Project Schedule', pageWidth / 2, 9, { align: 'center' });
+      doc.text(metadata?.name || 'Project Schedule', pageWidth / 2, 10, { align: 'center' });
 
       // Project info
-      doc.setFontSize(7);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(120, 120, 120);
+      doc.setTextColor(100, 100, 100);
       doc.text(
         `Start: ${metadata?.start_date || 'N/A'}  |  Status: ${metadata?.status_date || 'N/A'}  |  Tasks: ${tasks.length}`,
-        pageWidth / 2, 14, { align: 'center' }
+        pageWidth / 2, 16, { align: 'center' }
       );
     };
 
