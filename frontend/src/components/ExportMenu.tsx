@@ -321,8 +321,8 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
     setIsOpen(false);
   };
 
-  // Helper function to load image as base64
-  const loadImageAsBase64 = (src: string): Promise<string> => {
+  // Helper function to load image as base64 with dimensions
+  const loadImageAsBase64 = (src: string): Promise<{ base64: string; width: number; height: number }> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'Anonymous';
@@ -333,7 +333,11 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/png'));
+          resolve({
+            base64: canvas.toDataURL('image/png'),
+            width: img.width,
+            height: img.height
+          });
         } else {
           reject(new Error('Could not get canvas context'));
         }
@@ -349,9 +353,9 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
     const taskDates = calculateTaskDates();
 
     // Load Sturgis logo (black version for white PDF background)
-    let sturgisLogoBase64: string | null = null;
+    let sturgisLogoData: { base64: string; width: number; height: number } | null = null;
     try {
-      sturgisLogoBase64 = await loadImageAsBase64('/sturgis-logo-black.png');
+      sturgisLogoData = await loadImageAsBase64('/sturgis-logo-black.png');
     } catch (error) {
       console.warn('Could not load Sturgis logo:', error);
     }

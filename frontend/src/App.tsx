@@ -159,9 +159,19 @@ function AppContent() {
 
   const updateMetadataMutation = useMutation({
     mutationFn: updateProjectMetadata,
-    onSuccess: () => {
-      queryClientInstance.invalidateQueries({ queryKey: ['metadata'] });
-      queryClientInstance.invalidateQueries({ queryKey: ['tasks'] }); // Refresh tasks as dates depend on project start date
+    onSuccess: async () => {
+      // Recalculate all task dates when project metadata changes (especially start date)
+      try {
+        const result = await recalculateDates();
+        console.log('Dates recalculated:', result);
+      } catch (error) {
+        console.error('Failed to recalculate dates:', error);
+      }
+      // Refetch both metadata and tasks to ensure UI is updated with recalculated dates
+      await Promise.all([
+        queryClientInstance.refetchQueries({ queryKey: ['metadata'] }),
+        queryClientInstance.refetchQueries({ queryKey: ['tasks'] }),
+      ]);
       setIsMetadataOpen(false);
       setHasUnsavedChanges(true); // Mark as unsaved
     },
