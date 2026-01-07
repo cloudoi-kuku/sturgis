@@ -479,53 +479,74 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
 
     // Draw page footer
     const drawFooter = (pageNum: number) => {
-      const footerY = pageHeight - 9;
+      const footerY = pageHeight - 10;
 
       // Date details (lower left)
-      doc.setFontSize(6);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(120, 120, 120);
-      doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, margin, footerY - 1);
-      doc.text(`Project Start: ${metadata?.start_date || 'N/A'}`, margin, footerY + 2.5);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, margin, footerY);
+      doc.text(`Project Start: ${metadata?.start_date || 'N/A'}`, margin, footerY + 4);
 
       // File name and page (center)
-      doc.setFontSize(7);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(44, 62, 80);
-      doc.text(`${metadata?.name || 'Project'}`, pageWidth / 2, footerY - 1, { align: 'center' });
+      doc.text(`${metadata?.name || 'Project'}`, pageWidth / 2, footerY, { align: 'center' });
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6);
-      doc.setTextColor(120, 120, 120);
-      doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth / 2, footerY + 2.5, { align: 'center' });
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth / 2, footerY + 4, { align: 'center' });
 
-      // Client logo placeholder (lower right)
-      const clientLogoWidth = 35;
-      const clientLogoHeight = 10;
-      const clientLogoX = pageWidth - margin - clientLogoWidth;
+      // Client logo (lower right) - calculate proper aspect ratio
+      const clientLogoBase64 = localStorage.getItem('clientLogo');
+      const maxLogoHeight = 12;
+      const maxLogoWidth = 40;
       const clientLogoY = footerY - 5;
 
-      // Check if client logo is stored in localStorage
-      const clientLogoBase64 = localStorage.getItem('clientLogo');
       if (clientLogoBase64) {
         try {
-          doc.addImage(clientLogoBase64, 'PNG', clientLogoX, clientLogoY, clientLogoWidth, clientLogoHeight);
+          // Create temp image to get dimensions
+          const tempImg = new Image();
+          tempImg.src = clientLogoBase64;
+
+          // Calculate dimensions preserving aspect ratio
+          let logoWidth = maxLogoWidth;
+          let logoHeight = maxLogoHeight;
+          if (tempImg.width && tempImg.height) {
+            const aspectRatio = tempImg.width / tempImg.height;
+            if (aspectRatio > maxLogoWidth / maxLogoHeight) {
+              // Width constrained
+              logoWidth = maxLogoWidth;
+              logoHeight = maxLogoWidth / aspectRatio;
+            } else {
+              // Height constrained
+              logoHeight = maxLogoHeight;
+              logoWidth = maxLogoHeight * aspectRatio;
+            }
+          }
+
+          const clientLogoX = pageWidth - margin - logoWidth;
+          doc.addImage(clientLogoBase64, 'PNG', clientLogoX, clientLogoY, logoWidth, logoHeight);
         } catch (e) {
           // Draw placeholder if image fails
+          const clientLogoX = pageWidth - margin - maxLogoWidth;
           doc.setDrawColor(200, 200, 200);
           doc.setFillColor(250, 250, 250);
-          doc.roundedRect(clientLogoX, clientLogoY, clientLogoWidth, clientLogoHeight, 1, 1, 'FD');
-          doc.setFontSize(5);
+          doc.roundedRect(clientLogoX, clientLogoY, maxLogoWidth, maxLogoHeight, 1, 1, 'FD');
+          doc.setFontSize(7);
           doc.setTextColor(160, 160, 160);
-          doc.text('CLIENT LOGO', clientLogoX + clientLogoWidth / 2, clientLogoY + clientLogoHeight / 2 + 1, { align: 'center' });
+          doc.text('CLIENT LOGO', clientLogoX + maxLogoWidth / 2, clientLogoY + maxLogoHeight / 2 + 1.5, { align: 'center' });
         }
       } else {
         // Draw placeholder box
+        const clientLogoX = pageWidth - margin - maxLogoWidth;
         doc.setDrawColor(200, 200, 200);
         doc.setFillColor(250, 250, 250);
-        doc.roundedRect(clientLogoX, clientLogoY, clientLogoWidth, clientLogoHeight, 1, 1, 'FD');
-        doc.setFontSize(5);
+        doc.roundedRect(clientLogoX, clientLogoY, maxLogoWidth, maxLogoHeight, 1, 1, 'FD');
+        doc.setFontSize(7);
         doc.setTextColor(160, 160, 160);
-        doc.text('CLIENT LOGO', clientLogoX + clientLogoWidth / 2, clientLogoY + clientLogoHeight / 2 + 1, { align: 'center' });
+        doc.text('CLIENT LOGO', clientLogoX + maxLogoWidth / 2, clientLogoY + maxLogoHeight / 2 + 1.5, { align: 'center' });
       }
     };
 
@@ -534,13 +555,13 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
       // Table header
       doc.setFillColor(...headerBg);
       doc.rect(margin, startY, tableWidth, headerRowHeight, 'F');
-      doc.setFontSize(7);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(255, 255, 255);
 
       let xPos = margin + 2;
       colHeaders.forEach((header, i) => {
-        doc.text(header, xPos, startY + headerRowHeight - 2);
+        doc.text(header, xPos, startY + headerRowHeight - 2.5);
         xPos += colWidths[i];
       });
 
@@ -549,13 +570,13 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
       doc.rect(ganttStartX, startY, ganttWidth, headerRowHeight, 'F');
 
       // Timeline months
-      doc.setFontSize(6);
+      doc.setFontSize(8);
       const currentDate = new Date(projectStart);
       while (currentDate <= projectEnd) {
         const dayOffset = Math.ceil((currentDate.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24));
         const headerXPos = ganttStartX + (dayOffset / totalDays) * ganttWidth;
         if (currentDate.getDate() === 1 || currentDate.getTime() === projectStart.getTime()) {
-          doc.text(format(currentDate, 'MMM yy'), headerXPos + 1, startY + headerRowHeight - 2);
+          doc.text(format(currentDate, 'MMM yy'), headerXPos + 1, startY + headerRowHeight - 2.5);
         }
         currentDate.setMonth(currentDate.getMonth() + 1);
         currentDate.setDate(1);
@@ -605,7 +626,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
       }
 
       // Table content - text color based on critical status
-      doc.setFontSize(6);
+      doc.setFontSize(8);
       if (isCritical) {
         doc.setTextColor(...criticalRed);
       } else {
@@ -614,7 +635,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
       doc.setFont('helvetica', task.summary ? 'bold' : 'normal');
 
       let xPos = margin + 2;
-      const textY = y + rowHeight - 2;
+      const textY = y + rowHeight - 2.5;
 
       // # column
       doc.text((globalIndex + 1).toString(), xPos, textY);
@@ -644,42 +665,43 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
         const startOffset = (dates.start.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24);
         const duration = (dates.finish.getTime() - dates.start.getTime()) / (1000 * 60 * 60 * 24);
         const barX = ganttStartX + (startOffset / totalDays) * ganttWidth;
-        const barWidth = Math.max(2, (duration / totalDays) * ganttWidth);
-        const barHeight = rowHeight - 2;
-        const barY = y + 1;
+        const barWidth = Math.max(3, (duration / totalDays) * ganttWidth);
+        const barHeight = rowHeight - 2.5;
+        const barY = y + 1.25;
 
-        doc.setFontSize(5);
-        const labelName = task.name.length > 28 ? task.name.substring(0, 26) + '..' : task.name;
+        doc.setFontSize(7);
+        const labelName = task.name.length > 30 ? task.name.substring(0, 28) + '..' : task.name;
 
         // Choose color based on critical path
         const barColor = isCritical ? criticalRed : (task.milestone ? milestoneOrange : (task.summary ? summaryGray : taskBlue));
 
         if (task.milestone) {
-          // Diamond
+          // Diamond - slightly larger for better visibility
           doc.setFillColor(...barColor);
           const mx = barX;
           const my = barY + barHeight / 2;
-          doc.triangle(mx, my - 2, mx + 2, my, mx, my + 2, 'F');
-          doc.triangle(mx, my - 2, mx - 2, my, mx, my + 2, 'F');
+          const diamondSize = 2.5;
+          doc.triangle(mx, my - diamondSize, mx + diamondSize, my, mx, my + diamondSize, 'F');
+          doc.triangle(mx, my - diamondSize, mx - diamondSize, my, mx, my + diamondSize, 'F');
           doc.setTextColor(...barColor);
           doc.setFont('helvetica', 'bold');
-          doc.text(labelName, mx + 3, textY);
+          doc.text(labelName, mx + 4, textY);
         } else if (task.summary) {
-          // Summary bar
+          // Summary bar - slightly thicker
           doc.setFillColor(...barColor);
-          doc.rect(barX, barY + barHeight * 0.35, barWidth, barHeight * 0.3, 'F');
-          doc.triangle(barX, barY + barHeight * 0.35, barX, barY + barHeight * 0.65, barX - 1, barY + barHeight / 2, 'F');
-          doc.triangle(barX + barWidth, barY + barHeight * 0.35, barX + barWidth, barY + barHeight * 0.65, barX + barWidth + 1, barY + barHeight / 2, 'F');
+          doc.rect(barX, barY + barHeight * 0.3, barWidth, barHeight * 0.4, 'F');
+          doc.triangle(barX, barY + barHeight * 0.3, barX, barY + barHeight * 0.7, barX - 1.5, barY + barHeight / 2, 'F');
+          doc.triangle(barX + barWidth, barY + barHeight * 0.3, barX + barWidth, barY + barHeight * 0.7, barX + barWidth + 1.5, barY + barHeight / 2, 'F');
           doc.setTextColor(...barColor);
           doc.setFont('helvetica', 'bold');
-          doc.text(labelName, barX + barWidth + 2, textY);
+          doc.text(labelName, barX + barWidth + 3, textY);
         } else {
-          // Regular task bar
+          // Regular task bar - slightly larger corner radius
           doc.setFillColor(...barColor);
-          doc.roundedRect(barX, barY, barWidth, barHeight, 0.5, 0.5, 'F');
+          doc.roundedRect(barX, barY, barWidth, barHeight, 0.8, 0.8, 'F');
           doc.setTextColor(...barColor);
           doc.setFont('helvetica', 'normal');
-          doc.text(labelName, barX + barWidth + 2, textY);
+          doc.text(labelName, barX + barWidth + 3, textY);
         }
       }
     };
@@ -812,32 +834,32 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ tasks, metadata, onExpor
 
       // Legend on last page
       if (page === totalPages - 1) {
-        const legendY = Math.min(tableEndY + 6, contentEndY - 3);
-        doc.setFontSize(6);
-        doc.setTextColor(80, 80, 80);
+        const legendY = Math.min(tableEndY + 8, contentEndY - 4);
+        doc.setFontSize(8);
+        doc.setTextColor(60, 60, 60);
 
         let legendX = margin;
 
         doc.setFillColor(...taskBlue);
-        doc.roundedRect(legendX, legendY - 2, 8, 3, 0.5, 0.5, 'F');
-        doc.text('Task', legendX + 10, legendY);
-        legendX += 28;
-
-        doc.setFillColor(...criticalRed);
-        doc.roundedRect(legendX, legendY - 2, 8, 3, 0.5, 0.5, 'F');
-        doc.text('Critical Path', legendX + 10, legendY);
-        legendX += 38;
-
-        doc.setFillColor(...summaryGray);
-        doc.rect(legendX, legendY - 1.5, 8, 2, 'F');
-        doc.text('Summary', legendX + 10, legendY);
+        doc.roundedRect(legendX, legendY - 2.5, 10, 4, 0.8, 0.8, 'F');
+        doc.text('Task', legendX + 12, legendY + 0.5);
         legendX += 32;
 
+        doc.setFillColor(...criticalRed);
+        doc.roundedRect(legendX, legendY - 2.5, 10, 4, 0.8, 0.8, 'F');
+        doc.text('Critical Path', legendX + 12, legendY + 0.5);
+        legendX += 45;
+
+        doc.setFillColor(...summaryGray);
+        doc.rect(legendX, legendY - 1.5, 10, 2.5, 'F');
+        doc.text('Summary', legendX + 12, legendY + 0.5);
+        legendX += 38;
+
         doc.setFillColor(...milestoneOrange);
-        const mx = legendX + 2;
-        doc.triangle(mx, legendY - 3, mx + 2, legendY - 0.5, mx, legendY + 2, 'F');
-        doc.triangle(mx, legendY - 3, mx - 2, legendY - 0.5, mx, legendY + 2, 'F');
-        doc.text('Milestone', legendX + 5, legendY);
+        const mx = legendX + 2.5;
+        doc.triangle(mx, legendY - 3.5, mx + 2.5, legendY - 0.5, mx, legendY + 2.5, 'F');
+        doc.triangle(mx, legendY - 3.5, mx - 2.5, legendY - 0.5, mx, legendY + 2.5, 'F');
+        doc.text('Milestone', legendX + 7, legendY + 0.5);
       }
 
       drawFooter(page + 1);
