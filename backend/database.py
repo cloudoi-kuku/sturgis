@@ -654,6 +654,13 @@ class DatabaseService:
 
         return None
 
+    def get_task_ids(self, project_id: str) -> List[str]:
+        """Get all task IDs for a project"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM tasks WHERE project_id = ?", (project_id,))
+            return [row['id'] for row in cursor.fetchall()]
+
     def update_task(self, task_id: str, task_data: Dict[str, Any]) -> bool:
         """Update an existing task"""
         with self.get_connection() as conn:
@@ -671,7 +678,7 @@ class DatabaseService:
             update_fields = []
             values = []
 
-            for field in ['name', 'outline_number', 'duration', 'value', 'percent_complete',
+            for field in ['name', 'outline_number', 'outline_level', 'duration', 'value', 'percent_complete',
                          'start_date', 'finish_date', 'actual_start', 'actual_finish', 'actual_duration',
                          'constraint_type', 'constraint_date']:
                 if field in task_data:

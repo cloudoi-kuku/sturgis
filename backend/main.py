@@ -51,6 +51,7 @@ from validator import ProjectValidator
 from ai_service import ai_service
 from ai_command_handler import ai_command_handler
 from ai_project_editor import ai_project_editor, project_template_learner
+from ai_llm_parser import llm_parser  # LLM-based command parser (Claude)
 from database import DatabaseService, DATA_DIR
 from auth import router as auth_router, get_current_user, decode_token
 from azure_storage import init_azure_storage, shutdown_azure_storage, get_azure_storage
@@ -650,9 +651,32 @@ async def save_project():
             current_project.get('status_date', '2024-01-01')
         )
 
-        # Save all tasks
-        for task in current_project.get("tasks", []):
-            db.update_task(task["id"], task)
+        # Save all tasks - use upsert approach for proper handling of new tasks
+        # (e.g., summary tasks created by organize_project)
+        tasks = current_project.get("tasks", [])
+
+        # Get existing task IDs from database
+        existing_task_ids = set(db.get_task_ids(current_project_id))
+
+        new_tasks = 0
+        updated_tasks = 0
+
+        for task in tasks:
+            task_id = task.get("id")
+            if task_id in existing_task_ids:
+                # Update existing task
+                db.update_task(task_id, task)
+                updated_tasks += 1
+            else:
+                # Insert new task (e.g., summary tasks created by organize)
+                db.create_task(current_project_id, task)
+                new_tasks += 1
+
+        # Delete tasks that are no longer in memory (were deleted)
+        current_task_ids = {t.get("id") for t in tasks}
+        deleted_task_ids = existing_task_ids - current_task_ids
+        for task_id in deleted_task_ids:
+            db.delete_task(task_id)
 
         # Save XML template if available
         if xml_processor.xml_root is not None:
@@ -660,11 +684,15 @@ async def save_project():
             db.save_xml_template(current_project_id, xml_str)
 
         print(f"[SAVE] Project saved: {current_project.get('name', 'Unknown')} (ID: {current_project_id})")
+        print(f"[SAVE] Tasks: {new_tasks} new, {updated_tasks} updated, {len(deleted_task_ids)} deleted")
 
         return {
             "success": True,
             "message": f"Project '{current_project.get('name', 'Unknown')}' saved successfully",
-            "task_count": len(current_project.get("tasks", []))
+            "task_count": len(tasks),
+            "new_tasks": new_tasks,
+            "updated_tasks": updated_tasks,
+            "deleted_tasks": len(deleted_task_ids)
         }
     except Exception as e:
         print(f"[SAVE ERROR] Failed to save project: {e}")
@@ -1557,14 +1585,39 @@ async def chat_with_ai(request: ChatRequest, current_user: Optional[dict] = Depe
         ]):
             return await _handle_suggestion_request(request.message, target_project, target_project_id)
 
-        # Check for project editor commands (move, insert, delete, merge, split, etc.)
-        editor_command = ai_project_editor.parse_command(request.message)
-        if editor_command and target_project:
-            return await _handle_editor_command(editor_command, target_project, target_project_id, request.project_id)
+        # =====================================================================
+        # COMMAND PARSING: Try LLM parser first, then fall back to regex
+        # =====================================================================
 
-        # Check for basic commands (duration, lag, start date, etc.)
-        command = ai_command_handler.parse_command(request.message)
-        print(f"[AI Chat] Parsed command: {command}, target_project exists: {target_project is not None}")
+        command = None
+        command_source = None
+
+        # 1. Try LLM-based parser first (if enabled)
+        # This understands natural language variations like "make task 1.2 take 5 days"
+        if llm_parser.is_available():
+            print(f"[AI Chat] Trying LLM parser (Claude)...")
+            try:
+                llm_command = await llm_parser.parse_command(request.message, target_project)
+                if llm_command:
+                    command = llm_command
+                    command_source = "llm"
+                    print(f"[AI Chat] LLM parsed command: {command.get('action')} (confidence: {command.get('confidence', 'N/A')})")
+            except Exception as e:
+                print(f"[AI Chat] LLM parser error: {e}, falling back to regex")
+
+        # 2. Fall back to regex-based parsers if LLM didn't find a command
+        if not command:
+            # Check for project editor commands (move, insert, delete, merge, split, etc.)
+            editor_command = ai_project_editor.parse_command(request.message)
+            if editor_command and target_project:
+                return await _handle_editor_command(editor_command, target_project, target_project_id, request.project_id)
+
+            # Check for basic commands (duration, lag, start date, etc.)
+            command = ai_command_handler.parse_command(request.message)
+            if command:
+                command_source = "regex"
+
+        print(f"[AI Chat] Parsed command: {command}, source: {command_source}, target_project exists: {target_project is not None}")
 
         # If command detected but no target project, try to load from database
         if command and not target_project:
@@ -1723,6 +1776,50 @@ async def clear_chat_history():
     """Clear chat conversation history"""
     ai_service.clear_chat_history()
     return {"success": True, "message": "Chat history cleared"}
+
+
+@app.get("/api/ai/parser-status")
+async def get_ai_parser_status():
+    """
+    Get the status of AI command parsing.
+    Shows which parser (LLM or Regex) is active.
+
+    To enable LLM parser, set environment variables:
+    - USE_LLM_PARSER=true
+    - ANTHROPIC_API_KEY=your_key
+
+    Returns:
+        - llm_parser_enabled: Whether LLM (Claude) parser is active
+        - llm_parser_model: Which model is configured
+        - regex_parser: Always available as fallback
+        - recommendation: Which phrases work better with each parser
+    """
+    return {
+        "llm_parser": {
+            "enabled": llm_parser.is_available(),
+            "model": llm_parser.model if llm_parser.is_available() else None,
+            "status": "active" if llm_parser.is_available() else "disabled (set USE_LLM_PARSER=true and ANTHROPIC_API_KEY)"
+        },
+        "regex_parser": {
+            "enabled": True,
+            "status": "active (fallback)" if llm_parser.is_available() else "active (primary)",
+            "pattern_count": 58
+        },
+        "examples": {
+            "llm_understands": [
+                "make task 1.2 take 5 days",
+                "extend the foundation by a week",
+                "shorten all tasks by 10%",
+                "put a 3 day gap before concrete pouring",
+                "the roofing task should be a milestone"
+            ],
+            "regex_requires_exact": [
+                "set task 1.2 duration to 5 days",
+                "add 7 days lag to task 2.1",
+                "set project start date to 2024-03-01"
+            ]
+        }
+    }
 
 
 @app.post("/api/ai/generate-project")

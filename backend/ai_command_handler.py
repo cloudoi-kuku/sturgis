@@ -405,7 +405,13 @@ class AICommandHandler:
         
         if action == "set_duration":
             return self._set_task_duration(project, params["task_outline"], params["duration_days"])
-        
+
+        elif action == "extend_duration":
+            return self._extend_task_duration(project, params["task_outline"], params["days_to_add"])
+
+        elif action == "reduce_duration":
+            return self._reduce_task_duration(project, params["task_outline"], params["days_to_subtract"])
+
         elif action == "set_lag":
             return self._set_task_lag(project, params["task_outline"], params["lag_days"])
         
@@ -448,6 +454,24 @@ class AICommandHandler:
         elif action == "remove_predecessor":
             return self._remove_all_predecessors(project, params["task_outline"])
 
+        elif action == "move_task":
+            return self._move_task(project, params["task_outline"], params["target_outline"], params.get("position", "after"))
+
+        elif action == "insert_task":
+            return self._insert_task(project, params["task_name"], params["reference_outline"], params.get("position", "after"))
+
+        elif action == "delete_task":
+            return self._delete_task(project, params["task_outline"])
+
+        elif action == "merge_tasks":
+            return self._merge_tasks(project, params["task_outline_1"], params["task_outline_2"])
+
+        elif action == "split_task":
+            return self._split_task(project, params["task_outline"], params.get("parts", 2))
+
+        elif action == "scale_durations":
+            return self._scale_all_durations(project, params.get("scale_factor", 1.0))
+
         return {"success": False, "message": "Unknown command", "changes": []}
 
     def _set_task_duration(self, project: Dict[str, Any], task_outline: str, duration_days: int) -> Dict[str, Any]:
@@ -489,6 +513,96 @@ class AICommandHandler:
                 "new_value": new_duration,
                 "old_days": self._parse_duration_to_days(old_duration),
                 "new_days": duration_days
+            }]
+        }
+
+    def _extend_task_duration(self, project: Dict[str, Any], task_outline: str, days_to_add: int) -> Dict[str, Any]:
+        """Extend task duration by adding days to current duration"""
+        task = self._find_task_by_outline(project, task_outline)
+        if not task:
+            return {"success": False, "message": f"Task {task_outline} not found", "changes": []}
+
+        if task.get("milestone", False):
+            return {
+                "success": False,
+                "message": f"Cannot extend duration for milestone task {task_outline} '{task['name']}'. Milestone tasks must have zero duration.",
+                "changes": []
+            }
+
+        if task.get("summary", False):
+            return {
+                "success": False,
+                "message": f"Cannot extend duration for summary task {task_outline} '{task['name']}'. Summary task durations are calculated from their children.",
+                "changes": []
+            }
+
+        old_duration = task.get("duration", "PT8H0M0S")
+        old_days = self._parse_duration_to_days(old_duration)
+        new_days = old_days + days_to_add
+
+        if new_days < 0:
+            new_days = 0
+
+        hours = int(new_days * 8)
+        new_duration = f"PT{hours}H0M0S"
+        task["duration"] = new_duration
+
+        return {
+            "success": True,
+            "message": f"Extended task {task_outline} '{task['name']}' duration from {old_days} to {new_days} days (+{days_to_add} days)",
+            "changes": [{
+                "type": "duration",
+                "task": task_outline,
+                "task_name": task["name"],
+                "old_value": old_duration,
+                "new_value": new_duration,
+                "old_days": old_days,
+                "new_days": new_days
+            }]
+        }
+
+    def _reduce_task_duration(self, project: Dict[str, Any], task_outline: str, days_to_subtract: int) -> Dict[str, Any]:
+        """Reduce task duration by subtracting days from current duration"""
+        task = self._find_task_by_outline(project, task_outline)
+        if not task:
+            return {"success": False, "message": f"Task {task_outline} not found", "changes": []}
+
+        if task.get("milestone", False):
+            return {
+                "success": False,
+                "message": f"Cannot reduce duration for milestone task {task_outline} '{task['name']}'. Milestone tasks must have zero duration.",
+                "changes": []
+            }
+
+        if task.get("summary", False):
+            return {
+                "success": False,
+                "message": f"Cannot reduce duration for summary task {task_outline} '{task['name']}'. Summary task durations are calculated from their children.",
+                "changes": []
+            }
+
+        old_duration = task.get("duration", "PT8H0M0S")
+        old_days = self._parse_duration_to_days(old_duration)
+        new_days = old_days - days_to_subtract
+
+        if new_days < 0:
+            new_days = 0
+
+        hours = int(new_days * 8)
+        new_duration = f"PT{hours}H0M0S"
+        task["duration"] = new_duration
+
+        return {
+            "success": True,
+            "message": f"Reduced task {task_outline} '{task['name']}' duration from {old_days} to {new_days} days (-{days_to_subtract} days)",
+            "changes": [{
+                "type": "duration",
+                "task": task_outline,
+                "task_name": task["name"],
+                "old_value": old_duration,
+                "new_value": new_duration,
+                "old_days": old_days,
+                "new_days": new_days
             }]
         }
 
@@ -1187,6 +1301,361 @@ class AICommandHandler:
             }]
         }
 
+    def _move_task(self, project: Dict[str, Any], task_outline: str, target_outline: str, position: str = "after") -> Dict[str, Any]:
+        """Move a task to a new position relative to target task"""
+        tasks = project.get("tasks", [])
+
+        # Find source and target tasks
+        source_task = self._find_task_by_outline(project, task_outline)
+        target_task = self._find_task_by_outline(project, target_outline)
+
+        if not source_task:
+            return {"success": False, "message": f"Source task {task_outline} not found", "changes": []}
+        if not target_task:
+            return {"success": False, "message": f"Target task {target_outline} not found", "changes": []}
+
+        # Cannot move summary task
+        if source_task.get("summary"):
+            return {"success": False, "message": f"Cannot move summary task {task_outline}", "changes": []}
+
+        # Find indices
+        source_idx = next((i for i, t in enumerate(tasks) if t.get("outline_number") == task_outline), -1)
+        target_idx = next((i for i, t in enumerate(tasks) if t.get("outline_number") == target_outline), -1)
+
+        if source_idx == -1 or target_idx == -1:
+            return {"success": False, "message": "Could not find task positions", "changes": []}
+
+        # Remove source task
+        task_to_move = tasks.pop(source_idx)
+
+        # Recalculate target index after removal
+        if source_idx < target_idx:
+            target_idx -= 1
+
+        # Insert at new position
+        if position == "before":
+            insert_idx = target_idx
+        elif position == "after":
+            insert_idx = target_idx + 1
+        elif position == "under":
+            # Find last child of target and insert after
+            target_prefix = target_outline + "."
+            last_child_idx = target_idx
+            for i, t in enumerate(tasks):
+                if t.get("outline_number", "").startswith(target_prefix):
+                    last_child_idx = i
+            insert_idx = last_child_idx + 1
+        else:
+            insert_idx = target_idx + 1
+
+        tasks.insert(insert_idx, task_to_move)
+
+        # Renumber tasks
+        self._renumber_tasks(tasks)
+
+        new_outline = task_to_move.get("outline_number", "?")
+
+        return {
+            "success": True,
+            "message": f"Moved task '{source_task['name']}' from {task_outline} to {position} {target_outline} (new position: {new_outline})",
+            "changes": [{
+                "type": "move_task",
+                "task": task_outline,
+                "task_name": source_task["name"],
+                "target": target_outline,
+                "position": position,
+                "new_outline": new_outline
+            }]
+        }
+
+    def _insert_task(self, project: Dict[str, Any], task_name: str, reference_outline: str, position: str = "after") -> Dict[str, Any]:
+        """Insert a new task at a position relative to reference task"""
+        import uuid
+
+        tasks = project.get("tasks", [])
+        reference_task = self._find_task_by_outline(project, reference_outline)
+
+        if not reference_task:
+            return {"success": False, "message": f"Reference task {reference_outline} not found", "changes": []}
+
+        # Find reference index
+        ref_idx = next((i for i, t in enumerate(tasks) if t.get("outline_number") == reference_outline), -1)
+        if ref_idx == -1:
+            return {"success": False, "message": "Could not find reference task position", "changes": []}
+
+        # Determine insert position
+        if position == "before":
+            insert_idx = ref_idx
+        elif position == "after":
+            insert_idx = ref_idx + 1
+        elif position == "under":
+            # Insert as first child
+            insert_idx = ref_idx + 1
+        else:
+            insert_idx = ref_idx + 1
+
+        # Create new task
+        new_task = {
+            "id": str(uuid.uuid4()),
+            "uid": str(max([int(t.get("uid", 0)) for t in tasks] + [0]) + 1),
+            "name": task_name,
+            "outline_number": "",  # Will be set by renumber
+            "outline_level": reference_task.get("outline_level", 1),
+            "duration": "PT8H0M0S",  # 1 day default
+            "milestone": False,
+            "summary": False,
+            "predecessors": [],
+            "percent_complete": 0
+        }
+
+        if position == "under":
+            new_task["outline_level"] = reference_task.get("outline_level", 1) + 1
+
+        tasks.insert(insert_idx, new_task)
+
+        # Renumber tasks
+        self._renumber_tasks(tasks)
+
+        new_outline = new_task.get("outline_number", "?")
+
+        return {
+            "success": True,
+            "message": f"Inserted new task '{task_name}' {position} {reference_outline} (new position: {new_outline})",
+            "changes": [{
+                "type": "insert_task",
+                "task_name": task_name,
+                "reference": reference_outline,
+                "position": position,
+                "new_outline": new_outline
+            }]
+        }
+
+    def _delete_task(self, project: Dict[str, Any], task_outline: str) -> Dict[str, Any]:
+        """Delete a task from the project"""
+        tasks = project.get("tasks", [])
+        task = self._find_task_by_outline(project, task_outline)
+
+        if not task:
+            return {"success": False, "message": f"Task {task_outline} not found", "changes": []}
+
+        task_name = task.get("name", "Unknown")
+
+        # If summary task, also delete children
+        deleted_tasks = []
+        if task.get("summary"):
+            prefix = task_outline + "."
+            tasks_to_remove = [t for t in tasks if t.get("outline_number") == task_outline or t.get("outline_number", "").startswith(prefix)]
+            for t in tasks_to_remove:
+                deleted_tasks.append({"outline": t.get("outline_number"), "name": t.get("name")})
+                tasks.remove(t)
+        else:
+            deleted_tasks.append({"outline": task_outline, "name": task_name})
+            tasks.remove(task)
+
+        # Update predecessors that reference deleted task
+        for t in tasks:
+            preds = t.get("predecessors", [])
+            t["predecessors"] = [p for p in preds if p.get("outline_number") not in [d["outline"] for d in deleted_tasks]]
+
+        # Renumber tasks
+        self._renumber_tasks(tasks)
+
+        return {
+            "success": True,
+            "message": f"Deleted {len(deleted_tasks)} task(s): {task_outline} '{task_name}'",
+            "changes": [{
+                "type": "delete_task",
+                "deleted_tasks": deleted_tasks
+            }]
+        }
+
+    def _merge_tasks(self, project: Dict[str, Any], task_outline_1: str, task_outline_2: str) -> Dict[str, Any]:
+        """Merge two tasks into one (combines durations, keeps first task's position)"""
+        task1 = self._find_task_by_outline(project, task_outline_1)
+        task2 = self._find_task_by_outline(project, task_outline_2)
+
+        if not task1:
+            return {"success": False, "message": f"Task {task_outline_1} not found", "changes": []}
+        if not task2:
+            return {"success": False, "message": f"Task {task_outline_2} not found", "changes": []}
+
+        if task1.get("summary") or task2.get("summary"):
+            return {"success": False, "message": "Cannot merge summary tasks", "changes": []}
+
+        # Combine durations
+        dur1 = self._parse_duration_to_days(task1.get("duration", "PT8H0M0S"))
+        dur2 = self._parse_duration_to_days(task2.get("duration", "PT8H0M0S"))
+        new_duration_days = dur1 + dur2
+        new_duration = f"PT{int(new_duration_days * 8)}H0M0S"
+
+        # Merge names
+        task1["name"] = f"{task1['name']} + {task2['name']}"
+        task1["duration"] = new_duration
+
+        # Combine predecessors (unique)
+        all_preds = task1.get("predecessors", []) + task2.get("predecessors", [])
+        seen = set()
+        unique_preds = []
+        for p in all_preds:
+            key = p.get("outline_number")
+            if key and key not in seen and key != task_outline_1 and key != task_outline_2:
+                seen.add(key)
+                unique_preds.append(p)
+        task1["predecessors"] = unique_preds
+
+        # Delete task2
+        tasks = project.get("tasks", [])
+        tasks.remove(task2)
+
+        # Update any predecessors pointing to task2 to point to task1
+        for t in tasks:
+            for p in t.get("predecessors", []):
+                if p.get("outline_number") == task_outline_2:
+                    p["outline_number"] = task_outline_1
+
+        # Renumber
+        self._renumber_tasks(tasks)
+
+        return {
+            "success": True,
+            "message": f"Merged '{task2['name']}' into '{task1['name']}' (combined duration: {new_duration_days} days)",
+            "changes": [{
+                "type": "merge_tasks",
+                "kept_task": task_outline_1,
+                "merged_task": task_outline_2,
+                "new_duration_days": new_duration_days
+            }]
+        }
+
+    def _split_task(self, project: Dict[str, Any], task_outline: str, parts: int = 2) -> Dict[str, Any]:
+        """Split a task into multiple equal parts"""
+        import uuid
+
+        task = self._find_task_by_outline(project, task_outline)
+        if not task:
+            return {"success": False, "message": f"Task {task_outline} not found", "changes": []}
+
+        if task.get("summary"):
+            return {"success": False, "message": "Cannot split summary task", "changes": []}
+
+        if parts < 2 or parts > 10:
+            return {"success": False, "message": "Parts must be between 2 and 10", "changes": []}
+
+        tasks = project.get("tasks", [])
+        task_idx = next((i for i, t in enumerate(tasks) if t.get("outline_number") == task_outline), -1)
+
+        # Calculate split duration
+        original_duration = self._parse_duration_to_days(task.get("duration", "PT8H0M0S"))
+        split_duration = original_duration / parts
+        split_duration_str = f"PT{int(split_duration * 8)}H0M0S"
+
+        # Update original task
+        original_name = task["name"]
+        task["name"] = f"{original_name} (Part 1)"
+        task["duration"] = split_duration_str
+
+        # Create additional parts
+        new_tasks = []
+        prev_outline = task_outline
+        for i in range(2, parts + 1):
+            new_task = {
+                "id": str(uuid.uuid4()),
+                "uid": str(max([int(t.get("uid", 0)) for t in tasks] + [0]) + i),
+                "name": f"{original_name} (Part {i})",
+                "outline_number": "",
+                "outline_level": task.get("outline_level", 1),
+                "duration": split_duration_str,
+                "milestone": False,
+                "summary": False,
+                "predecessors": [{"outline_number": prev_outline, "type": 1, "lag": 0}],
+                "percent_complete": 0
+            }
+            new_tasks.append(new_task)
+
+        # Insert new tasks after original
+        for i, new_task in enumerate(new_tasks):
+            tasks.insert(task_idx + 1 + i, new_task)
+
+        # Renumber
+        self._renumber_tasks(tasks)
+
+        return {
+            "success": True,
+            "message": f"Split '{original_name}' into {parts} parts ({split_duration} days each)",
+            "changes": [{
+                "type": "split_task",
+                "original_task": task_outline,
+                "parts": parts,
+                "duration_per_part": split_duration
+            }]
+        }
+
+    def _scale_all_durations(self, project: Dict[str, Any], scale_factor: float) -> Dict[str, Any]:
+        """Scale all task durations by a factor"""
+        tasks = project.get("tasks", [])
+        changes = []
+
+        if scale_factor <= 0 or scale_factor > 10:
+            return {"success": False, "message": "Scale factor must be between 0 and 10", "changes": []}
+
+        for task in tasks:
+            if task.get("summary") or task.get("milestone"):
+                continue
+
+            old_duration = task.get("duration", "PT8H0M0S")
+            old_days = self._parse_duration_to_days(old_duration)
+            new_days = old_days * scale_factor
+            new_duration = f"PT{int(new_days * 8)}H0M0S"
+
+            if old_duration != new_duration:
+                task["duration"] = new_duration
+                changes.append({
+                    "task": task.get("outline_number"),
+                    "task_name": task.get("name"),
+                    "old_days": old_days,
+                    "new_days": new_days
+                })
+
+        return {
+            "success": True,
+            "message": f"Scaled {len(changes)} task durations by {scale_factor}x",
+            "changes": [{
+                "type": "scale_durations",
+                "scale_factor": scale_factor,
+                "tasks_modified": len(changes)
+            }]
+        }
+
+    def _renumber_tasks(self, tasks: List[Dict]) -> None:
+        """Renumber task outline numbers based on their position and level"""
+        counters = {}  # level -> current number
+        parent_stack = []  # stack of (level, outline_number)
+
+        for task in tasks:
+            level = task.get("outline_level", 1)
+
+            # Reset counters for levels deeper than current
+            counters = {k: v for k, v in counters.items() if k <= level}
+
+            # Find parent
+            while parent_stack and parent_stack[-1][0] >= level:
+                parent_stack.pop()
+
+            # Increment counter for this level
+            counters[level] = counters.get(level, 0) + 1
+
+            # Build outline number
+            if parent_stack:
+                parent_outline = parent_stack[-1][1]
+                new_outline = f"{parent_outline}.{counters[level]}"
+            else:
+                new_outline = str(counters[level])
+
+            task["outline_number"] = new_outline
+
+            # Add to parent stack if this could be a parent
+            parent_stack.append((level, new_outline))
+
     def _organize_project(self, project: Dict[str, Any]) -> Dict[str, Any]:
         """
         Intelligently organize a flat task list into a hierarchical structure.
@@ -1277,6 +1746,7 @@ class AICommandHandler:
 
         new_tasks = []
         phase_number = 0
+        num_buildings = len(building_indices)
 
         # Site-wide keywords (tasks before first building)
         site_wide_keywords = [
@@ -1294,6 +1764,21 @@ class AICommandHandler:
 
         first_building_idx = building_indices[0][0]
         last_building_idx = building_indices[-1][0]
+
+        # === DETECT: Building markers at end with no tasks between them ===
+        # If building markers are consecutive (within 2 indices of each other),
+        # it means they're placeholder markers at the end, not section headers
+        markers_are_consecutive = all(
+            building_indices[i+1][0] - building_indices[i][0] <= 2
+            for i in range(len(building_indices) - 1)
+        )
+
+        if markers_are_consecutive:
+            print(f"[Organize] DETECTED: Building markers are consecutive placeholders at end")
+            print(f"[Organize] Will distribute construction tasks across {num_buildings} buildings")
+            return self._organize_with_distributed_buildings(
+                project, work_tasks, building_indices, changes, max_existing_uid
+            )
 
         # Section headers that indicate post-building work (not closeout)
         post_building_sections = [
@@ -1710,6 +2195,216 @@ class AICommandHandler:
         return {
             "success": True,
             "message": f"Organized project with {building_count} buildings: Created {summary_count} sections with {task_count} tasks.",
+            "changes": changes
+        }
+
+    def _organize_with_distributed_buildings(self, project: Dict[str, Any], work_tasks: list,
+                                              building_indices: list, changes: list,
+                                              max_existing_uid: int = 1000) -> Dict[str, Any]:
+        """
+        Organize project where building markers are placeholders at the end.
+        Distributes construction tasks evenly across buildings based on repeating patterns.
+        """
+        import uuid
+
+        num_buildings = len(building_indices)
+        new_tasks = []
+        phase_number = 0
+
+        # Site-wide keywords
+        site_wide_keywords = [
+            'pre construction', 'preconstruction', 'project award', 'notice', 'permit',
+            'mobilization', 'site', 'survey', 'erosion', 'demolition', 'grading',
+            'sewer', 'storm', 'water', 'underground', 'road', 'curb', 'asphalt',
+            'retaining', 'final grade', 'utility', 'utilities', 'building permit'
+        ]
+
+        # Closeout/exterior keywords (shared across all buildings)
+        closeout_keywords = [
+            'exterior improvement', 'landscape', 'irrigation', 'paver', 'top coat',
+            'fine grading', 'flatwork', 'closeout', 'substantial completion'
+        ]
+
+        # Separate tasks into categories
+        site_tasks = []
+        building_work_tasks = []
+        closeout_tasks = []
+
+        # Get indices of building markers to exclude them
+        building_marker_indices = set(idx for idx, _ in building_indices)
+
+        for idx, task in enumerate(work_tasks):
+            # Skip building marker tasks themselves
+            if idx in building_marker_indices:
+                continue
+
+            task_name = task.get("name", "").lower()
+
+            # Check if it's site work
+            if any(kw in task_name for kw in site_wide_keywords):
+                site_tasks.append(task)
+            # Check if it's closeout/exterior work
+            elif any(kw in task_name for kw in closeout_keywords):
+                closeout_tasks.append(task)
+            else:
+                # It's building-specific work
+                building_work_tasks.append(task)
+
+        print(f"[Organize-Dist] Site tasks: {len(site_tasks)}, Building tasks: {len(building_work_tasks)}, Closeout: {len(closeout_tasks)}")
+
+        # === 1. Site Work & Preconstruction ===
+        if site_tasks:
+            phase_number += 1
+            summary_task = self._create_summary_task(phase_number, "Site Work & Preconstruction", max_existing_uid)
+            new_tasks.append(summary_task)
+            changes.append({
+                "type": "summary_created",
+                "task": str(phase_number),
+                "task_name": "Site Work & Preconstruction",
+                "child_count": len(site_tasks)
+            })
+
+            prev_outline = None
+            for child_idx, task in enumerate(site_tasks, 1):
+                child_outline = f"{phase_number}.{child_idx}"
+                old_outline = task.get("outline_number")
+
+                task["outline_number"] = child_outline
+                task["outline_level"] = 2
+                task["summary"] = False
+
+                if prev_outline:
+                    task["predecessors"] = [{"outline_number": prev_outline, "type": 1, "lag": 0, "lag_format": 7}]
+                else:
+                    task["predecessors"] = []
+
+                new_tasks.append(task)
+                prev_outline = child_outline
+
+                if old_outline != child_outline:
+                    changes.append({"type": "task_renumbered", "old_outline": old_outline, "new_outline": child_outline, "task_name": task.get("name")})
+
+        last_site_task = new_tasks[-1]["outline_number"] if new_tasks and not new_tasks[-1].get("summary") else None
+
+        # === 2. Distribute Building Tasks ===
+        # Calculate tasks per building (divide evenly)
+        if building_work_tasks:
+            tasks_per_building = len(building_work_tasks) // num_buildings
+            remainder = len(building_work_tasks) % num_buildings
+
+            print(f"[Organize-Dist] Distributing {len(building_work_tasks)} tasks across {num_buildings} buildings ({tasks_per_building} each, {remainder} extra)")
+
+            task_index = 0
+            prev_building_first_task = None
+            all_building_last_tasks = []
+            BUILDING_STAGGER_LAG = 15
+
+            for bldg_idx, (_, building_name) in enumerate(building_indices):
+                # Calculate how many tasks this building gets
+                num_tasks_for_building = tasks_per_building + (1 if bldg_idx < remainder else 0)
+
+                if num_tasks_for_building == 0:
+                    continue
+
+                # Get tasks for this building
+                building_tasks = building_work_tasks[task_index:task_index + num_tasks_for_building]
+                task_index += num_tasks_for_building
+
+                phase_number += 1
+                summary_task = self._create_summary_task(phase_number, building_name, max_existing_uid)
+                new_tasks.append(summary_task)
+                changes.append({
+                    "type": "summary_created",
+                    "task": str(phase_number),
+                    "task_name": building_name,
+                    "child_count": len(building_tasks)
+                })
+
+                prev_outline = None
+                first_task_in_building = True
+                current_building_first_task = None
+
+                for child_idx, task in enumerate(building_tasks, 1):
+                    child_outline = f"{phase_number}.{child_idx}"
+                    old_outline = task.get("outline_number")
+
+                    task["outline_number"] = child_outline
+                    task["outline_level"] = 2
+                    task["summary"] = False
+
+                    if prev_outline:
+                        task["predecessors"] = [{"outline_number": prev_outline, "type": 1, "lag": 0, "lag_format": 7}]
+                    elif first_task_in_building:
+                        current_building_first_task = child_outline
+                        if bldg_idx == 0 and last_site_task:
+                            task["predecessors"] = [{"outline_number": last_site_task, "type": 1, "lag": 0, "lag_format": 7}]
+                            changes.append({"type": "phase_dependency_created", "from_task": last_site_task, "to_task": child_outline})
+                        elif prev_building_first_task:
+                            task["predecessors"] = [{"outline_number": prev_building_first_task, "type": 1, "lag": BUILDING_STAGGER_LAG, "lag_format": 7}]
+                            changes.append({"type": "phase_dependency_created", "from_task": prev_building_first_task, "to_task": child_outline, "lag": BUILDING_STAGGER_LAG})
+                        else:
+                            task["predecessors"] = []
+
+                    new_tasks.append(task)
+                    prev_outline = child_outline
+                    first_task_in_building = False
+
+                    if old_outline != child_outline:
+                        changes.append({"type": "task_renumbered", "old_outline": old_outline, "new_outline": child_outline, "task_name": task.get("name")})
+
+                if prev_outline:
+                    all_building_last_tasks.append(prev_outline)
+                if current_building_first_task:
+                    prev_building_first_task = current_building_first_task
+
+        # === 3. Closeout / Exterior Improvements ===
+        if closeout_tasks:
+            phase_number += 1
+            summary_task = self._create_summary_task(phase_number, "Closeout & Exterior", max_existing_uid)
+            new_tasks.append(summary_task)
+            changes.append({
+                "type": "summary_created",
+                "task": str(phase_number),
+                "task_name": "Closeout & Exterior",
+                "child_count": len(closeout_tasks)
+            })
+
+            prev_outline = None
+            for child_idx, task in enumerate(closeout_tasks, 1):
+                child_outline = f"{phase_number}.{child_idx}"
+                old_outline = task.get("outline_number")
+
+                task["outline_number"] = child_outline
+                task["outline_level"] = 2
+                task["summary"] = False
+
+                if prev_outline:
+                    task["predecessors"] = [{"outline_number": prev_outline, "type": 1, "lag": 0, "lag_format": 7}]
+                elif all_building_last_tasks:
+                    # First closeout task depends on all buildings
+                    task["predecessors"] = [{"outline_number": lt, "type": 1, "lag": 0, "lag_format": 7} for lt in all_building_last_tasks]
+                else:
+                    task["predecessors"] = []
+
+                new_tasks.append(task)
+                prev_outline = child_outline
+
+                if old_outline != child_outline:
+                    changes.append({"type": "task_renumbered", "old_outline": old_outline, "new_outline": child_outline, "task_name": task.get("name")})
+
+        # Update project
+        project["tasks"] = new_tasks
+
+        # Recalculate dates
+        _recalculate_dates_standalone(project)
+        changes.append({"type": "dates_recalculated", "message": "All task dates recalculated"})
+
+        summary_count = len([t for t in new_tasks if t.get("summary")])
+        task_count = len([t for t in new_tasks if not t.get("summary")])
+
+        return {
+            "success": True,
+            "message": f"Organized project with {num_buildings} buildings: Created {summary_count} sections with {task_count} tasks (distributed evenly).",
             "changes": changes
         }
 
