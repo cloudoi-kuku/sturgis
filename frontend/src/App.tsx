@@ -33,7 +33,7 @@ import type {
   TaskCreate,
   TaskUpdate,
 } from './api/client';
-import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle, Save, Cloud, LogOut, User, ChevronDown, RefreshCw } from 'lucide-react';
+import { Upload, Plus, CheckCircle, AlertCircle, Settings, MessageCircle, FolderOpen, Calendar, GitBranch, HelpCircle, Cloud, LogOut, User, ChevronDown, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { parseISO, addDays, differenceInDays, format } from 'date-fns';
