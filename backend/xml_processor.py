@@ -501,12 +501,34 @@ class MSProjectXMLProcessor:
 
     def update_task(self, project_data: Dict[str, Any], task_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update an existing task"""
+        from datetime import datetime, timedelta
+
         updated_task = None
         for task in project_data["tasks"]:
             if task["id"] == task_id or task["outline_number"] == task_id:
+                # Check if we need to recalculate dates
+                start_changed = "start_date" in updates and updates["start_date"] != task.get("start_date")
+                duration_changed = "duration" in updates and updates["duration"] != task.get("duration")
+
                 task.update(updates)
+
                 if "outline_number" in updates:
                     task["outline_level"] = len(updates["outline_number"].split('.'))
+
+                # Recalculate finish_date if start_date or duration changed (and not a summary task)
+                if (start_changed or duration_changed) and not task.get("summary"):
+                    start_str = task.get("start_date")
+                    duration_str = task.get("duration", "PT8H0M0S")
+
+                    if start_str:
+                        try:
+                            start_date = datetime.fromisoformat(start_str.replace('Z', '+00:00').split('T')[0])
+                            duration_days = self._parse_duration_to_days(duration_str)
+                            finish_date = start_date + timedelta(days=max(duration_days, 0))
+                            task["finish_date"] = finish_date.strftime("%Y-%m-%dT17:00:00")
+                        except Exception as e:
+                            print(f"Error recalculating finish date: {e}")
+
                 updated_task = task
                 break
 
@@ -562,6 +584,19 @@ class MSProjectXMLProcessor:
         project_data["tasks"] = self._calculate_summary_tasks(project_data["tasks"])
 
         return True
+
+    def _parse_duration_to_days(self, duration_str: str) -> float:
+        """Parse ISO 8601 duration string to days"""
+        import re
+        if not duration_str:
+            return 0
+        match = re.search(r'PT(\d+)H', duration_str)
+        if match:
+            return int(match.group(1)) / 8
+        match = re.search(r'P(\d+)D', duration_str)
+        if match:
+            return int(match.group(1))
+        return 0
 
     def _calculate_summary_tasks(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
