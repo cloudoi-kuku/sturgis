@@ -441,6 +441,16 @@
   color: white;
 }
 
+.create-option-icon.upload {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #2563eb;
+}
+
+.create-option:hover .create-option-icon.upload {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: white;
+}
+
 .create-option-content h4 {
   margin: 0 0 0.375rem 0;
   color: #1e293b;

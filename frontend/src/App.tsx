@@ -310,7 +310,11 @@ function AppContent() {
     // Find the task to check if it's a summary
     const task = tasks.find(t => t.id === taskId);
     if (!task) {
-      alert('Task not found');
+      // Task not found in current list - it may have been deleted by another operation
+      // (e.g., "organize project" command which replaces all tasks)
+      console.warn('Task not found, it may have been deleted by another operation');
+      setIsEditorOpen(false);
+      setSelectedTask(undefined);
       return;
     }
 
@@ -326,8 +330,18 @@ function AppContent() {
           });
           return;
         }
-      } catch (error) {
+      } catch (error: any) {
+        // If we get a 404, the task was already deleted (e.g., by organize command)
+        // Don't try to delete it again
+        if (error?.response?.status === 404) {
+          console.warn('Task already deleted, refreshing task list');
+          queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
+          setIsEditorOpen(false);
+          setSelectedTask(undefined);
+          return;
+        }
         console.error('Error getting children count:', error);
+        // For other errors, still try to delete
       }
     }
 
@@ -336,7 +350,15 @@ function AppContent() {
       await deleteTaskMutation.mutateAsync(taskId);
       setIsEditorOpen(false);
       setSelectedTask(undefined);
-    } catch (error) {
+    } catch (error: any) {
+      // If 404, task was already deleted - just refresh the list
+      if (error?.response?.status === 404) {
+        console.warn('Task already deleted, refreshing task list');
+        queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
+        setIsEditorOpen(false);
+        setSelectedTask(undefined);
+        return;
+      }
       console.error('Delete error:', error);
       alert('Error deleting task. Please try again.');
     }
@@ -354,9 +376,17 @@ function AppContent() {
       }
       setIsEditorOpen(false);
       setSelectedTask(undefined);
-    } catch (error) {
-      console.error('Delete/Ungroup error:', error);
-      alert('Error processing request. Please try again.');
+    } catch (error: any) {
+      // If 404, task was already deleted - just refresh and close dialog
+      if (error?.response?.status === 404) {
+        console.warn('Task already deleted, refreshing task list');
+        queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
+        setIsEditorOpen(false);
+        setSelectedTask(undefined);
+      } else {
+        console.error('Delete/Ungroup error:', error);
+        alert('Error processing request. Please try again.');
+      }
     } finally {
       setDeleteConfirmDialog({ isOpen: false, task: null, childrenCount: 0 });
     }
@@ -1130,6 +1160,9 @@ function AppContent() {
         isOpen={isProjectManagerOpen}
         onClose={() => setIsProjectManagerOpen(false)}
         onProjectChanged={handleProjectChanged}
+        onUploadXml={async (file) => {
+          await uploadMutation.mutateAsync(file);
+        }}
       />
 
       <CalendarManager

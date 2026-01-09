@@ -38,11 +38,100 @@ class MSProjectXMLProcessor:
                 if task:
                     project_data["tasks"].append(task)
 
+        # Rebuild hierarchical outline numbers from OutlineLevel
+        # MS Project XML may have flat outline numbers (1, 2, 3...) instead of hierarchical (1, 1.1, 1.2...)
+        project_data["tasks"] = self._rebuild_hierarchical_outline_numbers(project_data["tasks"])
+
         # Skip project summary task (outline_level=0 or outline_number="0") and renumber remaining tasks
         # This keeps the WBS clean with unique top-level numbers starting from 1
         project_data["tasks"] = self._skip_project_summary_and_renumber(project_data["tasks"])
 
         return project_data
+
+    def _rebuild_hierarchical_outline_numbers(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Rebuild hierarchical outline numbers (1, 1.1, 1.2, 2, 2.1...) from OutlineLevel.
+
+        MS Project XML often has flat outline numbers (1, 2, 3, 4...) where hierarchy
+        is determined by OutlineLevel (0=project, 1=top level, 2=child, etc.).
+
+        This function converts flat numbering to proper WBS hierarchy.
+        """
+        if not tasks:
+            return tasks
+
+        # Check if outline numbers are already hierarchical
+        has_hierarchical = any('.' in str(t.get('outline_number', '')) for t in tasks)
+        if has_hierarchical:
+            print("[XML Import] Outline numbers already hierarchical, skipping rebuild")
+            return tasks
+
+        print("[XML Import] Rebuilding hierarchical outline numbers from OutlineLevel")
+
+        # Build old -> new outline number mapping for predecessor updates
+        outline_mapping = {}
+
+        # Track counters at each level: level_counters[level] = current count at that level
+        level_counters = {}
+        # Track the parent outline at each level
+        parent_outlines = {0: ""}  # Level 0 has empty parent
+
+        for task in tasks:
+            old_outline = task.get("outline_number", "")
+            level = task.get("outline_level", 1)
+
+            # Skip project summary (level 0)
+            if level == 0:
+                outline_mapping[old_outline] = "0"
+                task["outline_number"] = "0"
+                parent_outlines[0] = ""
+                continue
+
+            # Reset counters for levels deeper than current (we're going back up)
+            levels_to_remove = [l for l in level_counters.keys() if l > level]
+            for l in levels_to_remove:
+                del level_counters[l]
+                if l in parent_outlines:
+                    del parent_outlines[l]
+
+            # Increment counter at current level
+            if level not in level_counters:
+                level_counters[level] = 0
+            level_counters[level] += 1
+
+            # Build new outline number
+            if level == 1:
+                new_outline = str(level_counters[level])
+            else:
+                parent_level = level - 1
+                parent_outline = parent_outlines.get(parent_level, "")
+                if parent_outline:
+                    new_outline = f"{parent_outline}.{level_counters[level]}"
+                else:
+                    # Fallback if parent not found
+                    new_outline = str(level_counters[level])
+
+            # Store this outline as potential parent for next level
+            parent_outlines[level] = new_outline
+
+            # Update mapping and task
+            outline_mapping[old_outline] = new_outline
+            task["outline_number"] = new_outline
+            task["outline_level"] = len(new_outline.split('.'))
+
+        # Update predecessor references to use new outline numbers
+        for task in tasks:
+            if task.get("predecessors"):
+                for pred in task["predecessors"]:
+                    old_pred_outline = pred.get("outline_number", "")
+                    if old_pred_outline in outline_mapping:
+                        pred["outline_number"] = outline_mapping[old_pred_outline]
+
+        # Debug output
+        sample_outlines = [t["outline_number"] for t in tasks[:10]]
+        print(f"[XML Import] Sample rebuilt outlines: {sample_outlines}")
+
+        return tasks
 
     def _skip_project_summary_and_renumber(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -473,7 +562,18 @@ class MSProjectXMLProcessor:
                 ]
 
         # Recalculate summary tasks after deletion
+        print(f"\n=== DELETE TASK DEBUG ===")
+        print(f"Deleted task(s): {deleted_outline_numbers}")
+        print(f"Remaining tasks count: {len(project_data['tasks'])}")
+
         project_data["tasks"] = self._calculate_summary_tasks(project_data["tasks"])
+
+        # Debug: Show summary status after recalculation
+        summary_tasks = [t for t in project_data["tasks"] if t.get("summary")]
+        print(f"Summary tasks after recalc: {len(summary_tasks)}")
+        for t in summary_tasks:
+            print(f"  - {t['outline_number']}: {t['name']}")
+        print(f"=== END DELETE DEBUG ===\n")
 
         return True
 
@@ -485,9 +585,13 @@ class MSProjectXMLProcessor:
         IMPORTANT: This function preserves the original task order - do NOT sort!
         MS Project uses OutlineNumber to determine hierarchy, not task order in the file.
         """
+        print(f"\n=== CALC SUMMARY TASKS DEBUG ===")
+        print(f"Input tasks count: {len(tasks)}")
+
         # Build a lookup by outline number for faster access
         task_by_outline = {task["outline_number"]: task for task in tasks}
         all_outlines = set(task_by_outline.keys())
+        print(f"All outlines: {sorted(all_outlines)}")
 
         # First pass: Identify which tasks are summary tasks
         for task in tasks:
@@ -507,6 +611,13 @@ class MSProjectXMLProcessor:
             # Summary tasks cannot be milestones
             if has_children:
                 task["milestone"] = False
+
+        # Debug: show which tasks are marked as summary after first pass
+        summary_count = sum(1 for t in tasks if t.get("summary"))
+        print(f"After first pass: {summary_count} summary tasks")
+        for t in tasks:
+            if t.get("summary"):
+                print(f"  Summary: {t['outline_number']} - {t['name'][:30]}")
 
         # Second pass: Calculate summary task dates from children (bottom-up)
         # Sort by outline level descending so we process deepest summary tasks first
@@ -536,6 +647,7 @@ class MSProjectXMLProcessor:
                 task["finish_date"] = max(child_finishes)
 
         # Return tasks in original order - do NOT sort!
+        print(f"=== END CALC SUMMARY DEBUG ===\n")
         return tasks
 
     def generate_xml(self, project_data: Dict[str, Any]) -> str:

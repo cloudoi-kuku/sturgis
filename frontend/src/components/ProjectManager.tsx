@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, Plus, FolderOpen, Trash2, Check, Briefcase, Calendar, ListTodo, Share2, Lock, Users, Wand2, FileText } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Plus, FolderOpen, Trash2, Check, Briefcase, Calendar, ListTodo, Share2, Lock, Users, Wand2, FileText, Upload } from 'lucide-react';
 import { getAllProjects, createNewProject, switchProject, deleteProject, updateProjectSharing, generateProject } from '../api/client';
 import type { ProjectListItem } from '../api/client';
 import './ProjectManager.css';
@@ -8,12 +8,14 @@ interface ProjectManagerProps {
   isOpen: boolean;
   onClose: () => void;
   onProjectChanged: () => void | Promise<void>;
+  onUploadXml?: (file: File) => Promise<void>;
 }
 
 export const ProjectManager: React.FC<ProjectManagerProps> = ({
   isOpen,
   onClose,
   onProjectChanged,
+  onUploadXml,
 }) => {
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -24,6 +26,8 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
   const [aiDescription, setAIDescription] = useState('');
   const [aiProjectType, setAIProjectType] = useState('commercial');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -94,6 +98,34 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
       alert(`❌ Failed to generate project: ${errorMessage}`);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !onUploadXml) return;
+
+    setIsUploading(true);
+    try {
+      await onUploadXml(file);
+      setShowCreateOptions(false);
+      // Wait for data refresh to complete
+      await onProjectChanged();
+      await loadProjects();
+      onClose(); // Close the modal after successful upload
+    } catch (error: any) {
+      console.error('Failed to upload XML:', error);
+      alert(`❌ Failed to upload: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -174,9 +206,25 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
             </button>
           </div>
 
-          {/* Create Options: Manual vs AI */}
+          {/* Create Options: Upload, Manual, or AI */}
           {showCreateOptions && !showNewProjectInput && !showAIGenerator && (
             <div className="create-options">
+              <div className="create-option" onClick={handleUploadClick} style={{ opacity: isUploading ? 0.6 : 1 }}>
+                <div className="create-option-icon upload">
+                  <Upload size={24} />
+                </div>
+                <div className="create-option-content">
+                  <h4>{isUploading ? 'Uploading...' : 'Upload MS Project XML'}</h4>
+                  <p>Import an existing schedule from MS Project</p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xml"
+                  onChange={handleFileChange}
+                  hidden
+                />
+              </div>
               <div className="create-option" onClick={() => setShowNewProjectInput(true)}>
                 <div className="create-option-icon manual">
                   <FileText size={24} />

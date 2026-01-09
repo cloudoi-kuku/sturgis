@@ -251,6 +251,9 @@ def load_project_from_db(project_id: Optional[str] = None, user_id: Optional[str
             }
             current_project_id = project_id
 
+            # Rebuild hierarchical outline numbers if they're flat (from MS Project XML)
+            current_project["tasks"] = xml_processor._rebuild_hierarchical_outline_numbers(current_project["tasks"])
+
             # Calculate summary tasks after loading
             current_project["tasks"] = xml_processor._calculate_summary_tasks(current_project["tasks"])
 
@@ -483,6 +486,27 @@ async def upload_project(
         print(f"Parsed project: {project_data.get('name')}")
         print(f"Found {len(project_data.get('tasks', []))} tasks")
 
+        # Auto-fix common issues in uploaded XML
+        print("Auto-fixing project issues...")
+        fix_result = ai_command_handler._fix_all_validation_issues(project_data)
+        if fix_result.get("changes"):
+            print(f"Auto-fixed {len(fix_result['changes'])} issue(s):")
+            for change in fix_result["changes"]:
+                if change.get("type") == "broken_predecessor_fix":
+                    print(f"  - Removed broken predecessor refs from task {change.get('task')}")
+                elif change.get("type") == "circular_dependency_fix":
+                    print(f"  - Fixed circular dependency in task {change.get('task')}")
+                elif change.get("type") == "milestone_duration_fix":
+                    print(f"  - Fixed milestone duration for task {change.get('task')}")
+                elif change.get("type") == "summary_predecessor_fix":
+                    print(f"  - Removed predecessors from summary task {change.get('task')}")
+                elif change.get("type") == "unreasonable_lag_fix":
+                    print(f"  - Fixed unreasonable lag for task {change.get('task')}")
+                elif change.get("type") == "dates_recalculated":
+                    print(f"  - Recalculated all task dates")
+        else:
+            print("No issues found - project is clean")
+
         # Create project in database
         print("Creating project in database...")
         project_id = db.create_project(
@@ -515,11 +539,19 @@ async def upload_project(
         current_project_id = project_id
 
         print("=== Upload completed successfully ===")
+
+        # Build response message
+        fixes_applied = len(fix_result.get("changes", [])) if fix_result else 0
+        message = "Project uploaded successfully"
+        if fixes_applied > 0:
+            message += f" ({fixes_applied} issue(s) auto-fixed)"
+
         return {
             "success": True,
-            "message": "Project uploaded successfully",
+            "message": message,
             "project_id": project_id,
-            "project": project_data
+            "project": project_data,
+            "auto_fixes": fix_result.get("changes", []) if fix_result else []
         }
     except Exception as e:
         print(f"=== UPLOAD ERROR ===")
@@ -689,9 +721,19 @@ async def get_tasks(current_user: Optional[dict] = Depends(get_optional_user)):
 
 
 @app.post("/api/tasks")
-async def create_task(task: TaskCreate):
+async def create_task(task: TaskCreate, current_user: Optional[Dict] = Depends(get_current_user)):
     """Create a new task"""
-    global current_project
+    global current_project, current_project_id
+
+    # Get active project for THIS USER from database
+    user_id = current_user.get("id") if current_user else None
+    project_data = db.get_active_project(user_id)
+    if not project_data:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    # If no in-memory state or different project, load from database
+    if not current_project or current_project_id != project_data['id']:
+        load_project_from_db(project_data['id'])
 
     if not current_project or not current_project_id:
         raise HTTPException(status_code=404, detail="No project loaded")
@@ -717,9 +759,19 @@ async def create_task(task: TaskCreate):
 
 
 @app.put("/api/tasks/{task_id}")
-async def update_task(task_id: str, task: TaskUpdate):
+async def update_task(task_id: str, task: TaskUpdate, current_user: Optional[Dict] = Depends(get_current_user)):
     """Update an existing task"""
-    global current_project
+    global current_project, current_project_id
+
+    # Get active project for THIS USER from database
+    user_id = current_user.get("id") if current_user else None
+    project_data = db.get_active_project(user_id)
+    if not project_data:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    # If no in-memory state or different project, load from database
+    if not current_project or current_project_id != project_data['id']:
+        load_project_from_db(project_data['id'])
 
     if not current_project or not current_project_id:
         raise HTTPException(status_code=404, detail="No project loaded")
@@ -763,9 +815,19 @@ async def update_task(task_id: str, task: TaskUpdate):
 
 
 @app.delete("/api/tasks/{task_id}")
-async def delete_task(task_id: str):
+async def delete_task(task_id: str, current_user: Optional[Dict] = Depends(get_current_user)):
     """Delete a task"""
-    global current_project
+    global current_project, current_project_id
+
+    # Get active project for THIS USER from database
+    user_id = current_user.get("id") if current_user else None
+    project_data = db.get_active_project(user_id)
+    if not project_data:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    # If no in-memory state or different project, load from database
+    if not current_project or current_project_id != project_data['id']:
+        load_project_from_db(project_data['id'])
 
     if not current_project or not current_project_id:
         raise HTTPException(status_code=404, detail="No project loaded")
@@ -787,12 +849,22 @@ async def delete_task(task_id: str):
 
 
 @app.post("/api/tasks/{task_id}/ungroup")
-async def ungroup_task(task_id: str):
+async def ungroup_task(task_id: str, current_user: Optional[Dict] = Depends(get_current_user)):
     """
     Ungroup a summary task - remove it but promote its children up one level.
     Children become siblings at the parent level instead of being deleted.
     """
-    global current_project
+    global current_project, current_project_id
+
+    # Get active project for THIS USER from database
+    user_id = current_user.get("id") if current_user else None
+    project_data = db.get_active_project(user_id)
+    if not project_data:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    # If no in-memory state or different project, load from database
+    if not current_project or current_project_id != project_data['id']:
+        load_project_from_db(project_data['id'])
 
     if not current_project or not current_project_id:
         raise HTTPException(status_code=404, detail="No project loaded")
@@ -1475,6 +1547,8 @@ async def chat_with_ai(request: ChatRequest, current_user: Optional[dict] = Depe
                 target_project_id = request.project_id
 
         message_lower = request.message.lower().strip()
+        print(f"[AI Chat] Received message: '{request.message}'")
+        print(f"[AI Chat] target_project: {target_project is not None}, target_project_id: {target_project_id}")
 
         # Check for suggestion requests
         if target_project and any(phrase in message_lower for phrase in [
@@ -1490,12 +1564,54 @@ async def chat_with_ai(request: ChatRequest, current_user: Optional[dict] = Depe
 
         # Check for basic commands (duration, lag, start date, etc.)
         command = ai_command_handler.parse_command(request.message)
+        print(f"[AI Chat] Parsed command: {command}, target_project exists: {target_project is not None}")
+
+        # If command detected but no target project, try to load from database
+        if command and not target_project:
+            print("[AI Chat] Command detected but no target_project - trying to load from database")
+            print(f"[AI Chat] user_id: {user_id}, request.project_id: {request.project_id}")
+
+            # First try get_active_project
+            project_data = db.get_active_project(user_id)
+            print(f"[AI Chat] get_active_project result: {project_data is not None}")
+
+            # If no active project found, try most recent project
+            if not project_data:
+                print("[AI Chat] No active project found, trying to get most recent project")
+                all_projects = db.list_projects(user_id)
+                if all_projects:
+                    # Get the first (most recent) project
+                    project_data = db.get_project(all_projects[0]['id'])
+                    print(f"[AI Chat] Found most recent project: {project_data.get('name') if project_data else 'None'}")
+
+            if project_data:
+                tasks = db.get_tasks(project_data['id'])
+                target_project = {
+                    "name": project_data["name"],
+                    "start_date": project_data["start_date"],
+                    "status_date": project_data["status_date"],
+                    "tasks": tasks
+                }
+                target_project_id = project_data['id']
+                # Also update global state
+                current_project = target_project
+                current_project_id = target_project_id
+                print(f"[AI Chat] Loaded project from DB: {project_data['name']} with {len(tasks)} tasks")
+            else:
+                print("[AI Chat] ERROR: No project found in database at all!")
 
         if command and target_project:
             # Execute the command on the target project
+            task_count = len(target_project.get('tasks', []))
+            summary_count = len([t for t in target_project.get('tasks', []) if t.get('summary')])
+            print(f"[AI Chat] Executing command: {command['action']} on project with {task_count} tasks ({summary_count} summaries)")
             result = ai_command_handler.execute_command(command, target_project)
+            print(f"[AI Chat] Command result: success={result.get('success')}, message={result.get('message')}")
 
             if result["success"]:
+                # Update global state with modified project
+                current_project = target_project
+                print(f"[AI Chat] Command executed successfully, updated global state")
                 # MANUAL SAVE MODE: Changes kept in memory only until user saves
                 # if request.project_id:
                 #     for task in target_project.get("tasks", []):
@@ -1510,22 +1626,58 @@ async def chat_with_ai(request: ChatRequest, current_user: Optional[dict] = Depe
                 # Add details about changes
                 if result["changes"]:
                     response += "Changes made:\n"
-                    for change in result["changes"][:5]:  # Show first 5 changes
+
+                    # Group changes by type for cleaner output
+                    change_counts = {}
+                    for change in result["changes"]:
+                        ctype = change.get("type", "unknown")
+                        change_counts[ctype] = change_counts.get(ctype, 0) + 1
+
+                    # Show summary for bulk changes
+                    if change_counts.get("summary_created"):
+                        response += f"• Created {change_counts['summary_created']} phase summary task(s)\n"
+                    if change_counts.get("task_renumbered"):
+                        response += f"• Renumbered {change_counts['task_renumbered']} task(s) with new WBS structure\n"
+                    if change_counts.get("phase_dependency_created"):
+                        response += f"• Created {change_counts['phase_dependency_created']} phase-to-phase dependency link(s)\n"
+                    if change_counts.get("broken_predecessor_fix"):
+                        response += f"• Removed {change_counts['broken_predecessor_fix']} broken predecessor reference(s)\n"
+                    if change_counts.get("circular_dependency_fix"):
+                        response += f"• Fixed {change_counts['circular_dependency_fix']} circular dependency(ies)\n"
+                    if change_counts.get("milestone_duration_fix"):
+                        response += f"• Fixed {change_counts['milestone_duration_fix']} milestone duration(s)\n"
+                    if change_counts.get("summary_predecessor_fix"):
+                        response += f"• Removed predecessors from {change_counts['summary_predecessor_fix']} summary task(s)\n"
+                    if change_counts.get("unreasonable_lag_fix"):
+                        response += f"• Fixed {change_counts['unreasonable_lag_fix']} unreasonable lag value(s)\n"
+                    if change_counts.get("dates_recalculated"):
+                        response += f"• Recalculated all task dates\n"
+
+                    # Show individual changes for other types
+                    shown = 0
+                    for change in result["changes"]:
+                        if shown >= 5:
+                            break
                         if change["type"] == "duration":
                             response += f"• Task {change['task']} '{change['task_name']}': {change['old_days']:.1f} → {change['new_days']} days\n"
+                            shown += 1
                         elif change["type"] == "lag":
                             response += f"• Task {change['task']} lag: {change['old_days']:.1f} → {change['new_days']} days\n"
+                            shown += 1
                         elif change["type"] == "constraint_type":
                             response += f"• Task {change['task']} constraint: {change['old_name']} → {change['new_name']}\n"
+                            shown += 1
                         elif change["type"] == "constraint_date":
                             old_date = change['old_value'].split('T')[0] if change['old_value'] else 'None'
                             new_date = change['new_value'].split('T')[0] if change['new_value'] else 'None'
                             response += f"• Task {change['task']} constraint date: {old_date} → {new_date}\n"
+                            shown += 1
                         elif change["type"] == "project_start_date":
                             response += f"• Project start date: {change['old_value']} → {change['new_value']}\n"
+                            shown += 1
 
-                    if len(result["changes"]) > 5:
-                        response += f"• ... and {len(result['changes']) - 5} more changes\n"
+                # Add save reminder
+                response += "\n\n💾 **Click Save to persist these changes.**"
 
                 return {
                     "response": response.strip(),
@@ -1533,18 +1685,25 @@ async def chat_with_ai(request: ChatRequest, current_user: Optional[dict] = Depe
                     "changes": result["changes"]
                 }
             else:
-                # Command failed, let AI explain why
-                response = await ai_service.chat(
-                    user_message=f"I tried to execute: '{request.message}' but got error: {result['message']}. Please explain this to the user.",
-                    project_context=current_project
-                )
+                # Command failed - show the error directly
+                print(f"[AI Chat] Command FAILED: {result['message']}")
                 return {
-                    "response": response,
+                    "response": f"❌ Command failed: {result['message']}",
                     "command_executed": False,
                     "error": result["message"]
                 }
 
+        # Check if command was detected but no project found
+        if command and not target_project:
+            print(f"[AI Chat] FALLTHROUGH: Command '{command['action']}' detected but no target_project available!")
+            return {
+                "response": f"⚠️ I recognized your command to '{command['action'].replace('_', ' ')}', but no project is currently loaded.\n\nPlease select a project first by clicking on it in the project list, then try again.",
+                "command_executed": False,
+                "error": "No project loaded"
+            }
+
         # No command detected, use normal AI chat with historical context
+        print(f"[AI Chat] No command detected, using AI chat")
         historical_data = db.get_historical_project_data(limit=5)
         response = await ai_service.chat(
             user_message=request.message,
@@ -1732,7 +1891,7 @@ async def optimize_project_duration(request: OptimizeDurationRequest):
 
 
 @app.get("/api/critical-path")
-async def get_critical_path():
+async def get_critical_path(current_user: Optional[Dict] = Depends(get_current_user)):
     """
     Calculate and return the critical path for the current project.
 
@@ -1741,7 +1900,17 @@ async def get_critical_path():
         - project_duration: Total project duration in days
         - task_floats: Dictionary of task_id -> total_float (slack time)
     """
-    global current_project
+    global current_project, current_project_id
+
+    # Get active project for THIS USER from database
+    user_id = current_user.get("id") if current_user else None
+    project_data = db.get_active_project(user_id)
+    if not project_data:
+        raise HTTPException(status_code=404, detail="No project loaded")
+
+    # If no in-memory state or different project, load from database
+    if not current_project or current_project_id != project_data['id']:
+        load_project_from_db(project_data['id'])
 
     if not current_project:
         raise HTTPException(status_code=404, detail="No project loaded")

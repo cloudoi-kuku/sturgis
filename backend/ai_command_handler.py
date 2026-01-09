@@ -8,6 +8,123 @@ from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 
 
+def _recalculate_dates_standalone(project: Dict) -> Dict:
+    """Standalone date recalculation function to avoid circular imports"""
+    from datetime import datetime, timedelta
+
+    tasks = project.get("tasks", [])
+    if not tasks:
+        return project
+
+    # Get project start date
+    project_start_str = project.get("start_date", "")
+    try:
+        project_start = datetime.fromisoformat(project_start_str.replace('Z', '+00:00').split('T')[0]) if project_start_str else datetime.now()
+    except:
+        project_start = datetime.now()
+
+    # Build task lookup
+    task_map = {t["outline_number"]: t for t in tasks}
+
+    # Parse duration helper
+    def parse_duration(duration_str):
+        if not duration_str:
+            return 0
+        import re
+        match = re.search(r'PT(\d+)H', duration_str)
+        if match:
+            return int(match.group(1)) / 8
+        return 0
+
+    # First pass: Calculate dates for non-summary tasks
+    processed = set()
+    max_iterations = len(tasks) * 2
+    iteration = 0
+
+    while len(processed) < len(tasks) and iteration < max_iterations:
+        iteration += 1
+        for task in tasks:
+            outline = task["outline_number"]
+            if outline in processed or task.get("summary"):
+                continue
+
+            predecessors = task.get("predecessors", [])
+            all_preds_processed = all(
+                p.get("outline_number") in processed or p.get("outline_number") not in task_map
+                for p in predecessors
+            )
+
+            if not all_preds_processed and predecessors:
+                continue
+
+            start_date = project_start
+
+            for pred in predecessors:
+                pred_outline = pred.get("outline_number")
+                if pred_outline in task_map:
+                    pred_task = task_map[pred_outline]
+                    pred_finish_str = pred_task.get("finish_date", "")
+                    if pred_finish_str:
+                        try:
+                            pred_finish = datetime.fromisoformat(pred_finish_str.replace('Z', '+00:00').split('T')[0])
+                            lag_days = pred.get("lag", 0)
+                            if isinstance(lag_days, str):
+                                lag_days = 0
+                            pred_finish = pred_finish + timedelta(days=int(lag_days))
+                            if pred_finish > start_date:
+                                start_date = pred_finish
+                        except:
+                            pass
+
+            duration_days = parse_duration(task.get("duration", "PT8H0M0S"))
+            finish_date = start_date + timedelta(days=max(duration_days, 0))
+
+            task["start_date"] = start_date.strftime("%Y-%m-%dT08:00:00")
+            task["finish_date"] = finish_date.strftime("%Y-%m-%dT17:00:00")
+            processed.add(outline)
+
+    # Second pass: Calculate summary task dates
+    summary_tasks = [t for t in tasks if t.get("summary")]
+    summary_tasks.sort(key=lambda t: -t.get("outline_level", 0))
+
+    for summary in summary_tasks:
+        summary_outline = summary["outline_number"]
+        children = [t for t in tasks if t["outline_number"].startswith(summary_outline + ".")]
+
+        if not children:
+            continue
+
+        min_start = None
+        max_finish = None
+
+        for child in children:
+            if child.get("start_date"):
+                try:
+                    child_start = datetime.fromisoformat(child["start_date"].replace('Z', '+00:00').split('T')[0])
+                    if min_start is None or child_start < min_start:
+                        min_start = child_start
+                except:
+                    pass
+
+            if child.get("finish_date"):
+                try:
+                    child_finish = datetime.fromisoformat(child["finish_date"].replace('Z', '+00:00').split('T')[0])
+                    if max_finish is None or child_finish > max_finish:
+                        max_finish = child_finish
+                except:
+                    pass
+
+        if min_start:
+            summary["start_date"] = min_start.strftime("%Y-%m-%dT08:00:00")
+        if max_finish:
+            summary["finish_date"] = max_finish.strftime("%Y-%m-%dT17:00:00")
+        if min_start and max_finish:
+            duration_days = (max_finish - min_start).days
+            summary["duration"] = f"PT{duration_days * 8}H0M0S"
+
+    return project
+
+
 class AICommandHandler:
     """Parse and execute AI commands for project modification"""
     
@@ -73,6 +190,29 @@ class AICommandHandler:
                 r'remove\s+predecessors?\s+from\s+summary\s+tasks?',
                 r'summary\s+tasks?\s+should\s+not\s+have\s+predecessors?',
                 r'clear\s+summary\s+(?:task\s+)?predecessors?',
+            ],
+            # Fix dependencies (broken refs, circular, etc.)
+            'fix_dependencies': [
+                r'fix\s+(?:all\s+)?(?:the\s+)?dependenc(?:y|ies)',
+                r'fix\s+(?:all\s+)?(?:the\s+)?predecessors?',
+                r'fix\s+(?:broken|invalid)\s+(?:predecessor\s+)?(?:references?|links?)',
+                r'fix\s+circular\s+dependenc(?:y|ies)',
+                r'repair\s+(?:all\s+)?dependenc(?:y|ies)',
+                r'clean\s+up\s+(?:all\s+)?dependenc(?:y|ies)',
+                r'remove\s+(?:broken|invalid)\s+predecessors?',
+            ],
+            # Organize project - create summary tasks and dependencies
+            'organize_project': [
+                r'organi[sz]e\s+(?:the\s+)?project',  # organize/organise (US/UK)
+                r'create\s+(?:the\s+)?(?:project\s+)?structure',
+                r'create\s+summary\s+tasks?',
+                r'add\s+summary\s+tasks?',
+                r'group\s+(?:the\s+)?tasks?',
+                r'structure\s+(?:the\s+)?project',
+                r'setup?\s+(?:project\s+)?hierarchy',
+                r'create\s+(?:wbs|work\s+breakdown)',
+                r'organi[sz]e\s+(?:and\s+)?(?:fix\s+)?(?:the\s+)?tasks?',  # organize/organise
+                r'intelligently\s+(?:organi[sz]e|structure|group)',
             ],
             # Make task a milestone
             'make_milestone': [
@@ -217,6 +357,18 @@ class AICommandHandler:
                 "params": {}
             }
 
+        elif action == 'fix_dependencies':
+            return {
+                "action": "fix_dependencies",
+                "params": {}
+            }
+
+        elif action == 'organize_project':
+            return {
+                "action": "organize_project",
+                "params": {}
+            }
+
         elif action == 'make_milestone':
             return {
                 "action": "make_milestone",
@@ -280,6 +432,12 @@ class AICommandHandler:
 
         elif action == "fix_summary_predecessors":
             return self._fix_summary_predecessors(project)
+
+        elif action == "fix_dependencies":
+            return self._fix_all_dependencies(project)
+
+        elif action == "organize_project":
+            return self._organize_project(project)
 
         elif action == "make_milestone":
             return self._make_milestone(project, params["task_outline"])
@@ -609,16 +767,36 @@ class AICommandHandler:
         return 0.0
 
     def _fix_all_validation_issues(self, project: Dict[str, Any]) -> Dict[str, Any]:
-        """Fix all common validation issues in the project"""
+        """Fix all common validation issues in the project including dependencies"""
         changes = []
 
-        # Fix milestone durations
+        # 1. Fix broken predecessor references (references to non-existent tasks)
+        broken_result = self._fix_broken_predecessors(project)
+        changes.extend(broken_result.get("changes", []))
+
+        # 2. Fix circular dependencies
+        circular_result = self._fix_circular_dependencies(project)
+        changes.extend(circular_result.get("changes", []))
+
+        # 3. Fix milestone durations
         milestone_result = self._fix_milestone_durations(project)
         changes.extend(milestone_result.get("changes", []))
 
-        # Fix summary task predecessors
+        # 4. Fix summary task predecessors
         summary_result = self._fix_summary_predecessors(project)
         changes.extend(summary_result.get("changes", []))
+
+        # 5. Fix unreasonable lag values (>2 years)
+        lag_result = self._fix_unreasonable_lags(project)
+        changes.extend(lag_result.get("changes", []))
+
+        # 6. Recalculate all dates after fixes
+        if changes:
+            _recalculate_dates_standalone(project)
+            changes.append({
+                "type": "dates_recalculated",
+                "message": "All task dates recalculated after fixes"
+            })
 
         if not changes:
             return {
@@ -630,6 +808,224 @@ class AICommandHandler:
         return {
             "success": True,
             "message": f"Fixed {len(changes)} validation issue(s)",
+            "changes": changes
+        }
+
+    def _fix_broken_predecessors(self, project: Dict[str, Any]) -> Dict[str, Any]:
+        """Remove predecessor references to tasks that don't exist"""
+        tasks = project.get("tasks", [])
+        changes = []
+
+        # Build set of valid outline numbers
+        valid_outlines = {task.get("outline_number") for task in tasks}
+
+        for task in tasks:
+            predecessors = task.get("predecessors", [])
+            if not predecessors:
+                continue
+
+            # Find broken references
+            broken_refs = []
+            valid_preds = []
+
+            for pred in predecessors:
+                pred_outline = pred.get("outline_number")
+                if pred_outline not in valid_outlines:
+                    broken_refs.append(pred_outline)
+                else:
+                    valid_preds.append(pred)
+
+            if broken_refs:
+                task["predecessors"] = valid_preds
+                changes.append({
+                    "type": "broken_predecessor_fix",
+                    "task": task.get("outline_number"),
+                    "task_name": task.get("name"),
+                    "removed_references": broken_refs
+                })
+
+        if not changes:
+            return {
+                "success": True,
+                "message": "No broken predecessor references found",
+                "changes": []
+            }
+
+        return {
+            "success": True,
+            "message": f"Removed {len(changes)} broken predecessor reference(s)",
+            "changes": changes
+        }
+
+    def _fix_circular_dependencies(self, project: Dict[str, Any]) -> Dict[str, Any]:
+        """Detect and break circular dependencies by removing the last link in the cycle"""
+        tasks = project.get("tasks", [])
+        changes = []
+
+        # Build task lookup
+        task_by_outline = {t.get("outline_number"): t for t in tasks}
+
+        # Build dependency graph
+        def get_predecessors(outline):
+            task = task_by_outline.get(outline)
+            if not task:
+                return []
+            return [p.get("outline_number") for p in task.get("predecessors", [])]
+
+        # Find cycles using DFS
+        def find_cycle(start, current, path, visited):
+            if current in path:
+                # Found cycle - return the cycle path
+                cycle_start = path.index(current)
+                return path[cycle_start:] + [current]
+
+            if current in visited:
+                return None
+
+            visited.add(current)
+            path.append(current)
+
+            for pred in get_predecessors(current):
+                cycle = find_cycle(start, pred, path[:], visited)
+                if cycle:
+                    return cycle
+
+            return None
+
+        # Check each task for cycles
+        cycles_fixed = set()
+        for task in tasks:
+            outline = task.get("outline_number")
+            cycle = find_cycle(outline, outline, [], set())
+
+            if cycle and tuple(cycle) not in cycles_fixed:
+                cycles_fixed.add(tuple(cycle))
+
+                # Break the cycle by removing the last predecessor link
+                # This removes the link from cycle[-2] -> cycle[-1]
+                if len(cycle) >= 2:
+                    task_to_fix = task_by_outline.get(cycle[-2])
+                    pred_to_remove = cycle[-1]
+
+                    if task_to_fix:
+                        old_preds = task_to_fix.get("predecessors", [])
+                        new_preds = [p for p in old_preds if p.get("outline_number") != pred_to_remove]
+
+                        if len(new_preds) < len(old_preds):
+                            task_to_fix["predecessors"] = new_preds
+                            changes.append({
+                                "type": "circular_dependency_fix",
+                                "task": cycle[-2],
+                                "task_name": task_to_fix.get("name"),
+                                "removed_predecessor": pred_to_remove,
+                                "cycle": cycle
+                            })
+
+        if not changes:
+            return {
+                "success": True,
+                "message": "No circular dependencies found",
+                "changes": []
+            }
+
+        return {
+            "success": True,
+            "message": f"Fixed {len(changes)} circular dependency(ies)",
+            "changes": changes
+        }
+
+    def _fix_all_dependencies(self, project: Dict[str, Any]) -> Dict[str, Any]:
+        """Fix all dependency-related issues: broken refs, circular deps, and recalculate dates"""
+        changes = []
+
+        # 1. Fix broken predecessor references
+        broken_result = self._fix_broken_predecessors(project)
+        changes.extend(broken_result.get("changes", []))
+
+        # 2. Fix circular dependencies
+        circular_result = self._fix_circular_dependencies(project)
+        changes.extend(circular_result.get("changes", []))
+
+        # 3. Fix unreasonable lag values
+        lag_result = self._fix_unreasonable_lags(project)
+        changes.extend(lag_result.get("changes", []))
+
+        # 4. Fix summary task predecessors
+        summary_result = self._fix_summary_predecessors(project)
+        changes.extend(summary_result.get("changes", []))
+
+        # 5. Recalculate all dates
+        if changes:
+            _recalculate_dates_standalone(project)
+            changes.append({
+                "type": "dates_recalculated",
+                "message": "All task dates recalculated after dependency fixes"
+            })
+
+        if not changes:
+            return {
+                "success": True,
+                "message": "No dependency issues found to fix",
+                "changes": []
+            }
+
+        return {
+            "success": True,
+            "message": f"Fixed {len(changes)} dependency issue(s)",
+            "changes": changes
+        }
+
+    def _fix_unreasonable_lags(self, project: Dict[str, Any]) -> Dict[str, Any]:
+        """Fix lag values that are unreasonably large (>2 years = 730 days)"""
+        tasks = project.get("tasks", [])
+        changes = []
+
+        for task in tasks:
+            predecessors = task.get("predecessors", [])
+            modified = False
+
+            for pred in predecessors:
+                lag_value = pred.get("lag", 0)
+                lag_format = pred.get("lag_format", 7)
+
+                # Convert to days
+                if lag_format == 3:  # Minutes
+                    lag_days = lag_value / 480
+                elif lag_format in [5, 6]:  # Hours
+                    lag_days = lag_value / 8
+                elif lag_format in [7, 8]:  # Days
+                    lag_days = lag_value
+                elif lag_format in [9, 10]:  # Weeks
+                    lag_days = lag_value * 5
+                elif lag_format in [11, 12]:  # Months
+                    lag_days = lag_value * 20
+                else:
+                    lag_days = lag_value
+
+                if abs(lag_days) > 730:  # More than 2 years
+                    old_lag = lag_value
+                    pred["lag"] = 0
+                    pred["lag_format"] = 7
+                    modified = True
+                    changes.append({
+                        "type": "unreasonable_lag_fix",
+                        "task": task.get("outline_number"),
+                        "task_name": task.get("name"),
+                        "predecessor": pred.get("outline_number"),
+                        "old_lag_days": lag_days,
+                        "new_lag": 0
+                    })
+
+        if not changes:
+            return {
+                "success": True,
+                "message": "No unreasonable lag values found",
+                "changes": []
+            }
+
+        return {
+            "success": True,
+            "message": f"Fixed {len(changes)} unreasonable lag value(s)",
             "changes": changes
         }
 
@@ -789,6 +1185,680 @@ class AICommandHandler:
                 "task_name": task["name"],
                 "removed_predecessors": old_preds
             }]
+        }
+
+    def _organize_project(self, project: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Intelligently organize a flat task list into a hierarchical structure.
+
+        Strategy:
+        1. First detect building/unit markers (Building 1, Unit A, Phase 1, etc.)
+        2. If buildings found: group site-wide tasks, then each building, then closeout
+        3. If no buildings: fall back to phase-based grouping
+        """
+        import uuid
+        import re
+
+        tasks = project.get("tasks", [])
+        changes = []
+
+        if not tasks:
+            return {
+                "success": False,
+                "message": "No tasks to organize",
+                "changes": []
+            }
+
+        # Check if already organized (has summary tasks, excluding project-level task "0")
+        existing_summaries = [t for t in tasks if t.get("summary") and t.get("outline_number") != "0"]
+        print(f"[Organize] Total tasks: {len(tasks)}, Summary tasks (excl 0): {len(existing_summaries)}")
+        if existing_summaries:
+            summary_names = [f"{t.get('outline_number')}: {t.get('name')}" for t in existing_summaries[:5]]
+            print(f"[Organize] Existing summaries: {summary_names}")
+            return {
+                "success": False,
+                "message": f"Project already has {len(existing_summaries)} summary task(s): {summary_names}. Delete project and re-upload original XML.",
+                "changes": []
+            }
+
+        # Filter out project-level task (outline "0") and sort by outline number
+        work_tasks = [t for t in tasks if t.get("outline_number") != "0"]
+        # Sort by outline number to ensure correct order
+        def outline_sort_key(t):
+            outline = t.get("outline_number", "0")
+            try:
+                return int(outline.split('.')[0]), int(outline.split('.')[1]) if '.' in outline else 0
+            except:
+                return 9999, 0
+        work_tasks.sort(key=outline_sort_key)
+        print(f"[Organize] First 5 tasks: {[(t.get('outline_number'), t.get('name')[:20]) for t in work_tasks[:5]]}")
+        print(f"[Organize] Last 5 tasks: {[(t.get('outline_number'), t.get('name')[:20]) for t in work_tasks[-5:]]}")
+
+        # Find max existing UID to avoid conflicts when creating summary tasks
+        max_existing_uid = 0
+        for t in work_tasks:
+            try:
+                uid = int(t.get("uid", 0))
+                if uid > max_existing_uid:
+                    max_existing_uid = uid
+            except (ValueError, TypeError):
+                pass
+        print(f"[Organize] Max existing UID: {max_existing_uid}")
+
+        if not work_tasks:
+            return {
+                "success": False,
+                "message": "No work tasks to organize",
+                "changes": []
+            }
+
+        # Detect building markers
+        building_pattern = re.compile(
+            r'^(building|bldg|unit|structure|phase|area|block|tower|wing|section)\s*[#]?\s*(\d+|[a-z])\s*$',
+            re.IGNORECASE
+        )
+
+        building_indices = []
+        for idx, task in enumerate(work_tasks):
+            task_name = task.get("name", "").strip()
+            if building_pattern.match(task_name):
+                building_indices.append((idx, task_name))
+
+        # If we found building markers, use building-based organization
+        if len(building_indices) >= 2:
+            return self._organize_by_buildings(project, work_tasks, building_indices, changes, max_existing_uid)
+        else:
+            return self._organize_by_phases(project, work_tasks, changes, max_existing_uid)
+
+    def _organize_by_buildings(self, project: Dict[str, Any], work_tasks: list,
+                                building_indices: list, changes: list, max_existing_uid: int = 1000) -> Dict[str, Any]:
+        """Organize project that has building/unit markers."""
+        import uuid
+
+        new_tasks = []
+        phase_number = 0
+
+        # Site-wide keywords (tasks before first building)
+        site_wide_keywords = [
+            'pre construction', 'preconstruction', 'project award', 'notice', 'permit',
+            'mobilization', 'site', 'survey', 'erosion', 'demolition', 'grading',
+            'sewer', 'storm', 'water', 'underground', 'road', 'curb', 'asphalt',
+            'retaining', 'final grade', 'utility', 'utilities'
+        ]
+
+        # Closeout section headers (NOT individual tasks like "Punch" which appear in buildings)
+        closeout_section_headers = [
+            'closeout', 'close-out', 'project closeout', 'final closeout',
+            'substantial completion', 'certificate of occupancy', 'co issued', 'c of o'
+        ]
+
+        first_building_idx = building_indices[0][0]
+        last_building_idx = building_indices[-1][0]
+
+        # Section headers that indicate post-building work (not closeout)
+        post_building_sections = [
+            'exterior improvements', 'site improvements', 'site finishing',
+            'external works', 'sitework completion', 'site completion',
+            'hardscape', 'landscape', 'paving', 'parking'
+        ]
+
+        # Find where the last building's tasks end and detect post-building sections
+        last_building_end = len(work_tasks)
+        post_building_section_idx = None
+        post_building_section_name = None
+
+        print(f"[Organize] Looking for post-building sections after index {last_building_idx}")
+        print(f"[Organize] Tasks after last building marker:")
+        for idx in range(last_building_idx + 1, min(last_building_idx + 15, len(work_tasks))):
+            tn = work_tasks[idx].get("name", "")
+            on = work_tasks[idx].get("outline_number", "")
+            print(f"[Organize]   idx {idx}: outline {on} = '{tn}'")
+
+        for idx in range(last_building_idx + 1, len(work_tasks)):
+            task_name = work_tasks[idx].get("name", "").lower().strip()
+            # Check for post-building section headers
+            if any(section in task_name for section in post_building_sections):
+                print(f"[Organize] Found post-building section at idx {idx}: '{task_name}'")
+                last_building_end = idx
+                post_building_section_idx = idx
+                post_building_section_name = work_tasks[idx].get("name", "").strip()
+                break
+            # Check for closeout section headers
+            if any(kw in task_name for kw in closeout_section_headers):
+                print(f"[Organize] Found closeout at idx {idx}: '{task_name}'")
+                last_building_end = idx
+                break
+
+        print(f"[Organize] post_building_section_idx: {post_building_section_idx}, last_building_end: {last_building_end}")
+
+        # === 1. Site-Wide / Preconstruction Tasks ===
+        site_tasks = []
+        for idx in range(first_building_idx):
+            task = work_tasks[idx]
+            task_name = task.get("name", "").lower()
+            # Skip building marker tasks
+            if not any(kw in task_name for kw in ['building', 'bldg', 'unit']):
+                site_tasks.append(task)
+
+        if site_tasks:
+            phase_number += 1
+            summary_task = self._create_summary_task(phase_number, "Site Work & Preconstruction", max_existing_uid)
+            new_tasks.append(summary_task)
+            changes.append({
+                "type": "summary_created",
+                "task": str(phase_number),
+                "task_name": "Site Work & Preconstruction",
+                "child_count": len(site_tasks)
+            })
+
+            prev_outline = None
+            for child_idx, task in enumerate(site_tasks, 1):
+                child_outline = f"{phase_number}.{child_idx}"
+                old_outline = task.get("outline_number")
+
+                task["outline_number"] = child_outline
+                task["outline_level"] = 2
+                task["summary"] = False
+
+                if prev_outline:
+                    task["predecessors"] = [{
+                        "outline_number": prev_outline,
+                        "type": 1,
+                        "lag": 0,
+                        "lag_format": 7
+                    }]
+                else:
+                    task["predecessors"] = []
+
+                new_tasks.append(task)
+                prev_outline = child_outline
+
+                if old_outline != child_outline:
+                    changes.append({
+                        "type": "task_renumbered",
+                        "old_outline": old_outline,
+                        "new_outline": child_outline,
+                        "task_name": task.get("name")
+                    })
+
+        # Track last task of site work for building dependencies
+        last_site_task = new_tasks[-1]["outline_number"] if new_tasks and not new_tasks[-1].get("summary") else None
+        if new_tasks:
+            # Find the last non-summary task in site work
+            for t in reversed(new_tasks):
+                if not t.get("summary"):
+                    last_site_task = t["outline_number"]
+                    break
+
+        # Track last tasks of all buildings for closeout dependency
+        all_building_last_tasks = []
+
+        # Track first task of previous building for staggered starts
+        prev_building_first_task = None
+
+        # Stagger lag between building starts (in days) - creates rolling schedule
+        BUILDING_STAGGER_LAG = 15  # Each building starts ~15 days after previous
+
+        # === 2. Building-Specific Tasks (STAGGERED starts for realistic scheduling) ===
+        for bldg_idx, (start_idx, building_name) in enumerate(building_indices):
+            # Determine where this building's tasks end
+            if bldg_idx + 1 < len(building_indices):
+                end_idx = building_indices[bldg_idx + 1][0]
+            else:
+                end_idx = last_building_end
+
+            # Get tasks for this building (excluding the building marker itself)
+            building_tasks = work_tasks[start_idx + 1:end_idx]
+
+            if not building_tasks:
+                continue
+
+            phase_number += 1
+            summary_task = self._create_summary_task(phase_number, building_name, max_existing_uid)
+            new_tasks.append(summary_task)
+            changes.append({
+                "type": "summary_created",
+                "task": str(phase_number),
+                "task_name": building_name,
+                "child_count": len(building_tasks)
+            })
+
+            prev_outline = None
+            first_task_in_building = True
+            current_building_first_task = None
+
+            for child_idx, task in enumerate(building_tasks, 1):
+                child_outline = f"{phase_number}.{child_idx}"
+                old_outline = task.get("outline_number")
+
+                task["outline_number"] = child_outline
+                task["outline_level"] = 2
+                task["summary"] = False
+
+                if prev_outline:
+                    # Sequential within building
+                    task["predecessors"] = [{
+                        "outline_number": prev_outline,
+                        "type": 1,
+                        "lag": 0,
+                        "lag_format": 7
+                    }]
+                elif first_task_in_building:
+                    # First task of this building
+                    current_building_first_task = child_outline
+
+                    if bldg_idx == 0 and last_site_task:
+                        # First building starts after site work
+                        task["predecessors"] = [{
+                            "outline_number": last_site_task,
+                            "type": 1,
+                            "lag": 0,
+                            "lag_format": 7
+                        }]
+                        changes.append({
+                            "type": "phase_dependency_created",
+                            "from_task": last_site_task,
+                            "to_task": child_outline
+                        })
+                    elif prev_building_first_task:
+                        # Subsequent buildings start with lag after previous building starts
+                        # This creates staggered/rolling schedule
+                        task["predecessors"] = [{
+                            "outline_number": prev_building_first_task,
+                            "type": 1,  # Finish-to-Start
+                            "lag": BUILDING_STAGGER_LAG,  # Days lag
+                            "lag_format": 7
+                        }]
+                        changes.append({
+                            "type": "phase_dependency_created",
+                            "from_task": prev_building_first_task,
+                            "to_task": child_outline,
+                            "lag": BUILDING_STAGGER_LAG
+                        })
+                    else:
+                        task["predecessors"] = []
+                else:
+                    task["predecessors"] = []
+
+                new_tasks.append(task)
+                prev_outline = child_outline
+                first_task_in_building = False
+
+                if old_outline != child_outline:
+                    changes.append({
+                        "type": "task_renumbered",
+                        "old_outline": old_outline,
+                        "new_outline": child_outline,
+                        "task_name": task.get("name")
+                    })
+
+            # Track this building's last task and first task
+            if prev_outline:
+                all_building_last_tasks.append(prev_outline)
+            if current_building_first_task:
+                prev_building_first_task = current_building_first_task
+
+        # === 3. Post-Building Site Work (Exterior Improvements, etc.) ===
+        if post_building_section_idx is not None:
+            # Find where this section ends (at closeout or end of tasks)
+            section_end = len(work_tasks)
+            for idx in range(post_building_section_idx + 1, len(work_tasks)):
+                task_name = work_tasks[idx].get("name", "").lower()
+                if any(kw in task_name for kw in closeout_section_headers):
+                    section_end = idx
+                    break
+
+            # Get tasks for this section (excluding the section header itself)
+            post_building_tasks = work_tasks[post_building_section_idx + 1:section_end]
+
+            if post_building_tasks:
+                phase_number += 1
+                summary_task = self._create_summary_task(phase_number, post_building_section_name or "Exterior Improvements", max_existing_uid)
+                new_tasks.append(summary_task)
+                changes.append({
+                    "type": "summary_created",
+                    "task": str(phase_number),
+                    "task_name": post_building_section_name or "Exterior Improvements",
+                    "child_count": len(post_building_tasks)
+                })
+
+                prev_outline = None
+                first_task = True
+
+                for child_idx, task in enumerate(post_building_tasks, 1):
+                    child_outline = f"{phase_number}.{child_idx}"
+                    old_outline = task.get("outline_number")
+
+                    task["outline_number"] = child_outline
+                    task["outline_level"] = 2
+                    task["summary"] = False
+
+                    if prev_outline:
+                        task["predecessors"] = [{
+                            "outline_number": prev_outline,
+                            "type": 1,
+                            "lag": 0,
+                            "lag_format": 7
+                        }]
+                    elif first_task and all_building_last_tasks:
+                        # First task depends on ALL buildings' last tasks
+                        task["predecessors"] = [{
+                            "outline_number": last_task,
+                            "type": 1,
+                            "lag": 0,
+                            "lag_format": 7
+                        } for last_task in all_building_last_tasks]
+                        for last_task in all_building_last_tasks:
+                            changes.append({
+                                "type": "phase_dependency_created",
+                                "from_task": last_task,
+                                "to_task": child_outline
+                            })
+                    else:
+                        task["predecessors"] = []
+
+                    new_tasks.append(task)
+                    prev_outline = child_outline
+                    first_task = False
+
+                    if old_outline != child_outline:
+                        changes.append({
+                            "type": "task_renumbered",
+                            "old_outline": old_outline,
+                            "new_outline": child_outline,
+                            "task_name": task.get("name")
+                        })
+
+                # Update last tasks for closeout dependency
+                all_building_last_tasks = [prev_outline] if prev_outline else all_building_last_tasks
+
+            # Update where closeout starts
+            last_building_end = section_end
+
+        # === 4. Closeout Tasks (depends on ALL previous sections) ===
+        closeout_tasks = []
+        for idx in range(last_building_end, len(work_tasks)):
+            task = work_tasks[idx]
+            closeout_tasks.append(task)
+
+        if closeout_tasks:
+            phase_number += 1
+            summary_task = self._create_summary_task(phase_number, "Closeout", max_existing_uid)
+            new_tasks.append(summary_task)
+            changes.append({
+                "type": "summary_created",
+                "task": str(phase_number),
+                "task_name": "Closeout",
+                "child_count": len(closeout_tasks)
+            })
+
+            prev_outline = None
+            first_task = True
+
+            for child_idx, task in enumerate(closeout_tasks, 1):
+                child_outline = f"{phase_number}.{child_idx}"
+                old_outline = task.get("outline_number")
+
+                task["outline_number"] = child_outline
+                task["outline_level"] = 2
+                task["summary"] = False
+
+                if prev_outline:
+                    task["predecessors"] = [{
+                        "outline_number": prev_outline,
+                        "type": 1,
+                        "lag": 0,
+                        "lag_format": 7
+                    }]
+                elif first_task and all_building_last_tasks:
+                    # First closeout task depends on ALL buildings' last tasks
+                    task["predecessors"] = [{
+                        "outline_number": last_task,
+                        "type": 1,
+                        "lag": 0,
+                        "lag_format": 7
+                    } for last_task in all_building_last_tasks]
+                    for last_task in all_building_last_tasks:
+                        changes.append({
+                            "type": "phase_dependency_created",
+                            "from_task": last_task,
+                            "to_task": child_outline
+                        })
+                else:
+                    task["predecessors"] = []
+
+                new_tasks.append(task)
+                prev_outline = child_outline
+                first_task = False
+
+                if old_outline != child_outline:
+                    changes.append({
+                        "type": "task_renumbered",
+                        "old_outline": old_outline,
+                        "new_outline": child_outline,
+                        "task_name": task.get("name")
+                    })
+
+        # === SAFEGUARD: Check for any unassigned tasks and add them ===
+        assigned_task_ids = {t.get("id") for t in new_tasks if not t.get("summary")}
+        unassigned_tasks = [t for t in work_tasks if t.get("id") not in assigned_task_ids]
+
+        if unassigned_tasks:
+            print(f"[Organize] WARNING: Found {len(unassigned_tasks)} unassigned tasks, adding to Miscellaneous section")
+            for ut in unassigned_tasks[:5]:
+                print(f"[Organize]   - {ut.get('name', 'Unknown')}")
+
+            phase_number += 1
+            summary_task = self._create_summary_task(phase_number, "Miscellaneous", max_existing_uid)
+            new_tasks.append(summary_task)
+            changes.append({
+                "type": "summary_created",
+                "task": str(phase_number),
+                "task_name": "Miscellaneous",
+                "child_count": len(unassigned_tasks)
+            })
+
+            prev_outline = None
+            for child_idx, task in enumerate(unassigned_tasks, 1):
+                child_outline = f"{phase_number}.{child_idx}"
+                old_outline = task.get("outline_number")
+
+                task["outline_number"] = child_outline
+                task["outline_level"] = 2
+                task["summary"] = False
+
+                if prev_outline:
+                    task["predecessors"] = [{
+                        "outline_number": prev_outline,
+                        "type": 1,
+                        "lag": 0,
+                        "lag_format": 7
+                    }]
+                else:
+                    task["predecessors"] = []
+
+                new_tasks.append(task)
+                prev_outline = child_outline
+
+                if old_outline != child_outline:
+                    changes.append({
+                        "type": "task_renumbered",
+                        "old_outline": old_outline,
+                        "new_outline": child_outline,
+                        "task_name": task.get("name")
+                    })
+
+        # Update project
+        project["tasks"] = new_tasks
+
+        # Recalculate dates
+        _recalculate_dates_standalone(project)
+        changes.append({
+            "type": "dates_recalculated",
+            "message": "All task dates recalculated"
+        })
+
+        summary_count = len([t for t in new_tasks if t.get("summary")])
+        building_count = len(building_indices)
+        task_count = len([t for t in new_tasks if not t.get("summary")])
+
+        # Verify all tasks were organized
+        original_task_count = len(work_tasks)
+        if task_count != original_task_count:
+            print(f"[Organize] WARNING: Task count mismatch! Original: {original_task_count}, Organized: {task_count}")
+
+        return {
+            "success": True,
+            "message": f"Organized project with {building_count} buildings: Created {summary_count} sections with {task_count} tasks.",
+            "changes": changes
+        }
+
+    def _organize_by_phases(self, project: Dict[str, Any], work_tasks: list,
+                            changes: list, max_existing_uid: int = 1000) -> Dict[str, Any]:
+        """Organize project by construction phases (no building markers found)."""
+        import uuid
+
+        # Construction phase keywords for intelligent grouping
+        phase_keywords = {
+            'preconstruction': ['preconstruction', 'pre-construction', 'pre construction', 'planning', 'design', 'permit', 'approval', 'contract', 'mobilization', 'notice to proceed', 'ntp', 'award'],
+            'sitework': ['site', 'excavat', 'grading', 'clearing', 'demolition', 'earthwork', 'survey', 'erosion', 'sewer', 'storm', 'water', 'underground', 'utilities'],
+            'foundation': ['foundation', 'footing', 'footer', 'slab', 'concrete', 'rebar', 'formwork', 'pour', 'dig'],
+            'structure': ['structural', 'steel', 'framing', 'frame', 'erect', 'column', 'beam', 'joist', 'truss', 'deck'],
+            'exterior': ['exterior', 'roofing', 'roof', 'siding', 'facade', 'window', 'door', 'waterproof', 'envelope', 'cladding', 'masonry', 'brick'],
+            'rough_ins': ['rough', 'mep', 'm/e/p', 'mechanical', 'electrical', 'plumbing', 'hvac', 'duct', 'conduit', 'pipe', 'wire'],
+            'interior': ['interior', 'drywall', 'insulation', 'partition', 'ceiling', 'floor', 'tile', 'paint', 'finish', 'cabinet', 'millwork', 'trim', 'vanit', 'counter'],
+            'fixtures': ['fixture', 'equipment', 'appliance', 'install', 'hook-up', 'connection', 'trim out'],
+            'closeout': ['closeout', 'close-out', 'punch', 'final inspection', 'commissioning', 'turnover', 'substantial completion', 'certificate']
+        }
+
+        phase_order = ['preconstruction', 'sitework', 'foundation', 'structure', 'exterior', 'rough_ins', 'interior', 'fixtures', 'closeout']
+
+        def detect_phase(task_name: str) -> str:
+            name_lower = task_name.lower()
+            for phase, keywords in phase_keywords.items():
+                if any(kw in name_lower for kw in keywords):
+                    return phase
+            return 'general'
+
+        # Group tasks by phase
+        phase_tasks = {phase: [] for phase in phase_order}
+        phase_tasks['general'] = []
+
+        for task in work_tasks:
+            phase = detect_phase(task.get("name", ""))
+            phase_tasks[phase].append(task)
+
+        # Build new task list
+        new_tasks = []
+        phase_number = 0
+        last_phase_task = None
+
+        for phase in phase_order + ['general']:
+            phase_task_list = phase_tasks.get(phase, [])
+            if not phase_task_list:
+                continue
+
+            phase_number += 1
+
+            phase_display_name = phase.replace('_', ' ').title()
+            if phase == 'rough_ins':
+                phase_display_name = 'Rough-Ins (MEP)'
+
+            summary_task = self._create_summary_task(phase_number, phase_display_name, max_existing_uid)
+            new_tasks.append(summary_task)
+            changes.append({
+                "type": "summary_created",
+                "task": str(phase_number),
+                "task_name": phase_display_name,
+                "child_count": len(phase_task_list)
+            })
+
+            prev_outline = None
+            first_task = True
+
+            for child_idx, task in enumerate(phase_task_list, 1):
+                child_outline = f"{phase_number}.{child_idx}"
+                old_outline = task.get("outline_number")
+
+                task["outline_number"] = child_outline
+                task["outline_level"] = 2
+                task["summary"] = False
+
+                if prev_outline:
+                    task["predecessors"] = [{
+                        "outline_number": prev_outline,
+                        "type": 1,
+                        "lag": 0,
+                        "lag_format": 7
+                    }]
+                elif first_task and last_phase_task:
+                    task["predecessors"] = [{
+                        "outline_number": last_phase_task,
+                        "type": 1,
+                        "lag": 0,
+                        "lag_format": 7
+                    }]
+                    changes.append({
+                        "type": "phase_dependency_created",
+                        "from_task": last_phase_task,
+                        "to_task": child_outline
+                    })
+                else:
+                    task["predecessors"] = []
+
+                new_tasks.append(task)
+                prev_outline = child_outline
+                first_task = False
+
+                if old_outline != child_outline:
+                    changes.append({
+                        "type": "task_renumbered",
+                        "old_outline": old_outline,
+                        "new_outline": child_outline,
+                        "task_name": task.get("name")
+                    })
+
+            last_phase_task = prev_outline
+
+        # Update project
+        project["tasks"] = new_tasks
+
+        # Recalculate dates
+        _recalculate_dates_standalone(project)
+        changes.append({
+            "type": "dates_recalculated",
+            "message": "All task dates recalculated"
+        })
+
+        summary_count = len([t for t in new_tasks if t.get("summary")])
+        task_count = len([t for t in new_tasks if not t.get("summary")])
+
+        return {
+            "success": True,
+            "message": f"Organized project: Created {summary_count} phases with {task_count} tasks.",
+            "changes": changes
+        }
+
+    def _create_summary_task(self, phase_number: int, name: str, max_existing_uid: int = 1000) -> Dict[str, Any]:
+        """Create a summary task for a phase or building.
+
+        Uses UIDs starting from max_existing_uid + phase_number to avoid conflicts.
+        """
+        import uuid
+        # Use high UID to avoid conflicts with existing tasks
+        new_uid = max_existing_uid + phase_number
+        return {
+            "id": str(uuid.uuid4()),
+            "uid": str(new_uid),
+            "name": name,
+            "outline_number": str(phase_number),
+            "outline_level": 1,
+            "summary": True,
+            "milestone": False,
+            "duration": "PT0H0M0S",
+            "predecessors": [],
+            "percent_complete": 0,
+            "constraint_type": 0,
         }
 
 

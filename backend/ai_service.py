@@ -342,9 +342,9 @@ Provide your estimate:"""
                             if pred_id and pred_id in task_map:
                                 pred_task = task_map[pred_id]
 
-                                # Get lag in days (MS Project stores in minutes, format 7=days)
-                                lag_minutes = pred.get("lag", 0)
-                                lag_days = lag_minutes / 480.0  # 480 minutes = 1 day (8 hours)
+                                # Get lag in days (already converted from XML tenth-minutes to days during import)
+                                # lag is stored internally as days with lag_format=7
+                                lag_days = pred.get("lag", 0)
 
                                 # Dependency type (MS Project standard):
                                 # 0 = FF (Finish-to-Finish)
@@ -447,7 +447,7 @@ Provide your estimate:"""
                         for succ_info in successors:
                             succ_task = succ_info["task"]
                             dep_type = succ_info["type"]
-                            lag_days = succ_info["lag"] / 480.0
+                            lag_days = succ_info["lag"]  # Already in days
 
                             if dep_type == 1:  # FS (Finish-to-Start)
                                 start_time = succ_task["late_start"] - lag_days
@@ -510,11 +510,24 @@ Provide your estimate:"""
         critical_tasks = []
         task_floats = {}
 
+        print(f"\n=== CRITICAL PATH DEBUG ===")
+        print(f"Project end (max early_finish): {project_end}")
+        print(f"Total tasks: {len(tasks)}")
+
         for task in tasks:
             # Total Float = Late Start - Early Start (or Late Finish - Early Finish)
             total_float = task["late_start"] - task["early_start"]
             task["total_float"] = total_float
             task_floats[task["id"]] = total_float
+
+            duration_days = self._parse_duration_to_days(task.get("duration", ""))
+            print(f"Task {task['outline_number']}: {task['name'][:30]:30} | Duration: {duration_days:5.1f}d | ES: {task['early_start']:6.1f} | EF: {task['early_finish']:6.1f} | LS: {task['late_start']:6.1f} | LF: {task['late_finish']:6.1f} | Float: {total_float:6.1f} | Summary: {task.get('summary', False)}")
+
+            # Skip summary tasks - they derive their criticality from children
+            # Only work tasks (non-summary) can be on the critical path
+            if task.get("summary", False):
+                task["is_critical"] = False
+                continue
 
             # Critical if float is approximately zero (within 0.01 days tolerance)
             # Note: MUST constraints (types 2, 3) are always critical
@@ -522,6 +535,9 @@ Provide your estimate:"""
             if abs(total_float) < 0.01 or constraint_type in [2, 3]:
                 task["is_critical"] = True
                 critical_tasks.append(task)
+                print(f"  ^ CRITICAL (float={total_float:.2f})")
+
+        print(f"=== Found {len(critical_tasks)} critical tasks ===\n")
 
         return {
             "critical_tasks": critical_tasks,
@@ -613,16 +629,14 @@ Provide your estimate:"""
         # Only look at critical path tasks
         for task in critical_tasks:
             for pred in task.get("predecessors", []):
-                lag_minutes = pred.get("lag", 0)
+                # Lag is stored in days (converted from tenth-minutes during XML import)
+                lag_days = pred.get("lag", 0)
 
-                if lag_minutes > 0:
-                    lag_days = lag_minutes / 480.0  # MS Project: 480 min = 1 day
-
+                if lag_days > 0:
                     # Suggest reducing lag by 40% (conservative approach)
                     reduction_percent = 0.4
                     suggested_reduction = lag_days * reduction_percent
                     new_lag_days = lag_days - suggested_reduction
-                    new_lag_minutes = int(new_lag_days * 480)
 
                     changes.append({
                         "task_id": task["id"],
@@ -637,7 +651,7 @@ Provide your estimate:"""
                         "description": f"Reduce lag from {lag_days:.1f} to {new_lag_days:.1f} days",
                         "predecessor_outline": pred["outline_number"],
                         "lag_format": pred.get("lag_format", 7),
-                        "new_lag_minutes": new_lag_minutes
+                        "new_lag_days": new_lag_days
                     })
 
                     total_savings += suggested_reduction
@@ -996,16 +1010,14 @@ Respond ONLY with JSON: {"category": "<type>", "confidence": <0-100>}"""
             for task in tasks:
                 if task.get("predecessors"):
                     for pred in task.get("predecessors", []):
-                        lag_value = pred.get("lag", 0)
-                        if lag_value != 0:
-                            # Convert lag from minutes to days (48000 minutes = 100 days)
-                            lag_days = lag_value / 480.0  # 480 minutes = 1 day (8 hours)
+                        # Lag is stored in days (converted from tenth-minutes during XML import)
+                        lag_days = pred.get("lag", 0)
+                        if lag_days != 0:
                             tasks_with_lags.append({
                                 "task": task.get("name"),
                                 "outline": task.get("outline_number"),
                                 "predecessor": pred.get("outline_number"),
-                                "lag_days": lag_days,
-                                "lag_minutes": lag_value
+                                "lag_days": lag_days
                             })
 
             context_summary = f"""

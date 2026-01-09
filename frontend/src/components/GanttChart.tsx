@@ -186,6 +186,10 @@ const ZOOM_CONFIG = {
 // Timeline offset in days (adds empty space before the first task)
 const TIMELINE_OFFSET_DAYS = 14; // 2 weeks offset
 
+// Virtualization constants
+const ROW_HEIGHT = 44; // Height of each task row in pixels
+const OVERSCAN_COUNT = 5; // Number of extra rows to render above/below visible area
+
 export const GanttChart: React.FC<GanttChartProps> = ({
   tasks,
   projectStartDate,
@@ -247,6 +251,43 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     }
   }, [contextMenu, closeContextMenu]);
 
+  // Refresh critical path when tasks change (e.g., after organize command)
+  // This ensures the critical path highlighting stays accurate after project restructuring
+  React.useEffect(() => {
+    if (showCriticalPath && tasks.length > 0) {
+      // Check if any of the critical task IDs are still valid
+      const hasValidCriticalTasks = Array.from(criticalTaskIds).some(id =>
+        tasks.some(t => t.id === id)
+      );
+
+      // If no critical tasks match current tasks, recalculate
+      if (!hasValidCriticalTasks && criticalTaskIds.size > 0) {
+        console.log('Critical path IDs no longer match tasks, refreshing...');
+        setIsLoadingCriticalPath(true);
+        getCriticalPath()
+          .then(result => {
+            setCriticalPathData(result);
+            const criticalIds = new Set(result.critical_task_ids || []);
+            setCriticalTaskIds(criticalIds);
+            sessionStorage.setItem('criticalPathData', JSON.stringify({
+              ...result,
+              projectStartDate: projectStartDate
+            }));
+          })
+          .catch(error => {
+            console.error('Failed to refresh critical path:', error);
+            // Clear critical path on error
+            setShowCriticalPath(false);
+            setCriticalTaskIds(new Set());
+            setCriticalPathData(null);
+          })
+          .finally(() => {
+            setIsLoadingCriticalPath(false);
+          });
+      }
+    }
+  }, [tasks, showCriticalPath, criticalTaskIds, projectStartDate]);
+
   // Refs for synchronized scrolling
   const taskListRef = useRef<HTMLDivElement>(null);
   const timelineBodyRef = useRef<HTMLDivElement>(null);
@@ -254,6 +295,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     taskList: false,
     timeline: false
   });
+
+  // Virtualization state
+  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({ start: 0, end: 50 });
+  const containerHeightRef = useRef<number>(600); // Default container height
 
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -547,6 +592,20 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
     return visible;
   }, [sortedTasks, expandedTasks, summaryFilter]);
+
+  // Virtualized tasks - only render tasks in visible range
+  const virtualizedTasks = useMemo(() => {
+    return visibleTasks.slice(visibleRange.start, visibleRange.end);
+  }, [visibleTasks, visibleRange]);
+
+  // Initialize visible range when component mounts or tasks change
+  React.useEffect(() => {
+    if (taskListRef.current) {
+      containerHeightRef.current = taskListRef.current.clientHeight || 600;
+      const visibleCount = Math.ceil(containerHeightRef.current / ROW_HEIGHT);
+      setVisibleRange({ start: 0, end: Math.min(visibleTasks.length, visibleCount + OVERSCAN_COUNT * 2) });
+    }
+  }, [visibleTasks.length]);
 
   // Format predecessors for display (MS Project style)
   const formatPredecessors = useCallback((predecessors: Task['predecessors']): string => {
@@ -923,37 +982,69 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     timelineBodyRef.current.scrollLeft = Math.max(0, scrollPosition - 200);
   }, [projectStartDate, zoomLevel]);
 
+  // Calculate visible range for virtualization
+  const calculateVisibleRange = useCallback((scrollTop: number, containerHeight: number, totalItems: number) => {
+    const start = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN_COUNT);
+    const visibleCount = Math.ceil(containerHeight / ROW_HEIGHT);
+    const end = Math.min(totalItems, start + visibleCount + OVERSCAN_COUNT * 2);
+    return { start, end };
+  }, []);
+
+  // Update visible range on scroll
+  const updateVisibleRange = useCallback((scrollTop: number) => {
+    if (taskListRef.current) {
+      containerHeightRef.current = taskListRef.current.clientHeight;
+    }
+    const newRange = calculateVisibleRange(scrollTop, containerHeightRef.current, visibleTasks.length);
+    setVisibleRange(prev => {
+      if (prev.start !== newRange.start || prev.end !== newRange.end) {
+        return newRange;
+      }
+      return prev;
+    });
+  }, [calculateVisibleRange, visibleTasks.length]);
+
   // Synchronized scrolling between task list and timeline
   const handleTaskListScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const scrollTop = e.currentTarget.scrollTop;
+
+    // Update virtualization
+    updateVisibleRange(scrollTop);
+
     if (!timelineBodyRef.current || skipSyncRef.current.taskList) {
       skipSyncRef.current.taskList = false;
       return;
     }
-    
+
     skipSyncRef.current.timeline = true;
-    timelineBodyRef.current.scrollTop = e.currentTarget.scrollTop;
-    
+    timelineBodyRef.current.scrollTop = scrollTop;
+
     // Reset the flag after a small delay to ensure the sync operation completes
     setTimeout(() => {
       skipSyncRef.current.timeline = false;
     }, 0);
-  }, []);
+  }, [updateVisibleRange]);
 
   const handleTimelineScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const scrollTop = e.currentTarget.scrollTop;
+
+    // Update virtualization
+    updateVisibleRange(scrollTop);
+
     if (!taskListRef.current || skipSyncRef.current.timeline) {
       skipSyncRef.current.timeline = false;
       return;
     }
-    
+
     // Only sync vertical scrolling, leave horizontal scrolling independent
     skipSyncRef.current.taskList = true;
-    taskListRef.current.scrollTop = e.currentTarget.scrollTop;
-    
+    taskListRef.current.scrollTop = scrollTop;
+
     // Reset the flag after a small delay to ensure the sync operation completes
     setTimeout(() => {
       skipSyncRef.current.taskList = false;
     }, 0);
-  }, []);
+  }, [updateVisibleRange]);
 
   // Removed zoom controls - using fixed month width instead
 
@@ -1145,11 +1236,14 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               <div className="gantt-header-cell" title="Predecessor Tasks">Predecessors</div>
             </div>
             <div className="gantt-tasks" ref={taskListRef} onScroll={handleTaskListScroll}>
-              <SortableContext items={visibleTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                {visibleTasks.map((task, index) => {
+              {/* Virtualization spacer - top */}
+              <div style={{ height: visibleRange.start * ROW_HEIGHT, flexShrink: 0 }} />
+              <SortableContext items={virtualizedTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                {virtualizedTasks.map((task, virtualIndex) => {
+                  const actualIndex = visibleRange.start + virtualIndex;
                   const taskPos = taskPositions.find(p => p.task.id === task.id);
                   const calculatedStartDate = taskPos?.startDate || null;
-                  const rowNumber = taskRowNumbers.get(task.outline_number) || index + 1;
+                  const rowNumber = taskRowNumbers.get(task.outline_number) || actualIndex + 1;
                   const isCritical = showCriticalPath && criticalTaskIds.has(task.id);
 
                   return (
@@ -1177,6 +1271,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   );
                 })}
               </SortableContext>
+              {/* Virtualization spacer - bottom */}
+              <div style={{ height: Math.max(0, (visibleTasks.length - visibleRange.end) * ROW_HEIGHT), flexShrink: 0 }} />
             </div>
           </div>
 
@@ -1425,8 +1521,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               })}
             </svg>
 
-            {/* Task bars */}
-            {taskPositions.map(({ task, startDay, duration, startDate }) => {
+            {/* Virtualized task bars - only render visible rows */}
+            {/* Top spacer */}
+            <div style={{ height: visibleRange.start * ROW_HEIGHT, flexShrink: 0 }} />
+            {taskPositions.slice(visibleRange.start, visibleRange.end).map(({ task, startDay, duration, startDate }) => {
               const leftPx = (startDay / maxDay) * timelineConfig.width;
               const widthPx = task.milestone ? 20 : (duration / maxDay) * timelineConfig.width;
 
@@ -1521,6 +1619,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 </div>
               );
             })}
+            {/* Bottom spacer */}
+            <div style={{ height: Math.max(0, (taskPositions.length - visibleRange.end) * ROW_HEIGHT), flexShrink: 0 }} />
             </div>
           </div>
         </div>
