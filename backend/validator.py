@@ -85,7 +85,8 @@ class ProjectValidator:
             })
 
         # Check if this is a summary task (has children)
-        is_summary = self._is_summary_task(task, all_tasks)
+        # Only check for existing tasks (with id) - new tasks can't be summaries yet
+        is_summary = self._is_summary_task(task, all_tasks) if task.get("id") else False
 
         # Validate duration format
         duration = task.get("duration")
@@ -108,7 +109,7 @@ class ProjectValidator:
                     "message": "Milestone tasks should have zero duration"
                 })
 
-        # Summary tasks should not have predecessors
+        # Summary tasks should not have predecessors (only for existing tasks)
         if is_summary and task.get("predecessors") and len(task["predecessors"]) > 0:
             errors.append({
                 "field": "predecessors",

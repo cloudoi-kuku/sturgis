@@ -126,6 +126,7 @@ function AppContent() {
       queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
       setIsEditorOpen(false);
       setSelectedTask(undefined);
+      setQuickAddContext(null); // Clear quick add context to prevent stale references
       setHasUnsavedChanges(true); // Mark as unsaved
     },
   });

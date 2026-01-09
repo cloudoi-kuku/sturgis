@@ -509,11 +509,58 @@ class MSProjectXMLProcessor:
                 # Check if we need to recalculate dates
                 start_changed = "start_date" in updates and updates["start_date"] != task.get("start_date")
                 duration_changed = "duration" in updates and updates["duration"] != task.get("duration")
+                constraint_changed = "constraint_type" in updates or "constraint_date" in updates
 
                 task.update(updates)
 
                 if "outline_number" in updates:
                     task["outline_level"] = len(updates["outline_number"].split('.'))
+
+                # Apply constraint if set (and not a summary task)
+                if constraint_changed and not task.get("summary"):
+                    constraint_type = task.get("constraint_type", 0)
+                    constraint_date_str = task.get("constraint_date")
+                    duration_str = task.get("duration", "PT8H0M0S")
+                    duration_days = self._parse_duration_to_days(duration_str)
+
+                    if constraint_date_str and constraint_type in [2, 3, 4, 5, 6, 7]:
+                        try:
+                            constraint_date = datetime.fromisoformat(constraint_date_str.replace('Z', '+00:00').split('T')[0])
+
+                            if constraint_type == 2:  # Must Start On
+                                task["start_date"] = constraint_date.strftime("%Y-%m-%dT08:00:00")
+                                finish = constraint_date + timedelta(days=max(duration_days, 0))
+                                task["finish_date"] = finish.strftime("%Y-%m-%dT17:00:00")
+                                start_changed = False  # Already handled
+
+                            elif constraint_type == 3:  # Must Finish On
+                                task["finish_date"] = constraint_date.strftime("%Y-%m-%dT17:00:00")
+                                start = constraint_date - timedelta(days=max(duration_days, 0))
+                                task["start_date"] = start.strftime("%Y-%m-%dT08:00:00")
+                                start_changed = False
+
+                            elif constraint_type == 4:  # Start No Earlier Than
+                                current_start_str = task.get("start_date")
+                                if current_start_str:
+                                    current_start = datetime.fromisoformat(current_start_str.replace('Z', '+00:00').split('T')[0])
+                                    if current_start < constraint_date:
+                                        task["start_date"] = constraint_date.strftime("%Y-%m-%dT08:00:00")
+                                        finish = constraint_date + timedelta(days=max(duration_days, 0))
+                                        task["finish_date"] = finish.strftime("%Y-%m-%dT17:00:00")
+                                        start_changed = False
+
+                            elif constraint_type == 6:  # Finish No Earlier Than
+                                current_finish_str = task.get("finish_date")
+                                if current_finish_str:
+                                    current_finish = datetime.fromisoformat(current_finish_str.replace('Z', '+00:00').split('T')[0])
+                                    if current_finish < constraint_date:
+                                        task["finish_date"] = constraint_date.strftime("%Y-%m-%dT17:00:00")
+                                        start = constraint_date - timedelta(days=max(duration_days, 0))
+                                        task["start_date"] = start.strftime("%Y-%m-%dT08:00:00")
+                                        start_changed = False
+
+                        except Exception as e:
+                            print(f"Error applying constraint: {e}")
 
                 # Recalculate finish_date if start_date or duration changed (and not a summary task)
                 if (start_changed or duration_changed) and not task.get("summary"):
@@ -545,6 +592,7 @@ class MSProjectXMLProcessor:
         Delete a task from the project.
         If the task is a summary task, also delete all child tasks.
         Remove any predecessor references to the deleted task(s) from remaining tasks.
+        Renumber remaining tasks to close gaps (MS Project behavior).
         """
         # Find the task to delete
         task_to_delete = None
@@ -580,10 +628,73 @@ class MSProjectXMLProcessor:
                     if pred["outline_number"] not in deleted_outline_numbers
                 ]
 
+        # Renumber tasks to close gaps (MS Project behavior)
+        outline_mapping = self._renumber_tasks(project_data["tasks"])
+
+        # Update predecessor references to new outline numbers
+        if outline_mapping:
+            for task in project_data["tasks"]:
+                if "predecessors" in task and task["predecessors"]:
+                    for pred in task["predecessors"]:
+                        old_outline = pred.get("outline_number", "")
+                        if old_outline in outline_mapping:
+                            pred["outline_number"] = outline_mapping[old_outline]
+
         # Recalculate summary tasks after deletion
         project_data["tasks"] = self._calculate_summary_tasks(project_data["tasks"])
 
         return True
+
+    def _renumber_tasks(self, tasks: List[Dict[str, Any]]) -> Dict[str, str]:
+        """
+        Renumber tasks to close gaps after deletion.
+        Returns a mapping of old outline numbers to new outline numbers.
+
+        IMPORTANT: When a parent task is renumbered, all children must use the
+        new parent outline. E.g., if "2" becomes "1", then "2.1" must become "1.1".
+        """
+        outline_mapping = {}
+
+        # Group tasks by parent prefix
+        # e.g., "1.2.3" has parent "1.2", "1" has parent ""
+        def get_parent(outline: str) -> str:
+            parts = outline.split(".")
+            return ".".join(parts[:-1]) if len(parts) > 1 else ""
+
+        # Sort tasks by outline number for consistent ordering
+        # This ensures parents are processed before children
+        sorted_tasks = sorted(tasks, key=lambda t: [int(x) for x in t["outline_number"].split(".")])
+
+        # Track the next number for each parent level
+        next_number = {}
+
+        for task in sorted_tasks:
+            old_outline = task["outline_number"]
+            old_parent = get_parent(old_outline)
+
+            # CRITICAL: Check if parent was renamed - use the new parent if so
+            # This ensures children follow their renamed parent
+            new_parent = outline_mapping.get(old_parent, old_parent)
+
+            # Get next available number for this parent
+            if new_parent not in next_number:
+                next_number[new_parent] = 1
+
+            # Build new outline number
+            if new_parent:
+                new_outline = f"{new_parent}.{next_number[new_parent]}"
+            else:
+                new_outline = str(next_number[new_parent])
+
+            next_number[new_parent] += 1
+
+            # Record mapping if changed
+            if old_outline != new_outline:
+                outline_mapping[old_outline] = new_outline
+                task["outline_number"] = new_outline
+                task["outline_level"] = len(new_outline.split("."))
+
+        return outline_mapping
 
     def _parse_duration_to_days(self, duration_str: str) -> float:
         """Parse ISO 8601 duration string to days"""

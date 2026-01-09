@@ -768,8 +768,10 @@ async def create_task(task: TaskCreate, current_user: Optional[Dict] = Depends(g
 
     # Validate the task
     task_dict = task.model_dump()
+    print(f"[Create Task] Validating task: outline={task_dict.get('outline_number')}, predecessors={task_dict.get('predecessors')}")
     validation = validator.validate_task(task_dict, current_project.get("tasks", []))
     if not validation["valid"]:
+        print(f"[Create Task] Validation FAILED: {validation['errors']}")
         raise HTTPException(status_code=400, detail=validation["errors"])
 
     # Add the task to in-memory project
