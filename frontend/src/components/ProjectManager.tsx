@@ -133,14 +133,12 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
     setLoading(true);
     try {
       await switchProject(projectId);
-      // Wait for data refresh before closing modal
-      await onProjectChanged();
-      await loadProjects();
+      // Close modal immediately, refresh happens in background
       onClose();
+      onProjectChanged();
     } catch (error) {
       console.error('Failed to switch project:', error);
       alert('Failed to switch project');
-    } finally {
       setLoading(false);
     }
   };
@@ -325,7 +323,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
             </div>
           )}
 
-          {loading && <div className="loading">Loading...</div>}
+          {loading && projects.length === 0 && <div className="loading">Loading...</div>}
 
           <div className="projects-list">
             {projects.length === 0 && !loading && (
