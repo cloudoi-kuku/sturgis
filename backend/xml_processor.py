@@ -504,12 +504,9 @@ class MSProjectXMLProcessor:
         updated_task = None
         for task in project_data["tasks"]:
             if task["id"] == task_id or task["outline_number"] == task_id:
-                print(f"DEBUG xml_processor: Found task {task_id}, current predecessors: {task.get('predecessors', [])}")
-                print(f"DEBUG xml_processor: Applying updates: {updates}")
                 task.update(updates)
                 if "outline_number" in updates:
                     task["outline_level"] = len(updates["outline_number"].split('.'))
-                print(f"DEBUG xml_processor: After update, predecessors: {task.get('predecessors', [])}")
                 updated_task = task
                 break
 
@@ -562,18 +559,7 @@ class MSProjectXMLProcessor:
                 ]
 
         # Recalculate summary tasks after deletion
-        print(f"\n=== DELETE TASK DEBUG ===")
-        print(f"Deleted task(s): {deleted_outline_numbers}")
-        print(f"Remaining tasks count: {len(project_data['tasks'])}")
-
         project_data["tasks"] = self._calculate_summary_tasks(project_data["tasks"])
-
-        # Debug: Show summary status after recalculation
-        summary_tasks = [t for t in project_data["tasks"] if t.get("summary")]
-        print(f"Summary tasks after recalc: {len(summary_tasks)}")
-        for t in summary_tasks:
-            print(f"  - {t['outline_number']}: {t['name']}")
-        print(f"=== END DELETE DEBUG ===\n")
 
         return True
 
@@ -585,13 +571,10 @@ class MSProjectXMLProcessor:
         IMPORTANT: This function preserves the original task order - do NOT sort!
         MS Project uses OutlineNumber to determine hierarchy, not task order in the file.
         """
-        print(f"\n=== CALC SUMMARY TASKS DEBUG ===")
-        print(f"Input tasks count: {len(tasks)}")
 
         # Build a lookup by outline number for faster access
         task_by_outline = {task["outline_number"]: task for task in tasks}
         all_outlines = set(task_by_outline.keys())
-        print(f"All outlines: {sorted(all_outlines)}")
 
         # First pass: Identify which tasks are summary tasks
         for task in tasks:
@@ -611,13 +594,6 @@ class MSProjectXMLProcessor:
             # Summary tasks cannot be milestones
             if has_children:
                 task["milestone"] = False
-
-        # Debug: show which tasks are marked as summary after first pass
-        summary_count = sum(1 for t in tasks if t.get("summary"))
-        print(f"After first pass: {summary_count} summary tasks")
-        for t in tasks:
-            if t.get("summary"):
-                print(f"  Summary: {t['outline_number']} - {t['name'][:30]}")
 
         # Second pass: Calculate summary task dates from children (bottom-up)
         # Sort by outline level descending so we process deepest summary tasks first
@@ -647,7 +623,6 @@ class MSProjectXMLProcessor:
                 task["finish_date"] = max(child_finishes)
 
         # Return tasks in original order - do NOT sort!
-        print(f"=== END CALC SUMMARY DEBUG ===\n")
         return tasks
 
     def generate_xml(self, project_data: Dict[str, Any]) -> str:
@@ -684,23 +659,36 @@ class MSProjectXMLProcessor:
             # Clear existing tasks
             tasks_elem.clear()
 
-            # Build UID mapping: map any non-numeric UIDs to sequential numbers
-            # MS Project requires numeric UIDs
+            # Sort tasks by outline number to match frontend display order
+            # This ensures row numbers in the app match MS Project
+            def outline_sort_key(task):
+                outline = task.get("outline_number", "0")
+                try:
+                    # Split by dots and convert to integers for proper numeric sorting
+                    return [int(p) for p in outline.split('.')]
+                except ValueError:
+                    return [0]
+
+            sorted_tasks = sorted(project_data["tasks"], key=outline_sort_key)
+
+            # Build UID mapping: map ALL UIDs to sequential numbers
+            # MS Project displays predecessors by row number, and expects UID to match ID
+            # This ensures predecessor "3" in the app shows as "3" in MS Project
             uid_mapping = {}
             next_uid = 1  # Start from 1 (0 is reserved for project summary)
-            for task_data in project_data["tasks"]:
+            for task_data in sorted_tasks:
                 original_uid = str(task_data.get("uid", ""))
-                # Check if UID is numeric
-                if original_uid.isdigit():
-                    uid_mapping[original_uid] = original_uid
+                # Check if this is the project summary task (UID 0)
+                if original_uid == "0" or task_data.get("outline_number") == "0":
+                    uid_mapping[original_uid] = "0"
                 else:
-                    # Non-numeric UID (like UUID), assign sequential number
+                    # Map ALL UIDs to sequential numbers to match row positions
                     uid_mapping[original_uid] = str(next_uid)
                     next_uid += 1
 
             # Add tasks from project data with sequential IDs for MS Project
-            for index, task_data in enumerate(project_data["tasks"]):
-                task_elem = self._create_task_element(task_data, project_data["tasks"], index, uid_mapping)
+            for index, task_data in enumerate(sorted_tasks):
+                task_elem = self._create_task_element(task_data, sorted_tasks, index, uid_mapping)
                 tasks_elem.append(task_elem)
 
         # Convert to string with proper XML declaration
@@ -734,8 +722,9 @@ class MSProjectXMLProcessor:
         # Add basic fields
         # UID must be numeric for MS Project
         create_elem(task_elem, 'UID', mapped_uid)
-        # ID must be a sequential integer for MS Project (not a UUID)
-        create_elem(task_elem, 'ID', task_index)
+        # ID must match UID for MS Project to display predecessors correctly
+        # MS Project shows predecessors by ID, so ID must equal UID
+        create_elem(task_elem, 'ID', mapped_uid)
         create_elem(task_elem, 'Name', task_data["name"])
 
         # Project summary task has minimal fields

@@ -816,7 +816,6 @@ async def update_task(task_id: str, task: TaskUpdate, current_user: Optional[Dic
 
     # Merge updates with existing task for validation
     updates = task.model_dump(exclude_unset=True)
-    print(f"DEBUG: Updating task {task_id} with updates: {updates}")
 
     # Create a merged task dict for validation
     merged_task = {**existing_task, **updates}
@@ -838,7 +837,6 @@ async def update_task(task_id: str, task: TaskUpdate, current_user: Optional[Dic
     #     db.update_task(task["id"], task)
     # save_project_to_db()
 
-    print(f"DEBUG: Updated task result: {updated_task}")
     return {"success": True, "task": updated_task}
 
 

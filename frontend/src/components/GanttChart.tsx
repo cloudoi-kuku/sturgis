@@ -477,25 +477,25 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   // Open critical path detailed analysis in a new tab
   const handleOpenCriticalPathDetails = async () => {
-    // If we already have the data, just open the tab
-    if (criticalPathData) {
+    // Always fetch fresh data to ensure details page matches main page
+    setIsLoadingCriticalPath(true);
+    try {
+      const result = await getCriticalPath();
+      setCriticalPathData(result);
+      const criticalIds = new Set(result.critical_task_ids || []);
+      setCriticalTaskIds(criticalIds);
+      setShowCriticalPath(true);
+      // Store fresh data in sessionStorage for the detailed view
+      sessionStorage.setItem('criticalPathData', JSON.stringify({
+        ...result,
+        projectStartDate: projectStartDate
+      }));
       window.open('/critical-path', '_blank');
-    } else {
-      // Fetch data first, then open
-      setIsLoadingCriticalPath(true);
-      try {
-        const result = await getCriticalPath();
-        sessionStorage.setItem('criticalPathData', JSON.stringify({
-          ...result,
-          projectStartDate: projectStartDate
-        }));
-        window.open('/critical-path', '_blank');
-      } catch (error) {
-        console.error('Failed to calculate critical path:', error);
-        alert('Failed to calculate critical path. Please try again.');
-      } finally {
-        setIsLoadingCriticalPath(false);
-      }
+    } catch (error) {
+      console.error('Failed to calculate critical path:', error);
+      alert('Failed to calculate critical path. Please try again.');
+    } finally {
+      setIsLoadingCriticalPath(false);
     }
   };
 
