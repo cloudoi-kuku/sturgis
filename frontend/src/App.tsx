@@ -963,20 +963,24 @@ function AppContent() {
               </button>
               {/* Manual Save Button - always visible, prominent when unsaved changes exist */}
               <button
-                onClick={handleSave}
+                onClick={hasUnsavedChanges ? handleSave : undefined}
                 disabled={isSaving || !hasUnsavedChanges}
                 title={hasUnsavedChanges ? "Save Project (Unsaved Changes)" : "All Changes Saved"}
-                style={{ padding: '10px' }}
-                className={`flex items-center rounded-lg border transition-all disabled:cursor-not-allowed ${
-                  hasUnsavedChanges
-                    ? 'text-white bg-green-500 hover:bg-green-600 border-green-600 animate-pulse'
-                    : 'text-slate-500 bg-slate-100 border-slate-300 hover:bg-slate-200'
-                }`}
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: hasUnsavedChanges ? '#22c55e' : '#f1f5f9',
+                  color: hasUnsavedChanges ? '#ffffff' : '#64748b',
+                  border: hasUnsavedChanges ? '1px solid #16a34a' : '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  cursor: hasUnsavedChanges ? 'pointer' : 'not-allowed',
+                }}
               >
                 {isSaving ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
-                  <Save className="h-4 w-4" />
+                  <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                    {hasUnsavedChanges ? 'Save' : 'Saved'}
+                  </span>
                 )}
               </button>
               <button
